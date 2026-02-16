@@ -1,3 +1,6 @@
+#Custom o temp
+*.sql
+
 # Created by https://www.toptal.com/developers/gitignore/api/django,angular
 # Edit at https://www.toptal.com/developers/gitignore?templates=django,angular
 
