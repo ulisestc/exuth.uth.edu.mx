@@ -39,6 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    #REST
+    'rest_framework',
+    #docs
+    'drf_spectacular', #Si es necesario hacerlo offline, se instalará sidecar
     #las custom
     'users',
 ]
@@ -91,6 +95,11 @@ DATABASES = {
     }
 }
 
+#REST FRAMEWORK CONFIG
+REST_FRAMEWORK = {
+    # DOCS
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -129,3 +138,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# DOCS configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'EXUTH API',
+    'DESCRIPTION': 'API para la bolsa de trabajo de egresados de la UTH',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+    #. . . (Si queremos docs offline, se debe instalar drf_spectacular_sidecar)
+}
