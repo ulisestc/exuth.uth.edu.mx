@@ -13,7 +13,9 @@ El proyecto no correrá sin variables de entorno, para ello copia el archivo **.
 ```shell
 cp .env.example .env
 ```
+
 Abre el archivo .env y configura los valores locales, **DB_HOST** debe ser "db"
+
 ------------
 ##### 3. Levantar el entorno (build)
 Este comando descarga MySQL, instala dependencias de Python y levanta el servidor:
