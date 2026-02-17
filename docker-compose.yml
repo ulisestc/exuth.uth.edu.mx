@@ -1,0 +1,36 @@
+#sources: https://www.youtube.com/watch?v=oaFGLqYB9p4
+#         https://www.docker.com/blog/how-to-dockerize-django-app/
+#         y apoyo de ia
+
+services:
+  #MYSQL
+  db:
+    image: mysql:8.0
+    container_name: exuth_mysql
+    restart: always #Docker intentará reinciar el contenedor siempre que se detenga
+    environment: #Acá no basta con .env porque mysql no sabe que es "DB_...", docker detecta automaticamente del .env
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER} #usuario limitado
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD} #usuario root
+    ports:
+    - "3307:3306" # se comenta en prod para que solo sea accesible por la API
+    volumes:
+      - mysql_data:/var/lib/mysql #ruta para guardar datos persistentemente
+
+  #DJANGO API
+  backend:
+    build: ./backend
+    container_name: exuth_backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes: 
+      - ./backend:/app #se monta un volumen para updates del codigo en tiempo real sin hacer rebuild
+    ports:
+      - "8080:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+volumes:
+  mysql_data: #para que docker sepa que volumen usar (datos)
