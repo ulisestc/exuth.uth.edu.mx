@@ -41,13 +41,22 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     #REST
     'rest_framework',
+    #AUTH
+    'djoser',
+    'rest_framework_simplejwt',
+    #CORS
+    'corsheaders',
     #docs
     'drf_spectacular', #Si es necesario hacerlo offline, se instalará sidecar
-    #las custom
+    #las apps creadas
     'users',
 ]
 
 MIDDLEWARE = [
+    #CORS
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    #Default
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -55,6 +64,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+#Permitir Frontend Angular (Cambiar puerto si es necesario)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",
+    "http://127.0.0.1:4200",
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -97,14 +112,28 @@ DATABASES = {
 
 #REST FRAMEWORK CONFIG
 REST_FRAMEWORK = {
+    #AUTH
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
     # DOCS
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+SIMPLE_JWT = {
+    'AUTH_HEADER_TYPES': ('JWT',),
+}
+
+DJOSER = {
+    'LOGIN_FIELD': 'email', #PARA MANDAR: { "username": "email@gmail.com", "password": "123" }
+    'TOKEN_MODEL': None, #Solo se usará JWT
+}
+
+AUTH_USER_MODEL = 'users.CustomUser' #Para usar nuestro CustomUser (rol)
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
-AUTH_USER_MODEL = 'users.CustomUser' #Para usar nuestro CustomUser (rol)
 
 AUTH_PASSWORD_VALIDATORS = [
     {
