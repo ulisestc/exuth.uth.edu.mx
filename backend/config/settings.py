@@ -53,12 +53,11 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    #CORS
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
     #Default
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    #CORS
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -116,10 +115,17 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [ 
+        #Como el sistema es cerrado, todas los endpoints requerirán auth, 
+        # de esa forma nos evitamos poner permissions = [isAuthenticated] en cada viewset.
+        # para casos especificos (ADMIN) se pondrá manualmente.
+        'rest_framework.permissions.IsAuthenticated', 
+    ],
     # DOCS
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+# Authorization JWT -> token
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
 }
@@ -127,9 +133,23 @@ SIMPLE_JWT = {
 DJOSER = {
     'LOGIN_FIELD': 'email', #PARA MANDAR: { "username": "email@gmail.com", "password": "123" }
     'TOKEN_MODEL': None, #Solo se usará JWT
+
+    'SEND_ACTIVATION_EMAIL': True,
+    'ACTIVATION_URL': 'auth/activate/?uid={uid}&token={token}', #Frontend-> Angular ejecuta la petición
+    'PASSWORD_RESET_CONFIRM_URL': 'auth/reset-password/?uid={uid}&token={token}', #Frontend-> Angular ejecuta la petición
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
+
+    'SERIALIZERS': {
+        'user_create': 'users.serializers.UserCreateSerializer', #/users/
+        'user': 'users.serializers.UserRoleSerializer', #/users/{id}/
+        'current_user': 'users.serializers.CurrentUserSerializer', #/users/me/
+    },
 }
 
-AUTH_USER_MODEL = 'users.CustomUser' #Para usar nuestro CustomUser (rol)
+DOMAIN = 'localhost:8080'
+SITE_NAME = 'EXUTH'
+
+AUTH_USER_MODEL = 'users.User' #Para usar nuestro CustomUser (rol)
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -177,3 +197,14 @@ SPECTACULAR_SETTINGS = {
     # OTHER SETTINGS
     #. . . (Si queremos docs offline, se debe instalar drf_spectacular_sidecar)
 }
+
+##EMAIL CONFIGG
+
+EMAIL_BACKEND = config('EMAIL_BACKEND')
+MAILER_EMAIL_BACKEND = config('MAILER_EMAIL_BACKEND')
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_PORT = config('EMAIL_PORT', default=25)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER')
