@@ -125,9 +125,12 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+from datetime import timedelta #CAMBIAR EN PROD
 # Authorization JWT -> token
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #CAMBIAR EN PROD
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1), # CAMBIAR EN PROD
 }
 
 DJOSER = {

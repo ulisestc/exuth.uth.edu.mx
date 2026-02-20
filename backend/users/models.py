@@ -29,21 +29,23 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_deactivated', False)
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('rol', 'soporte_ti')
         return self._create_user(email, password, **extra_fields)
     
 #MODELO USER
 class User (AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = (
+        ('soporte_ti', 'Soporte TI'),
         ('admin_uth', 'Administrador UTH'),
         ('egresado', 'Egresado'),
         ('empresa', 'Empresa')
     )
     
-    email = models.EmailField(blank=True, default='', unique=True)
-    nombres = models.CharField(max_length=255, blank=True, default='')
-    apellido_paterno = models.CharField(max_length=255, blank=True, default='')
-    apellido_materno = models.CharField(max_length=255, blank=True, default='')
-    rol = models.CharField(max_length=255, choices=ROLE_CHOICES, default='egresado')
+    email = models.EmailField(blank=False, unique=True)
+    nombres = models.CharField(max_length=255, blank=False)
+    apellido_paterno = models.CharField(max_length=255, blank=False)
+    apellido_materno = models.CharField(max_length=255, blank=False)
+    rol = models.CharField(max_length=255, choices=ROLE_CHOICES, blank=False)
 
     is_active = models.BooleanField(default=False)
     is_deactivated = models.BooleanField(default=False)
@@ -58,7 +60,8 @@ class User (AbstractBaseUser, PermissionsMixin):
     # #usar USERNAME_FIELD = 'email'! para indicar a simplejwt que el username es el email
     USERNAME_FIELD = 'email'
     EMAIL_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['nombres','apellido_paterno','apellido_materno']
+
     class Meta:
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
