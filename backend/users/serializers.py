@@ -19,17 +19,15 @@ class UserCreateSerializer(BaseUserCreateSerializer):
         model = User
         fields = ('id', 'email', 'password', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol')
 
-class CurrentUserSerializer(BaseUserSerializer):
+class CustomUserSerializer(BaseUserSerializer):
     """Serializer para editar el propio usuario /users/me/"""
+    def validate_is_deactivated(self,value):
+        #definimos que un usuario se pueda desactivar, pero no activar manualmente
+        if self.instance.is_deactivated == True and value == False:
+            raise serializers.ValidationError("No se puede activar manualmente un usuario desactivado.")
+        return value
+    
     class Meta(BaseUserSerializer.Meta):
         model = User
-        fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'is_active', 'is_staff', 'date_joined')
-        read_only_fields = ('id', 'is_staff', 'date_joined', 'rol')
-
-
-class UserRoleSerializer(BaseUserSerializer):
-    """Serializer para asignar rol de administrador /users/{id}/"""
-    class Meta(BaseUserSerializer.Meta):
-        model = User
-        fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'is_active', 'is_staff')
-        read_only_fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno')
+        fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'is_active','is_deactivated', 'date_joined', 'last_login')
+        read_only_fields = ('id', 'email', 'rol', 'is_active', 'date_joined', 'last_login')
