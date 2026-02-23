@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     #CORS
     'corsheaders',
+    #filtros
+    'django_filters',
     #docs
     'drf_spectacular', #Si es necesario hacerlo offline, se instalará sidecar
     #las apps creadas
@@ -121,6 +123,9 @@ REST_FRAMEWORK = {
         # para casos especificos (ADMIN) se pondrá manualmente.
         'rest_framework.permissions.IsAuthenticated', 
     ],
+    #paginación
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
     # DOCS
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
