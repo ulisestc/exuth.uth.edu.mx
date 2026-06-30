@@ -6,7 +6,12 @@ from django.utils import timezone
 
 # Create your models here.
 
-#Creamos el manager personalizado
+#Creamos los managers personalizados
+
+class ActiveUserManager(models.Manager):
+    def get_queryset(self):
+        # Queremos el queryset original, pero filtrado
+        return super().get_queryset().filter(is_active=True, deactivated_at__isnull=True)
 class CustomUserManager(BaseUserManager):
     def _create_user(self, email, password, **extra_fields):
         if not email: 
@@ -26,7 +31,6 @@ class CustomUserManager(BaseUserManager):
     
     def create_superuser(self, email=None, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_deactivated', False)
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('rol', 'soporte_ti')
@@ -48,7 +52,7 @@ class User (AbstractBaseUser, PermissionsMixin):
     rol = models.CharField(max_length=255, choices=ROLE_CHOICES, blank=False)
 
     is_active = models.BooleanField(default=False)
-    is_deactivated = models.BooleanField(default=False)
+    deactivated_at = models.DateTimeField(blank=True, null=True)
     is_superuser = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
 
@@ -56,6 +60,7 @@ class User (AbstractBaseUser, PermissionsMixin):
     last_login = models.DateTimeField(blank=True, null=True)
 
     objects = CustomUserManager()
+    active_objects = ActiveUserManager()
 
     # #usar USERNAME_FIELD = 'email'! para indicar a simplejwt que el username es el email
     USERNAME_FIELD = 'email'

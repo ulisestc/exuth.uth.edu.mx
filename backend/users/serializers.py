@@ -1,6 +1,7 @@
 from djoser.serializers import UserSerializer as BaseUserSerializer, UserCreateSerializer as BaseUserCreateSerializer
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -21,13 +22,19 @@ class UserCreateSerializer(BaseUserCreateSerializer):
 
 class CustomUserSerializer(BaseUserSerializer):
     """Serializer para editar el propio usuario /users/me/"""
-    def validate_is_deactivated(self,value):
-        #definimos que un usuario se pueda desactivar, pero no activar manualmente
-        if self.instance.is_deactivated == True and value == False:
-            raise serializers.ValidationError("No se puede activar manualmente un usuario desactivado.")
-        return value
-    
     class Meta(BaseUserSerializer.Meta):
         model = User
-        fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'is_active','is_deactivated', 'date_joined', 'last_login')
-        read_only_fields = ('id', 'email', 'rol', 'is_active', 'date_joined', 'last_login')
+        fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'is_active', 'deactivated_at', 'date_joined', 'last_login')
+        # Hacemos que deactivated_at sea de solo lectura
+        read_only_fields = ('id', 'email', 'rol', 'is_active', 'deactivated_at', 'date_joined', 'last_login')
+
+#serializador custom para evitar que usuario con deactivated_at != None pueda iniciar sesión
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        #1. validación padre -> email y password
+        data = super().validate(attrs)
+
+        #2. Si es correcto, self.user contiene el usuario autenticado, verificamos si está desactivado
+        if self.user.deactivated_at is not None:
+            raise serializers.ValidationError("Este usuario ha sido desactivado y no puede iniciar sesión.")
+        return data
