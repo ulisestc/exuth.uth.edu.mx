@@ -38,3 +38,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if self.user.deactivated_at is not None:
             raise serializers.ValidationError("Este usuario ha sido desactivado y no puede iniciar sesión.")
         return data
+    
+class ReactivateRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(help_text="Correo electrónico de la cuenta desactivada")
+
+class ReactivateConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(help_text="ID codificado del usuario (provisto en el correo)")
+    token = serializers.CharField(help_text="Token de reactivación (provisto en el correo)")

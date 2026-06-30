@@ -29,6 +29,10 @@ DEBUG = config('DEBUG', default = False, cast = bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
+#VARIABLES PARA EL FRONTEND
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:4200')
+DOMAIN = config('FRONTEND_DOMAIN', default='localhost:4200')
+SITE_NAME = 'EXUTH'
 
 # Application definition
 
@@ -144,8 +148,8 @@ DJOSER = {
     'TOKEN_MODEL': None, #Solo se usará JWT
 
     'SEND_ACTIVATION_EMAIL': True,
-    'ACTIVATION_URL': 'auth/activate/?uid={uid}&token={token}', #Frontend-> Angular ejecuta la petición
-    'PASSWORD_RESET_CONFIRM_URL': 'auth/reset-password/?uid={uid}&token={token}', #Frontend-> Angular ejecuta la petición
+    'ACTIVATION_URL': 'auth/activate/{uid}/{token}/', #Frontend-> Angular ejecuta la petición
+    'PASSWORD_RESET_CONFIRM_URL': 'auth/reset-password/{uid}/{token}/', #Frontend-> Angular ejecuta la petición
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
 
     'SERIALIZERS': {
@@ -154,9 +158,6 @@ DJOSER = {
         'current_user': 'users.serializers.CustomUserSerializer', #/users/me/
     },
 }
-
-DOMAIN = 'localhost:8080'
-SITE_NAME = 'EXUTH'
 
 AUTH_USER_MODEL = 'users.User' #Para usar nuestro CustomUser (rol)
 
