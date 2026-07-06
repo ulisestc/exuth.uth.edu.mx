@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     #las apps creadas
     'users',
     'profiles',
+    'core',
 ]
 
 MIDDLEWARE = [
