@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'drf_spectacular', #Si es necesario hacerlo offline, se instalará sidecar
     #las apps creadas
     'users',
+    'profiles',
 ]
 
 MIDDLEWARE = [
