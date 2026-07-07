@@ -31,7 +31,7 @@ class Empresa(models.Model):
     giro = models.ForeignKey(Giro, on_delete=models.PROTECT, related_name='empresas')
     sector = models.ForeignKey(Sector, on_delete=models.PROTECT, related_name='empresas')
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='empresa')
-    estado_validacion = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pendiente')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pendiente')
 
     def __str__(self):
         return f"{self.nombre} - {self.correo_contacto}"

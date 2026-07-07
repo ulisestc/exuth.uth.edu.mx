@@ -140,6 +140,7 @@ from datetime import timedelta #CAMBIAR EN PROD
 # Authorization JWT -> token
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
+    'UPDATE_LAST_LOGIN': True, #para poder desactivar el usuario tras 6 meses de inactividad, se actualizará el campo last_login cada vez que el usuario haga login
     'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.CustomTokenObtainPairSerializer', #serializador custom para evitar que usuario con deactivated_at != None pueda iniciar sesión
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #CAMBIAR EN PROD
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1), # CAMBIAR EN PROD
