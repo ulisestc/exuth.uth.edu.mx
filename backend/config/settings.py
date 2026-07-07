@@ -116,6 +116,11 @@ DATABASES = {
         }
     }
 }
+#---------------------------------------------------------
+# Si se usa SQLite para correr tests/local, eliminar OPTIONS específicos de MySQL
+if 'sqlite3' in DATABASES['default']['ENGINE']:
+    DATABASES['default'].pop('OPTIONS', None)
+#---------------------------------------------------------
 
 #REST FRAMEWORK CONFIG
 REST_FRAMEWORK = {
