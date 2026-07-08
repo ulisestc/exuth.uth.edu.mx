@@ -43,3 +43,13 @@ class Carrera(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+class Idioma(models.Model):
+    nombre = models.CharField(max_length=150, unique=True)
+
+    class Meta:
+        verbose_name = 'Idioma'
+        verbose_name_plural = 'Idiomas'
+
+    def __str__(self):
+        return self.nombre
