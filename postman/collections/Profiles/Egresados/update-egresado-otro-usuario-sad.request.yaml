@@ -1,0 +1,30 @@
+$kind: http-request
+name: Update Egresado Otro Usuario (Sad)
+method: PUT
+url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/'
+order: 9000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{otherUserAccessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user": 2,
+      "matricula": "UTH2021001",
+      "curp": "ABCD123456HDFXXX01",
+      "telefono": "7711234567",
+      "carrera": 1
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 403", function () {
+          pm.response.to.have.status(403);
+      });

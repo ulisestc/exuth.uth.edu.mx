@@ -1,0 +1,3 @@
+$kind: collection
+name: Registro
+description: 'Endpoints de registro de nuevos usuarios (egresado y empresa). Incluye happy paths y sad paths.'

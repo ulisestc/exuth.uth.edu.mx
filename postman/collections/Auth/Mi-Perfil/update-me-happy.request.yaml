@@ -1,0 +1,32 @@
+$kind: http-request
+name: 'PUT Actualizar Perfil - Happy Path'
+method: PUT
+url: '{{baseUrl}}/auth/users/me/'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+body:
+  type: json
+  content: |-
+    {
+      "nombres": "Juan Carlos Actualizado",
+      "apellido_paterno": "García",
+      "apellido_materno": "López"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Perfil actualizado exitosamente", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Nombres actualizados correctamente", function () {
+          const json = pm.response.json();
+          pm.expect(json.nombres).to.eql("Juan Carlos Actualizado");
+      });

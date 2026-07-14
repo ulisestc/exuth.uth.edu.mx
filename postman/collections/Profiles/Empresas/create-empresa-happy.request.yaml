@@ -1,0 +1,37 @@
+$kind: http-request
+name: Create Empresa (Happy)
+method: POST
+url: '{{baseUrl}}/profiles/empresas/'
+order: 5000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user": 1,
+      "nombre": "Tech Solutions SA de CV",
+      "domicilio": "Av. Juárez 123, Pachuca, Hidalgo",
+      "telefono": "7719876543",
+      "correo_contacto": "contacto@techsolutions.com",
+      "actividad_de_la_empresa": "Desarrollo de software",
+      "campo": "Tecnología",
+      "giro": 1,
+      "sector": 1
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+          pm.environment.set("empresaId", pm.response.json().id);
+      }

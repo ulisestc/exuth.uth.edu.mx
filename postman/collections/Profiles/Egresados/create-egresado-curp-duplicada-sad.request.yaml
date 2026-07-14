@@ -1,0 +1,34 @@
+$kind: http-request
+name: Create Egresado CURP Duplicada (Sad)
+method: POST
+url: '{{baseUrl}}/profiles/egresados/'
+order: 7000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user": 2,
+      "matricula": "UTH2021002",
+      "curp": "ABCD123456HDFXXX01",
+      "telefono": "7711234568",
+      "carrera": 1
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response contains CURP error", function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData).to.have.property('curp');
+      });

@@ -1,0 +1,27 @@
+$kind: http-request
+name: 'Login Usuario Desactivado - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/jwt/create/'
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "desactivado@test.com",
+      "password": "TestPass123!"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400 - Usuario desactivado rechazado", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response contiene mensaje de cuenta desactivada", function () {
+          const json = pm.response.json();
+          const responseText = JSON.stringify(json);
+          pm.expect(responseText.toLowerCase()).to.include("desactivad");
+      });

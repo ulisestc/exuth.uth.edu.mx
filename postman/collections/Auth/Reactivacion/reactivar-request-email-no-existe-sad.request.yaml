@@ -1,0 +1,21 @@
+$kind: http-request
+name: 'Solicitar Reactivación Email No Existe - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/reactivate/request/'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "noexiste@test.com"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - No revela si email existe (seguridad)", function () {
+          pm.response.to.have.status(200);
+      });

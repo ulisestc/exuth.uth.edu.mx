@@ -1,0 +1,14 @@
+$kind: http-request
+name: List Vacantes sin token (Sad)
+method: GET
+url: '{{baseUrl}}/vacantes/'
+order: 2000
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 401", function () {
+          pm.response.to.have.status(401);
+      });

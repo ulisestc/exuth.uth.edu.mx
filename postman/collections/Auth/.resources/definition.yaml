@@ -1,0 +1,6 @@
+$kind: collection
+name: Auth
+description: 'Endpoints de autenticación: registro, login, JWT y reactivación de cuenta.'
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8000/api/v1'

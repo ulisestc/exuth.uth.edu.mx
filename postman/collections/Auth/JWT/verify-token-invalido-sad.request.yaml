@@ -1,0 +1,25 @@
+$kind: http-request
+name: 'Verify Token Inválido - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/jwt/verify/'
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "token": "token.invalido.aqui"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 401 - Token inválido rechazado", function () {
+          pm.response.to.have.status(401);
+      });
+      pm.test("Response contiene mensaje de error", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("detail");
+      });

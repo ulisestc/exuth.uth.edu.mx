@@ -1,0 +1,17 @@
+$kind: http-request
+name: 'DELETE Soft Delete Usuario - Happy Path'
+method: DELETE
+url: '{{baseUrl}}/auth/users/{{userId}}/'
+order: 4000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 204 - Soft delete exitoso", function () {
+          pm.response.to.have.status(204);
+      });

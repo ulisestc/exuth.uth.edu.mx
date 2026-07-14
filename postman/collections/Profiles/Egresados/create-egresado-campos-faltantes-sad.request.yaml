@@ -1,0 +1,26 @@
+$kind: http-request
+name: Create Egresado Campos Faltantes (Sad)
+method: POST
+url: '{{baseUrl}}/profiles/egresados/'
+order: 6000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "telefono": "7711234567"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });

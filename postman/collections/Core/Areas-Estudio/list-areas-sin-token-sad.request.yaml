@@ -1,0 +1,12 @@
+$kind: http-request
+name: List Áreas de Estudio - Sin Token (Sad)
+method: GET
+url: '{{baseUrl}}/core/areas-estudio/'
+order: 2000
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 401", () => pm.response.to.have.status(401));

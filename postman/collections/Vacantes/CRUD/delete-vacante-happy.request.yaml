@@ -1,0 +1,17 @@
+$kind: http-request
+name: Delete Vacante (Happy)
+method: DELETE
+url: '{{baseUrl}}/vacantes/{{vacanteId}}/'
+order: 9000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 204", function () {
+          pm.response.to.have.status(204);
+      });

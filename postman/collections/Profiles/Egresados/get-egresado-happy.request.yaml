@@ -1,0 +1,24 @@
+$kind: http-request
+name: Get Egresado (Happy)
+method: GET
+url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/'
+order: 3000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response has required fields", function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData).to.have.property('id');
+          pm.expect(jsonData).to.have.property('matricula');
+          pm.expect(jsonData).to.have.property('curp');
+          pm.expect(jsonData).to.have.property('carrera');
+      });

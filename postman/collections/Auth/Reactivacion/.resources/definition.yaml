@@ -1,0 +1,3 @@
+$kind: collection
+name: Reactivación
+description: 'Endpoints para solicitar y confirmar la reactivación de una cuenta desactivada.'

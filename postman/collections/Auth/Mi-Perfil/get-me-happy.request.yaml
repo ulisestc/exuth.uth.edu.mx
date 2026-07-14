@@ -1,0 +1,29 @@
+$kind: http-request
+name: 'GET Mi Perfil - Happy Path'
+method: GET
+url: '{{baseUrl}}/auth/users/me/'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Perfil obtenido exitosamente", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response tiene campo email", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("email");
+      });
+      pm.test("Response tiene campo id", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("id");
+      });
+      pm.test("Response tiene campo rol", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("rol");
+      });

@@ -1,0 +1,14 @@
+$kind: http-request
+name: List Egresados Sin Token (Sad)
+method: GET
+url: '{{baseUrl}}/profiles/egresados/'
+order: 2000
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 401", function () {
+          pm.response.to.have.status(401);
+      });

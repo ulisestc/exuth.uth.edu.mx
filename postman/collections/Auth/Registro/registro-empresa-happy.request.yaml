@@ -1,0 +1,38 @@
+$kind: http-request
+name: 'Registro Empresa - Happy Path'
+method: POST
+url: '{{baseUrl}}/auth/users/'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "empresa@test.com",
+      "password": "TestPass123!",
+      "nombres": "Empresa Ejemplo",
+      "apellido_paterno": "S.A.",
+      "apellido_materno": "de C.V.",
+      "rol": "empresa"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 201 - Registro empresa exitoso", function () {
+          pm.response.to.have.status(201);
+      });
+      pm.test("Response tiene id de usuario", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("id");
+      });
+      pm.test("Rol es empresa", function () {
+          const json = pm.response.json();
+          pm.expect(json.rol).to.eql("empresa");
+      });
+      if (pm.response.code === 201) {
+          const json = pm.response.json();
+          pm.environment.set("empresaUserId", json.id);
+      }

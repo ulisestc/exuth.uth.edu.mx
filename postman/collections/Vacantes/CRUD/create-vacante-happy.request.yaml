@@ -1,0 +1,54 @@
+$kind: http-request
+name: Create Vacante (Happy)
+method: POST
+url: '{{baseUrl}}/vacantes/'
+order: 5000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Desarrollador Backend Python",
+      "nivel_estudios": "Licenciatura",
+      "edad_minima": 22,
+      "edad_maxima": 35,
+      "sexo": "Indistinto",
+      "estado_civil": "Soltero",
+      "experiencia": "1 año de experiencia en Django o FastAPI",
+      "funciones_y_actividades": "Desarrollo y mantenimiento de APIs REST",
+      "habilidades_y_competencias": "Python, Django, PostgreSQL, Git",
+      "transporte": "Transporte público",
+      "oferta_laboral": "Sueldo competitivo, prestaciones de ley",
+      "sueldo_minimo": "8000.00",
+      "sueldo_maximo": "12000.00",
+      "horario": {"lunes": "09:00-18:00", "viernes": "09:00-15:00"},
+      "entrevistador": "Ing. García",
+      "confidencial": false,
+      "area_estudio": 1,
+      "idiomas": [
+        {"idioma": 1, "nivel": "Intermedio", "obligatorio": false}
+      ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 201", function () {
+          pm.response.to.have.status(201);
+      });
+      pm.test("Tiene id, titulo y empresa", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.have.property('id');
+          pm.expect(json).to.have.property('titulo');
+          pm.expect(json).to.have.property('empresa');
+      });
+      if (pm.response.code === 201) {
+          pm.environment.set("vacanteId", pm.response.json().id);
+      }

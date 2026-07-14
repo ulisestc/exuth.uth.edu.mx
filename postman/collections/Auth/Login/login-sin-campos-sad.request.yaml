@@ -1,0 +1,23 @@
+$kind: http-request
+name: 'Login Sin Campos - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/jwt/create/'
+order: 5000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400 - Body vacío rechazado", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response contiene errores de validación", function () {
+          const json = pm.response.json();
+          pm.expect(Object.keys(json).length).to.be.greaterThan(0);
+      });

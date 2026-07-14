@@ -1,0 +1,30 @@
+$kind: http-request
+name: 'Registro Email Duplicado - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/users/'
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "egresado@test.com",
+      "password": "TestPass123!",
+      "nombres": "Juan Carlos",
+      "apellido_paterno": "García",
+      "apellido_materno": "López",
+      "rol": "egresado"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400 - Email duplicado rechazado", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response contiene error de email", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("email");
+      });

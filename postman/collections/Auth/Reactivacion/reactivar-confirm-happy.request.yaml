@@ -1,0 +1,22 @@
+$kind: http-request
+name: 'Confirmar Reactivación - Happy Path'
+method: POST
+url: '{{baseUrl}}/auth/reactivate/confirm/'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "uid": "{{reactivationUid}}",
+      "token": "{{reactivationToken}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Cuenta reactivada exitosamente", function () {
+          pm.response.to.have.status(200);
+      });

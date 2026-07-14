@@ -1,0 +1,7 @@
+$kind: collection
+name: Vacantes
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8000'
+  - key: vacanteId
+    value: '1'

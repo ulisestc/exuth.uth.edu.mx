@@ -1,0 +1,26 @@
+$kind: http-request
+name: Partial Update Vacante (Happy)
+method: PATCH
+url: '{{baseUrl}}/vacantes/{{vacanteId}}/'
+order: 8000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Desarrollador Backend Senior"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200", function () {
+          pm.response.to.have.status(200);
+      });

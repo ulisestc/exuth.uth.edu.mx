@@ -1,0 +1,26 @@
+$kind: http-request
+name: 'Login Credenciales Inválidas - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/jwt/create/'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "egresado@test.com",
+      "password": "WrongPassword999!"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 401 - Credenciales inválidas rechazadas", function () {
+          pm.response.to.have.status(401);
+      });
+      pm.test("Response contiene mensaje de error", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("detail");
+      });

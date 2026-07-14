@@ -1,0 +1,6 @@
+$kind: collection
+name: Profiles
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8000'
+    description: Base URL for the EXUTH API

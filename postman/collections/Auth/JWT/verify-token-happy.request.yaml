@@ -1,0 +1,21 @@
+$kind: http-request
+name: 'Verify Token - Happy Path'
+method: POST
+url: '{{baseUrl}}/auth/jwt/verify/'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "token": "{{accessToken}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Token válido verificado", function () {
+          pm.response.to.have.status(200);
+      });

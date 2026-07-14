@@ -1,0 +1,34 @@
+$kind: http-request
+name: Update Empresa (Happy)
+method: PUT
+url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/'
+order: 7000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user": 1,
+      "nombre": "Tech Solutions SA de CV",
+      "domicilio": "Blvd. Everardo Márquez 123, Pachuca, Hidalgo",
+      "telefono": "7719876543",
+      "correo_contacto": "contacto@techsolutions.com",
+      "actividad_de_la_empresa": "Desarrollo de software y consultoría",
+      "campo": "Tecnología",
+      "giro": 1,
+      "sector": 1
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });

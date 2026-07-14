@@ -1,0 +1,23 @@
+$kind: http-request
+name: Get Empresa (Happy)
+method: GET
+url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/'
+order: 3000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response has required fields", function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData).to.have.property('id');
+          pm.expect(jsonData).to.have.property('nombre');
+          pm.expect(jsonData).to.have.property('status');
+      });

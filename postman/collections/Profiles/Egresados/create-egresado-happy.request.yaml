@@ -1,0 +1,33 @@
+$kind: http-request
+name: Create Egresado (Happy)
+method: POST
+url: '{{baseUrl}}/profiles/egresados/'
+order: 5000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user": 1,
+      "matricula": "UTH2021001",
+      "curp": "ABCD123456HDFXXX01",
+      "telefono": "7711234567",
+      "carrera": 1
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+          pm.environment.set("egresadoId", pm.response.json().id);
+      }

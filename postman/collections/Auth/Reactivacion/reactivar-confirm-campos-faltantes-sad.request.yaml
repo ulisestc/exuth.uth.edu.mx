@@ -1,0 +1,23 @@
+$kind: http-request
+name: 'Confirmar Reactivación Campos Faltantes - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/reactivate/confirm/'
+order: 5000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400 - Campos faltantes rechazados", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response contiene errores de validación", function () {
+          const json = pm.response.json();
+          pm.expect(Object.keys(json).length).to.be.greaterThan(0);
+      });

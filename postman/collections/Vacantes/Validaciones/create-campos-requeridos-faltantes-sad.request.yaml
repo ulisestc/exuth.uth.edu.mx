@@ -1,0 +1,24 @@
+$kind: http-request
+name: 'Create Vacante: campos requeridos faltantes (Sad)'
+method: POST
+url: '{{baseUrl}}/vacantes/'
+order: 2000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400", function () {
+          pm.response.to.have.status(400);
+      });

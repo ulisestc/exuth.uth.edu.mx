@@ -1,0 +1,38 @@
+$kind: http-request
+name: 'Registro Egresado - Happy Path'
+method: POST
+url: '{{baseUrl}}/auth/users/'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "egresado@test.com",
+      "password": "TestPass123!",
+      "nombres": "Juan Carlos",
+      "apellido_paterno": "García",
+      "apellido_materno": "López",
+      "rol": "egresado"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 201 - Registro exitoso", function () {
+          pm.response.to.have.status(201);
+      });
+      pm.test("Response tiene id de usuario", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("id");
+      });
+      pm.test("Response tiene email correcto", function () {
+          const json = pm.response.json();
+          pm.expect(json.email).to.eql("egresado@test.com");
+      });
+      if (pm.response.code === 201) {
+          const json = pm.response.json();
+          pm.environment.set("userId", json.id);
+      }

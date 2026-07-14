@@ -1,0 +1,17 @@
+$kind: http-request
+name: Get Egresado No Existe (Sad)
+method: GET
+url: '{{baseUrl}}/profiles/egresados/99999/'
+order: 4000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 404", function () {
+          pm.response.to.have.status(404);
+      });

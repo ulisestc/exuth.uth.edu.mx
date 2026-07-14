@@ -1,0 +1,24 @@
+$kind: http-request
+name: 'Solicitar Reactivación - Happy Path'
+method: POST
+url: '{{baseUrl}}/auth/reactivate/request/'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "egresado@test.com"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Solicitud de reactivación enviada", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response no revela si el email existe", function () {
+          pm.expect(pm.response.code).to.eql(200);
+      });

@@ -1,0 +1,15 @@
+$kind: http-request
+name: Get Área de Estudio - No Existe (Sad)
+method: GET
+url: '{{baseUrl}}/core/areas-estudio/99999/'
+order: 4000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 404", () => pm.response.to.have.status(404));

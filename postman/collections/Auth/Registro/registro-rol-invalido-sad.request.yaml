@@ -1,0 +1,30 @@
+$kind: http-request
+name: 'Registro Rol Inválido - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/users/'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "admin@test.com",
+      "password": "TestPass123!",
+      "nombres": "Admin",
+      "apellido_paterno": "Test",
+      "apellido_materno": "User",
+      "rol": "admin_uth"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400 - Rol inválido rechazado", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response contiene error de rol", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("rol");
+      });

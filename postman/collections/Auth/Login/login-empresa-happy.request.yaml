@@ -1,0 +1,35 @@
+$kind: http-request
+name: 'Login Empresa - Happy Path'
+method: POST
+url: '{{baseUrl}}/auth/jwt/create/'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "empresa@test.com",
+      "password": "TestPass123!"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Login empresa exitoso", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response tiene access token", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("access");
+      });
+      pm.test("Response tiene refresh token", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("refresh");
+      });
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.environment.set("empresaAccessToken", json.access);
+          pm.environment.set("empresaRefreshToken", json.refresh);
+      }

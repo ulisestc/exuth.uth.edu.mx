@@ -1,0 +1,3 @@
+$kind: collection
+name: Core - Catálogos
+description: 'Endpoints de catálogos del sistema: Giros, Sectores, Áreas de Estudio, Carreras e Idiomas. Todos son de solo lectura (ReadOnly).'

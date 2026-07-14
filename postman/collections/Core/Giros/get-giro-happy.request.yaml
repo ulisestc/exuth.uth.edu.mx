@@ -1,0 +1,17 @@
+$kind: http-request
+name: Get Giro - Happy
+method: GET
+url: '{{baseUrl}}/core/giros/1/'
+order: 3000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200", () => pm.response.to.have.status(200));
+      pm.test("Tiene id", () => pm.expect(pm.response.json()).to.have.property('id'));
+      pm.test("Tiene nombre", () => pm.expect(pm.response.json()).to.have.property('nombre'));

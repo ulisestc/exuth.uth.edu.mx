@@ -1,0 +1,34 @@
+$kind: http-request
+name: Update Empresa Otro Usuario (Sad)
+method: PUT
+url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/'
+order: 8000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{otherUserAccessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user": 2,
+      "nombre": "Tech Solutions SA de CV",
+      "domicilio": "Av. Juárez 123, Pachuca, Hidalgo",
+      "telefono": "7719876543",
+      "correo_contacto": "contacto@techsolutions.com",
+      "actividad_de_la_empresa": "Desarrollo de software",
+      "campo": "Tecnología",
+      "giro": 1,
+      "sector": 1
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 403", function () {
+          pm.response.to.have.status(403);
+      });

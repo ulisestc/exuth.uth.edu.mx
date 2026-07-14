@@ -1,0 +1,26 @@
+$kind: http-request
+name: 'Confirmar Reactivación Token Inválido - Sad Path'
+method: POST
+url: '{{baseUrl}}/auth/reactivate/confirm/'
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "uid": "uid-invalido",
+      "token": "token-invalido-aqui"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400 - Token inválido rechazado", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response contiene mensaje de error", function () {
+          const json = pm.response.json();
+          pm.expect(Object.keys(json).length).to.be.greaterThan(0);
+      });

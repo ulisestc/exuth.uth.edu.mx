@@ -1,0 +1,17 @@
+$kind: http-request
+name: Get Vacante no existe (Sad)
+method: GET
+url: '{{baseUrl}}/vacantes/99999/'
+order: 4000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 404", function () {
+          pm.response.to.have.status(404);
+      });

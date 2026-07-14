@@ -1,0 +1,49 @@
+$kind: http-request
+name: Update Vacante (Happy)
+method: PUT
+url: '{{baseUrl}}/vacantes/{{vacanteId}}/'
+order: 7000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Desarrollador Backend Python Senior",
+      "nivel_estudios": "Licenciatura",
+      "edad_minima": 25,
+      "edad_maxima": 40,
+      "sexo": "Indistinto",
+      "estado_civil": "Soltero",
+      "experiencia": "3 años de experiencia en Django o FastAPI",
+      "funciones_y_actividades": "Desarrollo y mantenimiento de APIs REST y microservicios",
+      "habilidades_y_competencias": "Python, Django, FastAPI, PostgreSQL, Docker, Git",
+      "transporte": "Transporte público",
+      "oferta_laboral": "Sueldo competitivo, prestaciones de ley, home office",
+      "sueldo_minimo": "12000.00",
+      "sueldo_maximo": "18000.00",
+      "horario": {"lunes": "09:00-18:00", "viernes": "09:00-15:00"},
+      "entrevistador": "Ing. García",
+      "confidencial": false,
+      "area_estudio": 1,
+      "idiomas": [
+        {"idioma": 1, "nivel": "Avanzado", "obligatorio": true}
+      ]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Titulo actualizado", function () {
+          var json = pm.response.json();
+          pm.expect(json.titulo).to.eql("Desarrollador Backend Python Senior");
+      });

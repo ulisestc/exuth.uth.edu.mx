@@ -1,0 +1,21 @@
+$kind: http-request
+name: List Empresas (Happy)
+method: GET
+url: '{{baseUrl}}/profiles/empresas/'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response is an array", function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData).to.be.an('array');
+      });

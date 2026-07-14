@@ -1,0 +1,16 @@
+$kind: http-request
+name: 'GET Mi Perfil Sin Token - Sad Path'
+method: GET
+url: '{{baseUrl}}/auth/users/me/'
+order: 2000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 401 - Sin token rechazado", function () {
+          pm.response.to.have.status(401);
+      });
+      pm.test("Response contiene mensaje de autenticación requerida", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("detail");
+      });

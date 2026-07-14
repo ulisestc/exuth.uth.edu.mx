@@ -1,0 +1,29 @@
+$kind: http-request
+name: 'Refresh Token - Happy Path'
+method: POST
+url: '{{baseUrl}}/auth/jwt/refresh/'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "refresh": "{{refreshToken}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Token refrescado exitosamente", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response tiene nuevo access token", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("access");
+      });
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.environment.set("accessToken", json.access);
+      }

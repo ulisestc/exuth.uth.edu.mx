@@ -1,0 +1,43 @@
+$kind: http-request
+name: 'Create Vacante: nivel_estudios inválido (Sad)'
+method: POST
+url: '{{baseUrl}}/vacantes/'
+order: 3000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Vacante Inválida",
+      "nivel_estudios": "Preparatoria",
+      "edad_minima": 22,
+      "edad_maxima": 35,
+      "sexo": "Indistinto",
+      "estado_civil": "Soltero",
+      "experiencia": "1 año de experiencia",
+      "funciones_y_actividades": "Funciones varias",
+      "habilidades_y_competencias": "Habilidades varias",
+      "transporte": "Transporte público",
+      "oferta_laboral": "Prestaciones de ley",
+      "sueldo_minimo": "8000.00",
+      "sueldo_maximo": "12000.00",
+      "horario": {"lunes": "09:00-18:00"},
+      "entrevistador": "Ing. García",
+      "confidencial": false,
+      "area_estudio": 1,
+      "idiomas": []
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400", function () {
+          pm.response.to.have.status(400);
+      });
