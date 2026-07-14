@@ -35,4 +35,6 @@ urlpatterns = [
     path('api/v1/profiles/', include('profiles.urls')),
     #endpoints de la app vacantes
     path('api/v1/vacantes/', include('vacantes.urls')),
+    #endpoints de la app core
+    path('api/v1/core/', include('core.urls'))
 ]
