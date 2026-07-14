@@ -18,6 +18,7 @@ class VacanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vacante
         fields = '__all__'
+        read_only_fields = ['empresa'] # <--- Esto le dice a DRF: "Yo lo lleno en el servidor, ignóralo si viene del frontend"
 
     def validate(self, attrs):
         sueldo_min = attrs.get('sueldo_minimo')
