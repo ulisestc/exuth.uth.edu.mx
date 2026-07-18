@@ -1,11 +1,10 @@
 $kind: http-request
-name: 'Login Empresa - Happy Path'
+name: Login Empresa - Happy Path
 method: POST
-url: '{{baseUrl}}/auth/jwt/create/'
+url: "{{baseUrl}}/auth/jwt/create/"
 order: 2000
 headers:
-  - key: Content-Type
-    value: application/json
+  Content-Type: application/json
 body:
   type: json
   content: |-
@@ -15,7 +14,6 @@ body:
     }
 scripts:
   - type: afterResponse
-    language: text/javascript
     code: |-
       pm.test("Status 200 - Login empresa exitoso", function () {
           pm.response.to.have.status(200);
@@ -33,3 +31,4 @@ scripts:
           pm.environment.set("empresaAccessToken", json.access);
           pm.environment.set("empresaRefreshToken", json.refresh);
       }
+    language: text/javascript

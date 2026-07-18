@@ -1,0 +1,17 @@
+$kind: http-request
+name: Delete Vacante Otro Usuario (Sad)
+method: DELETE
+url: '{{baseUrl}}/vacantes/{{vacanteId}}/'
+order: 9980
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{empresa2AccessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 403", function () {
+          pm.response.to.have.status(403);
+      });
