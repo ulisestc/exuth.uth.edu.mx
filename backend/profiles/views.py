@@ -16,6 +16,20 @@ class EgresadoViewSet(viewsets.ModelViewSet):
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     
+    filterset_fields = ['carrera']
+    
+    # Podemos buscar por matrícula, curp, o cruzar a la tabla User para buscar por nombre
+    search_fields = [
+        'matricula', 
+        'curp', 
+        'user__nombres', 
+        'user__apellido_paterno', 
+        'user__apellido_materno'
+    ]
+    
+    ordering_fields = ['id']
+    ordering = ['-id']
+
     def get_queryset(self):
         return Egresado.objects.filter(user__deactivated_at__isnull=True)
 
@@ -35,6 +49,18 @@ class EmpresaViewSet(viewsets.ModelViewSet):
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     
+    filterset_fields = ['giro', 'sector', 'status']
+    
+    search_fields = [
+        'nombre', 
+        'actividad_de_la_empresa', 
+        'correo_contacto'
+    ]
+    
+    # Permitimos ordenar por status para que los admins vean rápido las "pendientes"
+    ordering_fields = ['nombre', 'status', 'id']
+    ordering = ['-id']
+
     def get_queryset(self):
         return Empresa.objects.filter(user__deactivated_at__isnull=True)
     

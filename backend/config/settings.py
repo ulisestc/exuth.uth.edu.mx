@@ -140,6 +140,12 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
     # DOCS
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    #BUSQUEDA Y FILTROS
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
 
 from datetime import timedelta #CAMBIAR EN PROD
