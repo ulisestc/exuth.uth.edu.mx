@@ -32,4 +32,6 @@ scripts:
           const json = pm.response.json();
           pm.environment.set("accessToken", json.access);
           pm.environment.set("refreshToken", json.refresh);
+          pm.environment.set("egresadoAccessToken", json.access);
+          pm.environment.set("egresadoRefreshToken", json.refresh);
       }

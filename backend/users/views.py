@@ -20,6 +20,14 @@ from .serializers import ReactivateRequestSerializer, ReactivateConfirmSerialize
 User = get_user_model()
 
 class CustomUserViewSet(UserViewSet):
+    def perform_create(self, serializer, *args, **kwargs):
+        super().perform_create(serializer, *args, **kwargs)
+        # Si la activación por correo está desactivada, activamos el usuario directamente
+        if not settings.DJOSER.get('SEND_ACTIVATION_EMAIL', False):
+            user = serializer.instance
+            user.is_active = True
+            user.save()
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         

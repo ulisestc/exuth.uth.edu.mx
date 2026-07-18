@@ -2,7 +2,7 @@ $kind: http-request
 name: Delete Vacante (Happy)
 method: DELETE
 url: '{{baseUrl}}/vacantes/{{vacanteId}}/'
-order: 9000
+order: 9999
 auth:
   type: bearer
   credentials:

@@ -2,7 +2,7 @@ $kind: http-request
 name: List Egresados Sin Token (Sad)
 method: GET
 url: '{{baseUrl}}/profiles/egresados/'
-order: 2000
+order: 3500
 auth:
   type: noauth
 scripts:

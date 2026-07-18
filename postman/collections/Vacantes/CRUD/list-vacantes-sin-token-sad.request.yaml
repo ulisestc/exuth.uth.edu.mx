@@ -2,7 +2,7 @@ $kind: http-request
 name: List Vacantes sin token (Sad)
 method: GET
 url: '{{baseUrl}}/vacantes/'
-order: 2000
+order: 5500
 auth:
   type: noauth
 scripts:

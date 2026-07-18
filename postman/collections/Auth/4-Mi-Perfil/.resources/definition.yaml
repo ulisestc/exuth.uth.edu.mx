@@ -1,3 +1,3 @@
 $kind: collection
-name: Mi Perfil
+name: 4-Mi Perfil
 description: 'Endpoints del perfil del usuario autenticado: obtener, actualizar y eliminar (soft delete).'

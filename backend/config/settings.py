@@ -145,7 +145,7 @@ REST_FRAMEWORK = {
 from datetime import timedelta #CAMBIAR EN PROD
 # Authorization JWT -> token
 SIMPLE_JWT = {
-    'AUTH_HEADER_TYPES': ('JWT',),
+    'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
     'UPDATE_LAST_LOGIN': True, #para poder desactivar el usuario tras 6 meses de inactividad, se actualizará el campo last_login cada vez que el usuario haga login
     'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.CustomTokenObtainPairSerializer', #serializador custom para evitar que usuario con deactivated_at != None pueda iniciar sesión
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #CAMBIAR EN PROD
@@ -156,7 +156,7 @@ DJOSER = {
     'LOGIN_FIELD': 'email', #PARA MANDAR: { "username": "email@gmail.com", "password": "123" }
     'TOKEN_MODEL': None, #Solo se usará JWT
 
-    'SEND_ACTIVATION_EMAIL': True,
+    'SEND_ACTIVATION_EMAIL': config('SEND_ACTIVATION_EMAIL', default=True, cast=bool),
     'ACTIVATION_URL': 'auth/activate/{uid}/{token}/', #Frontend-> Angular ejecuta la petición
     'PASSWORD_RESET_CONFIRM_URL': 'auth/reset-password/{uid}/{token}/', #Frontend-> Angular ejecuta la petición
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,

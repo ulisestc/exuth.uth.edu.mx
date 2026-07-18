@@ -2,7 +2,7 @@ $kind: http-request
 name: Create Egresado (Happy)
 method: POST
 url: '{{baseUrl}}/profiles/egresados/'
-order: 5000
+order: 1000
 auth:
   type: bearer
   credentials:
@@ -15,13 +15,17 @@ body:
   type: json
   content: |-
     {
-      "user": 1,
+      "user": {{userId}},
       "matricula": "UTH2021001",
       "curp": "ABCD123456HDFXXX01",
       "telefono": "7711234567",
       "carrera": 1
     }
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-

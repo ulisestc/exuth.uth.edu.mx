@@ -2,7 +2,7 @@ $kind: http-request
 name: List Egresados (Happy)
 method: GET
 url: '{{baseUrl}}/profiles/egresados/'
-order: 1000
+order: 3000
 auth:
   type: bearer
   credentials:
@@ -15,7 +15,8 @@ scripts:
       pm.test("Status code is 200", function () {
           pm.response.to.have.status(200);
       });
-      pm.test("Response is an array", function () {
+      pm.test("Response has pagination structure", function () {
           var jsonData = pm.response.json();
-          pm.expect(jsonData).to.be.an('array');
+          pm.expect(jsonData).to.have.property('results');
+          pm.expect(jsonData.results).to.be.an('array');
       });

@@ -15,7 +15,7 @@ body:
   type: json
   content: |-
     {
-      "user": 1,
+      "user": {{empresaUserId}},
       "nombre": "Tech Solutions SA de CV",
       "domicilio": "Blvd. Everardo Márquez 123, Pachuca, Hidalgo",
       "telefono": "7719876543",

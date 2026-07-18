@@ -2,7 +2,7 @@ $kind: http-request
 name: Create Vacante (Happy)
 method: POST
 url: '{{baseUrl}}/vacantes/'
-order: 5000
+order: 1000
 auth:
   type: bearer
   credentials:
@@ -37,6 +37,10 @@ body:
       ]
     }
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-

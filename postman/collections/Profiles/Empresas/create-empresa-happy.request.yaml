@@ -2,7 +2,7 @@ $kind: http-request
 name: Create Empresa (Happy)
 method: POST
 url: '{{baseUrl}}/profiles/empresas/'
-order: 5000
+order: 1000
 auth:
   type: bearer
   credentials:
@@ -15,7 +15,7 @@ body:
   type: json
   content: |-
     {
-      "user": 1,
+      "user": {{empresaUserId}},
       "nombre": "Tech Solutions SA de CV",
       "domicilio": "Av. Juárez 123, Pachuca, Hidalgo",
       "telefono": "7719876543",
@@ -26,6 +26,10 @@ body:
       "sector": 1
     }
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-

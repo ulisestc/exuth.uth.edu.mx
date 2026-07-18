@@ -1,0 +1,57 @@
+$kind: http-request
+name: 'Confirmar Reactivación - Happy Path'
+method: POST
+url: '{{baseUrl}}/auth/reactivate/confirm/'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "uid": "{{reactivationUid}}",
+      "token": "{{reactivationToken}}"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      const sendRequest = (req) => {
+          return new Promise((resolve, reject) => {
+              pm.sendRequest(req, (err, res) => {
+                  if (err) return reject(err);
+                  resolve(res);
+              });
+          });
+      };
+
+      (async () => {
+          try {
+              // Wait a brief moment to ensure smtp4dev received the email
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              const res = await sendRequest("http://localhost:5000/api/messages");
+              const messages = res.json().results;
+              
+              // Find latest message for egresado@test.com with reactivation subject
+              const msg = messages.find(m => m.to.includes("egresado@test.com") && m.subject.includes("Reactivación"));
+              if (msg) {
+                  const bodyRes = await sendRequest("http://localhost:5000/api/messages/" + msg.id + "/plaintext");
+                  const body = bodyRes.text();
+                  const match = body.match(/\/reactivate-account\/([^\/]+)\/([^\/]+)\//);
+                  if (match) {
+                      pm.environment.set("reactivationUid", match[1]);
+                      pm.environment.set("reactivationToken", match[2]);
+                  }
+              }
+          } catch (e) {
+              console.error(e);
+          }
+      })();
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Cuenta reactivada exitosamente", function () {
+          pm.response.to.have.status(200);
+      });

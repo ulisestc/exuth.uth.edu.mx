@@ -13,7 +13,7 @@ class RequisitoIdiomaSerializer(serializers.ModelSerializer):
 
 class VacanteSerializer(serializers.ModelSerializer):
     #anidar serializer de RequisitoIdioma
-    idiomas = RequisitoIdiomaSerializer(many=True)
+    idiomas = RequisitoIdiomaSerializer(many=True, source='requisitoidioma_set')
 
     class Meta:
         model = Vacante
@@ -29,7 +29,7 @@ class VacanteSerializer(serializers.ModelSerializer):
     
     @transaction.atomic
     def create(self, validated_data):
-        idiomas_data = validated_data.pop('idiomas', [])
+        idiomas_data = validated_data.pop('requisitoidioma_set', [])
         vacante = Vacante.objects.create(**validated_data)
         for idioma_data in idiomas_data:
             RequisitoIdioma.objects.create(vacante=vacante, **idioma_data)
@@ -38,7 +38,7 @@ class VacanteSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         #extraer idiomas
-        idiomas_data = validated_data.pop('idiomas', None)
+        idiomas_data = validated_data.pop('requisitoidioma_set', None)
 
         # 2. Actualizar los campos propios de la Vacante
         for attr, value in validated_data.items():

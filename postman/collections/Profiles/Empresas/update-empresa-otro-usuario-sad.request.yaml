@@ -7,7 +7,7 @@ auth:
   type: bearer
   credentials:
     - key: token
-      value: '{{otherUserAccessToken}}'
+      value: '{{egresadoAccessToken}}'
 headers:
   - key: Content-Type
     value: application/json
