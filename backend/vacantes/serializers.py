@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import Vacante, RequisitoIdioma
+from .models import Vacante, RequisitoIdioma, Postulacion
 from core.models import Idioma
 
 class RequisitoIdiomaSerializer(serializers.ModelSerializer):
@@ -53,3 +53,9 @@ class VacanteSerializer(serializers.ModelSerializer):
             for idioma_data in idiomas_data:
                 RequisitoIdioma.objects.create(vacante=instance, **idioma_data)  # Crear nuevos idiomas
         return instance
+    
+class PostulacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Postulacion
+        fields = '__all__'
+        read_only_fields = ['id', 'egresado', 'fecha_postulacion', 'estado'] # campos bliondados (seguridad) 

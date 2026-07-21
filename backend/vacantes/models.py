@@ -59,3 +59,22 @@ class RequisitoIdioma(models.Model):
     idioma = models.ForeignKey(Idioma, on_delete=models.CASCADE)
     nivel = models.CharField(max_length=50, choices=NIVELES_IDIOMA)
     obligatorio = models.BooleanField(default=False)
+
+class Postulacion(models.Model):
+    ESTADOS_POSTULACION = (
+        ('Pendiente', 'Pendiente'),
+        ('Aceptada', 'Aceptada'),
+        ('Rechazada', 'Rechazada'),
+    )
+    vacante = models.ForeignKey(Vacante, on_delete=models.CASCADE, related_name='postulaciones')
+    egresado = models.ForeignKey('profiles.Egresado', on_delete=models.CASCADE, related_name='postulaciones')
+    fecha_postulacion = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS_POSTULACION, default='Pendiente')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['vacante', 'egresado'], name='unique_postulacion')
+        ]
+    
+    def __str__(self):
+        return f"Postulación de {self.egresado} a la vacante {self.vacante}"
