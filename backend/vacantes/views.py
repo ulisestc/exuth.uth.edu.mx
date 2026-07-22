@@ -2,11 +2,13 @@ from rest_framework import viewsets, permissions, exceptions
 from .models import Vacante, Postulacion
 from .serializers import VacanteSerializer, PostulacionSerializer, PostulacionEstadoSerializer
 from .permissions import IsEmpresaAuthorOrReadOnly
+from profiles.permissions import IsEmpresaAprobadaOrReadOnly
+from rest_framework.exceptions import PermissionDenied
 
 class VacanteViewSet(viewsets.ModelViewSet):
     queryset = Vacante.objects.all()
     serializer_class = VacanteSerializer
-    permission_classes = [permissions.IsAuthenticated, IsEmpresaAuthorOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsEmpresaAuthorOrReadOnly, IsEmpresaAprobadaOrReadOnly]
 
     #filtros, busquedas y ordenamiento
     filterset_fields = [
@@ -26,6 +28,8 @@ class VacanteViewSet(viewsets.ModelViewSet):
     ordering = ['-id']
     
     def perform_create(self, serializer):
+        if not hasattr(self.request.user, 'empresa'):
+            raise PermissionDenied("Solo las empresas registradas y aprobadas pueden crear vacantes desde la API. Los administradores deben usar el panel interno de Django.")       
         # Asignar la empresa del usuario autenticado al crear una vacante
         serializer.save(empresa=self.request.user.empresa)
 
