@@ -1,0 +1,30 @@
+$kind: http-request
+name: Create Postulacion por Empresa (Sad - RBAC)
+method: POST
+url: '{{baseUrl}}/vacantes/postulaciones/'
+order: 5300
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "vacante": {{vacanteId}}
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Empresa no puede postularse", function () {
+          pm.response.to.have.status(403);
+      });

@@ -1,0 +1,30 @@
+$kind: http-request
+name: Create Postulacion Duplicada (Sad)
+method: POST
+url: '{{baseUrl}}/vacantes/postulaciones/'
+order: 5200
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "vacante": {{vacanteId}}
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400 - Duplicada no permitida", function () {
+          pm.response.to.have.status(400);
+      });

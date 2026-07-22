@@ -1,0 +1,40 @@
+$kind: http-request
+name: Create Postulacion (Happy)
+method: POST
+url: '{{baseUrl}}/vacantes/postulaciones/'
+order: 5100
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "vacante": {{vacanteId}}
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 201 - Postulacion creada", function () {
+          pm.response.to.have.status(201);
+      });
+      pm.test("Tiene id, vacante, egresado y estado inicial Pendiente", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.have.property('id');
+          pm.expect(json).to.have.property('vacante');
+          pm.expect(json).to.have.property('egresado');
+          pm.expect(json.estado).to.eql("Pendiente");
+      });
+      if (pm.response.code === 201) {
+          pm.environment.set("postulacionId", pm.response.json().id);
+      }

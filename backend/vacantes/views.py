@@ -50,7 +50,11 @@ class PostulacionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # si es empresa, no puede crear postulaciones. si es egresado, asignar el egresado del usuario autenticado al crear una postulacion
         if hasattr(self.request.user, 'egresado'):
-            serializer.save(egresado=self.request.user.egresado)
+            egresado = self.request.user.egresado
+            vacante = serializer.validated_data.get('vacante')
+            if Postulacion.objects.filter(vacante=vacante, egresado=egresado).exists():
+                raise exceptions.ValidationError("Ya te has postulado a esta vacante.") #400
+            serializer.save(egresado=egresado)
         else:
             raise exceptions.PermissionDenied("Solo los egresados pueden crear postulaciones.") #403
     

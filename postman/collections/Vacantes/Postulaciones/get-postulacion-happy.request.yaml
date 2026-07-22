@@ -1,0 +1,28 @@
+$kind: http-request
+name: Get Postulacion (Happy)
+method: GET
+url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/'
+order: 5600
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Tiene campos requeridos de postulacion", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.have.property('id');
+          pm.expect(json).to.have.property('vacante');
+          pm.expect(json).to.have.property('egresado');
+          pm.expect(json).to.have.property('estado');
+      });

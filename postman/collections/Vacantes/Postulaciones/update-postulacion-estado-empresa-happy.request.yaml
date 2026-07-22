@@ -1,0 +1,34 @@
+$kind: http-request
+name: Update Postulacion Estado Empresa (Happy)
+method: PATCH
+url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/'
+order: 5700
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "estado": "Aceptada"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Estado actualizado por Empresa", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Estado es Aceptada", function () {
+          var json = pm.response.json();
+          pm.expect(json.estado).to.eql("Aceptada");
+      });
