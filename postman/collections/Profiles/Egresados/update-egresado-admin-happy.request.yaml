@@ -1,8 +1,8 @@
 $kind: http-request
-name: Update Egresado (Happy)
+name: Update Egresado por Admin (Happy - RBAC)
 method: PUT
 url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/'
-order: 8000
+order: 8100
 auth:
   type: bearer
   credentials:
@@ -15,20 +15,19 @@ body:
   type: json
   content: |-
     {
-      "user": {{userId}},
       "matricula": "UTH2021001",
       "curp": "ABCD123456HDFXXX01",
-      "telefono": "7719999999",
+      "telefono": "7719998888",
       "carrera": 1
     }
 scripts:
   - type: beforeRequest
     language: text/javascript
     code: |-
-      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status code is 200", function () {
+      pm.test("Status 200 - Admin edita perfil de egresado", function () {
           pm.response.to.have.status(200);
       });

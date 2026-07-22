@@ -1,0 +1,37 @@
+$kind: http-request
+name: Create Empresa Rol Inválido (Sad - RBAC)
+method: POST
+url: '{{baseUrl}}/profiles/empresas/'
+order: 6100
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Empresa No Autorizada",
+      "domicilio": "Calle Falsa 123",
+      "telefono": "7710000000",
+      "correo_contacto": "noautorizado@empresa.com",
+      "actividad_de_la_empresa": "Testing",
+      "campo": "Testing",
+      "giro": 1,
+      "sector": 1
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Egresado no puede crear perfil de Empresa", function () {
+          pm.response.to.have.status(403);
+      });

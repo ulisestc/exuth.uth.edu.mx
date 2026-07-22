@@ -35,6 +35,10 @@ body:
       "idiomas": []
     }
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-

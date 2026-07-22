@@ -1,8 +1,8 @@
 $kind: http-request
-name: 'Create Vacante: sueldo_minimo > sueldo_maximo (Sad)'
+name: Create Vacante Empresa Pendiente (Sad - RBAC)
 method: POST
 url: '{{baseUrl}}/vacantes/'
-order: 1000
+order: 7150
 auth:
   type: bearer
   credentials:
@@ -15,21 +15,21 @@ body:
   type: json
   content: |-
     {
-      "titulo": "Vacante Inválida",
+      "titulo": "Vacante Empresa No Aprobada",
       "nivel_estudios": "Licenciatura",
       "edad_minima": 22,
       "edad_maxima": 35,
       "sexo": "Indistinto",
       "estado_civil": "Soltero",
-      "experiencia": "1 año de experiencia",
-      "funciones_y_actividades": "Funciones varias",
-      "habilidades_y_competencias": "Habilidades varias",
+      "experiencia": "Testing",
+      "funciones_y_actividades": "Testing",
+      "habilidades_y_competencias": "Testing",
       "transporte": "Transporte público",
-      "oferta_laboral": "Prestaciones de ley",
-      "sueldo_minimo": "15000.00",
-      "sueldo_maximo": "8000.00",
+      "oferta_laboral": "Testing",
+      "sueldo_minimo": "8000.00",
+      "sueldo_maximo": "12000.00",
       "horario": {"lunes": "09:00-18:00"},
-      "entrevistador": "Ing. García",
+      "entrevistador": "Ing. Test",
       "confidencial": false,
       "area_estudio": 1,
       "idiomas": []
@@ -42,10 +42,6 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status 400", function () {
-          pm.response.to.have.status(400);
-      });
-      pm.test("Mensaje de error sobre sueldo", function () {
-          var body = pm.response.text();
-          pm.expect(body.toLowerCase()).to.include("sueldo");
+      pm.test("Status 403 - Empresa pendiente no puede crear vacante", function () {
+          pm.response.to.have.status(403);
       });

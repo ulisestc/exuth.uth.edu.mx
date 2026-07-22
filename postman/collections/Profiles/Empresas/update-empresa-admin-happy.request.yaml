@@ -1,8 +1,8 @@
 $kind: http-request
-name: Update Empresa (Happy)
+name: Update Empresa por Admin (Happy - RBAC)
 method: PUT
 url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/'
-order: 7000
+order: 8100
 auth:
   type: bearer
   credentials:
@@ -15,7 +15,6 @@ body:
   type: json
   content: |-
     {
-      "user": {{empresaUserId}},
       "nombre": "Tech Solutions SA de CV",
       "domicilio": "Blvd. Everardo Márquez 123, Pachuca, Hidalgo",
       "telefono": "7719876543",
@@ -29,10 +28,10 @@ scripts:
   - type: beforeRequest
     language: text/javascript
     code: |-
-      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status code is 200", function () {
+      pm.test("Status 200 - Admin edita perfil de empresa", function () {
           pm.response.to.have.status(200);
       });

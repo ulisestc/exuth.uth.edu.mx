@@ -1,8 +1,8 @@
 $kind: http-request
-name: Update Empresa (Happy)
-method: PUT
-url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/'
-order: 7000
+name: Create Empresa Perfil Duplicado (Sad - OneToOne)
+method: POST
+url: '{{baseUrl}}/profiles/empresas/'
+order: 6200
 auth:
   type: bearer
   credentials:
@@ -15,12 +15,11 @@ body:
   type: json
   content: |-
     {
-      "user": {{empresaUserId}},
-      "nombre": "Tech Solutions SA de CV",
-      "domicilio": "Blvd. Everardo Márquez 123, Pachuca, Hidalgo",
-      "telefono": "7719876543",
-      "correo_contacto": "contacto@techsolutions.com",
-      "actividad_de_la_empresa": "Desarrollo de software y consultoría",
+      "nombre": "Segunda Empresa Falsa",
+      "domicilio": "Calle Falsa 456",
+      "telefono": "7710000000",
+      "correo_contacto": "segunda@empresa.com",
+      "actividad_de_la_empresa": "Software",
       "campo": "Tecnología",
       "giro": 1,
       "sector": 1
@@ -33,6 +32,6 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status code is 200", function () {
-          pm.response.to.have.status(200);
+      pm.test("Status 400 - Perfil de empresa ya existe para esta cuenta", function () {
+          pm.response.to.have.status(400);
       });

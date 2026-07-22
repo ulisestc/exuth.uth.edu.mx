@@ -1,8 +1,8 @@
 $kind: http-request
-name: Update Egresado (Happy)
-method: PUT
-url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/'
-order: 8000
+name: Create Egresado Perfil Duplicado (Sad - OneToOne)
+method: POST
+url: '{{baseUrl}}/profiles/egresados/'
+order: 6200
 auth:
   type: bearer
   credentials:
@@ -15,10 +15,9 @@ body:
   type: json
   content: |-
     {
-      "user": {{userId}},
-      "matricula": "UTH2021001",
-      "curp": "ABCD123456HDFXXX01",
-      "telefono": "7719999999",
+      "matricula": "UTH2021002",
+      "curp": "NEWCURP1234567890",
+      "telefono": "7710000000",
       "carrera": 1
     }
 scripts:
@@ -29,6 +28,6 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status code is 200", function () {
-          pm.response.to.have.status(200);
+      pm.test("Status 400 - Perfil de egresado ya existe para esta cuenta", function () {
+          pm.response.to.have.status(400);
       });

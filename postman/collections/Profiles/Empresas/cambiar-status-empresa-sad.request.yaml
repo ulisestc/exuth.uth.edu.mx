@@ -1,8 +1,8 @@
 $kind: http-request
-name: 'Create Vacante: campos requeridos faltantes (Sad)'
-method: POST
-url: '{{baseUrl}}/vacantes/'
-order: 2000
+name: Cambiar Status Empresa por Empresa (Sad - RBAC)
+method: PATCH
+url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/cambiar_status/'
+order: 7100
 auth:
   type: bearer
   credentials:
@@ -14,7 +14,9 @@ headers:
 body:
   type: json
   content: |-
-    {}
+    {
+      "status": "aprobada"
+    }
 scripts:
   - type: beforeRequest
     language: text/javascript
@@ -23,6 +25,6 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status 400", function () {
-          pm.response.to.have.status(400);
+      pm.test("Status 403 - Empresa no puede cambiar su propio estatus", function () {
+          pm.response.to.have.status(403);
       });

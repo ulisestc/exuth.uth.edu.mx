@@ -1,8 +1,8 @@
 $kind: http-request
-name: 'Create Vacante: campos requeridos faltantes (Sad)'
+name: Create Egresado Rol Inválido (Sad - RBAC)
 method: POST
-url: '{{baseUrl}}/vacantes/'
-order: 2000
+url: '{{baseUrl}}/profiles/egresados/'
+order: 6100
 auth:
   type: bearer
   credentials:
@@ -14,7 +14,12 @@ headers:
 body:
   type: json
   content: |-
-    {}
+    {
+      "matricula": "UTH9999999",
+      "curp": "FAKE123456HDFXXX09",
+      "telefono": "7710000000",
+      "carrera": 1
+    }
 scripts:
   - type: beforeRequest
     language: text/javascript
@@ -23,6 +28,6 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status 400", function () {
-          pm.response.to.have.status(400);
+      pm.test("Status 403 - Empresa no puede crear perfil de Egresado", function () {
+          pm.response.to.have.status(403);
       });

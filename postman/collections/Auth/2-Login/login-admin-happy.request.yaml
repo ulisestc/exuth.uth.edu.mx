@@ -1,0 +1,25 @@
+$kind: http-request
+name: Login Admin - Happy Path
+method: POST
+url: "{{baseUrl}}/auth/jwt/create/"
+order: 2600
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "admin@test.com",
+      "password": "TestPass123!"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status 200 - Login admin exitoso", function () {
+          pm.response.to.have.status(200);
+      });
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.environment.set("adminAccessToken", json.access);
+      }
+    language: text/javascript

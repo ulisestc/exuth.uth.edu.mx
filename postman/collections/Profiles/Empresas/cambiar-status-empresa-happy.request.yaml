@@ -1,0 +1,34 @@
+$kind: http-request
+name: Cambiar Status Empresa por Admin (Happy)
+method: PATCH
+url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/cambiar_status/'
+order: 7200
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "aprobada"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Admin aprueba la empresa", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Status de empresa actualizado a aprobada", function () {
+          var json = pm.response.json();
+          pm.expect(json.status).to.eql("aprobada");
+      });
