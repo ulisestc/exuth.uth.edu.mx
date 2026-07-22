@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions, exceptions
 from .models import Vacante, Postulacion
-from .serializers import VacanteSerializer, PostulacionSerializer
+from .serializers import VacanteSerializer, PostulacionSerializer, PostulacionEstadoSerializer
 from .permissions import IsEmpresaAuthorOrReadOnly
 
 class VacanteViewSet(viewsets.ModelViewSet):
@@ -42,9 +42,21 @@ class PostulacionViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(egresado=self.request.user.egresado)
         return self.queryset if (self.request.user.rol in ['soporte_ti', 'admin_uth'] or self.request.user.is_superuser) else self.queryset.none()
 
+    def get_serializer_class(self):
+        if self.action == 'update' or self.action == 'partial_update':
+            return PostulacionEstadoSerializer  # Usar el serializer de estado para actualizaciones
+        return PostulacionSerializer  # Usar el serializer completo para otras acciones
+
     def perform_create(self, serializer):
         # si es empresa, no puede crear postulaciones. si es egresado, asignar el egresado del usuario autenticado al crear una postulacion
         if hasattr(self.request.user, 'egresado'):
             serializer.save(egresado=self.request.user.egresado)
         else:
             raise exceptions.PermissionDenied("Solo los egresados pueden crear postulaciones.") #403
+    
+    def perform_update(self, serializer):
+        # Solo permitir que las empresas, soporte_ti y admin_uth actualicen el estado de la postulación
+        if hasattr(self.request.user, 'empresa') or self.request.user.rol in ['soporte_ti', 'admin_uth'] or self.request.user.is_superuser:
+            serializer.save()
+        else:
+            raise exceptions.PermissionDenied("No tienes permiso para actualizar el estado de esta postulación.") #403 

@@ -59,3 +59,9 @@ class PostulacionSerializer(serializers.ModelSerializer):
         model = Postulacion
         fields = '__all__'
         read_only_fields = ['id', 'egresado', 'fecha_postulacion', 'estado'] # campos bliondados (seguridad) 
+
+class PostulacionEstadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Postulacion
+        fields = ['estado', 'id']  # Solo se permite actualizar el estado de la postulación
+        read_only_fields = ['id']  # El ID es de solo lectura, no se puede modificar
