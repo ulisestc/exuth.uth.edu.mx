@@ -172,6 +172,7 @@ DJOSER = {
         'user_create': 'users.serializers.UserCreateSerializer', #/users/
         'user': 'users.serializers.CustomUserSerializer', #/users/{id}/
         'current_user': 'users.serializers.CustomUserSerializer', #/users/me/
+        'activation': 'users.serializers.CustomActivationSerializer', #/users/activation
     },
 }
 

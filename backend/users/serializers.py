@@ -1,4 +1,6 @@
 from djoser.serializers import UserSerializer as BaseUserSerializer, UserCreateSerializer as BaseUserCreateSerializer
+from djoser.serializers import ActivationSerializer
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -45,3 +47,26 @@ class ReactivateRequestSerializer(serializers.Serializer):
 class ReactivateConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField(help_text="ID codificado del usuario (provisto en el correo)")
     token = serializers.CharField(help_text="Token de reactivación (provisto en el correo)")
+
+#serializador personalizado para forzosamente tener que aceptar el aviso de privacidad al activar cuenta
+class CustomActivationSerializer(ActivationSerializer): 
+    acepta_aviso_privacidad = serializers.BooleanField(required=True)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if not attrs.get('acepta_aviso_privacidad'):
+            raise serializers.ValidationError(
+                {"acepta_aviso_privacidad": "Es un requisito legal indispensable aceptar el Aviso de Privacidad para activar tu cuenta."}         
+            )
+
+        return attrs
+
+    def save(self, **kwargs):
+        super.save(**kwargs)
+
+        self.user.acepta_aviso_privacidad = True
+        self.user.fecha_aviso_privacidad = timezone.now()
+        self.user.save(update_fields=['is_active','acepta_aviso_privacidad','fecha_aviso_privacidad'])
+
+        return self.user

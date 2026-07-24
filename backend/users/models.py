@@ -59,6 +59,17 @@ class User (AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
     last_login = models.DateTimeField(blank=True, null=True)
 
+    #Trazabilidad aviso de privacidad
+    acepta_aviso_privacidad = models.BooleanField(
+        default = False,
+        verbose_name = "Aceptó el aviso de privacidad"
+    )
+    fecha_aviso_privacidad = models.DateTimeField(
+        null = True,
+        blank = True,
+        verbose_name = "Fecha de aceptación del aviso de privacidad"
+    )
+
     objects = CustomUserManager()
     active_objects = ActiveUserManager()
 
