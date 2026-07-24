@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'profiles',
     'core',
     'vacantes',
+    'events',
 ]
 
 MIDDLEWARE = [
