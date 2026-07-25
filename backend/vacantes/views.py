@@ -14,13 +14,13 @@ class VacanteViewSet(viewsets.ModelViewSet):
     filterset_fields = [
         'area_estudio', 
         'nivel_estudios', 
-        'transporte'
+        'incluye_transporte'
     ]
 
     search_fields = [
         'titulo', 
-        'funciones_y_actividades', 
-        'habilidades_y_competencias', 
+        'responsabilidades', 
+        'habilidades', 
         'experiencia'
     ]
     
