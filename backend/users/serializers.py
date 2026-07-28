@@ -26,9 +26,9 @@ class CustomUserSerializer(BaseUserSerializer):
     """Serializer para editar el propio usuario /users/me/"""
     class Meta(BaseUserSerializer.Meta):
         model = User
-        fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'is_active', 'deactivated_at', 'date_joined', 'last_login')
+        fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'is_active', 'deactivated_at', 'date_joined', 'last_login', 'acepta_aviso_privacidad', 'fecha_aviso_privacidad')
         # Hacemos que deactivated_at sea de solo lectura
-        read_only_fields = ('id', 'email', 'rol', 'is_active', 'deactivated_at', 'date_joined', 'last_login')
+        read_only_fields = ('id', 'email', 'rol', 'is_active', 'deactivated_at', 'date_joined', 'last_login', 'acepta_aviso_privacidad', 'fecha_aviso_privacidad')
 
 #serializador custom para evitar que usuario con deactivated_at != None pueda iniciar sesión
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

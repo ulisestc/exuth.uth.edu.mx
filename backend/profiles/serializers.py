@@ -4,8 +4,13 @@ from .models import Egresado, Empresa
 class EgresadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Egresado
-        fields = ['id', 'user', 'matricula', 'curp', 'cv', 'telefono', 'carrera']
-        read_only_fields = ['id', 'user']  # El 'id' es de solo lectura, y 'user' se asignará automáticamente al usuario autenticado.
+        fields = [
+            'id', 'user', 'matricula', 'curp', 'cv', 'carrera',
+            'telefono_celular', 'telefono_casa', 'domicilio',
+            'nivel_estudios', 'genero', 'capacidades_especiales',
+            'habilidades', 'documentos', 'colocado', 'es_verificado_padron'
+        ]
+        read_only_fields = ['id', 'user', 'colocado', 'es_verificado_padron']  # El 'id' es de solo lectura, y 'user' se asignará automáticamente al usuario autenticado.
 
     def to_representation(self, instance):
         # 1. Obtiene el diccionario original (donde 'carrera' es un número)
@@ -19,8 +24,9 @@ class EmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empresa
         fields = [
-            'id', 'user', 'nombre', 'domicilio', 'telefono', 'correo_contacto',
-            'actividad_de_la_empresa', 'campo', 'giro', 'sector', 'status'
+            'id', 'user', 'nombre', 'domicilio', 'correo_contacto',
+            'actividad_de_la_empresa', 'campo', 'giro', 'sector', 'status',
+            'telefono_oficina', 'telefono_celular', 'nombre_contacto', 'cargo_contacto' 
         ]
         read_only_fields = ['id', 'status', 'user']  # El 'id' y 'status' son de solo lectura, y 'user' se asignará automáticamente al usuario autenticado.
 
