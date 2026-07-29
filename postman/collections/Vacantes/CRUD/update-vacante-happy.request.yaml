@@ -16,27 +16,38 @@ body:
   content: |-
     {
       "titulo": "Desarrollador Backend Python Senior",
-      "nivel_estudios": "Licenciatura",
-      "edad_minima": 25,
-      "edad_maxima": 40,
-      "sexo": "Indistinto",
-      "estado_civil": "Soltero",
+      "tipo_contratacion": "tiempo_completo",
+      "modalidad": "hibrido",
+      "num_candidatos": 3,
+      "horario_trabajo": "Lunes a Viernes 9:00 a 18:00",
+      "nivel_estudios": "ING_LIC",
+      "edad": "25 a 40 años",
+      "genero": "indistinto",
+      "estado_civil": "soltero",
+      "es_inclusiva": false,
       "experiencia": "3 años de experiencia en Django o FastAPI",
-      "funciones_y_actividades": "Desarrollo y mantenimiento de APIs REST y microservicios",
-      "habilidades_y_competencias": "Python, Django, FastAPI, PostgreSQL, Docker, Git",
-      "transporte": "Transporte público",
-      "oferta_laboral": "Sueldo competitivo, prestaciones de ley, home office",
+      "conocimientos": "Python, Django, FastAPI, PostgreSQL, Docker, Git",
+      "habilidades": "Liderazgo, arquitectura de software",
+      "actitudes": "Responsabilidad, Proactividad",
+      "responsabilidades": "Desarrollo y mantenimiento de APIs REST y microservicios",
       "sueldo_minimo": "12000.00",
       "sueldo_maximo": "18000.00",
-      "horario": {"lunes": "09:00-18:00", "viernes": "09:00-15:00"},
-      "entrevistador": "Ing. García",
-      "confidencial": false,
+      "salario_a_tratar": false,
+      "prestaciones": "Sueldo competitivo, prestaciones de ley, home office",
+      "incluye_transporte": false,
+      "incluye_comedor": false,
+      "documentos_requeridos": "Título o Cédula Profesional",
+      "persona_contacto": "Ing. García",
       "area_estudio": 1,
       "idiomas": [
-        {"idioma": 1, "nivel": "Avanzado", "obligatorio": true}
+        {"idioma": 1, "nivel": "C1", "obligatorio": true}
       ]
     }
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-

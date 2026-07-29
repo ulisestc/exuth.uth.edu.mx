@@ -1,8 +1,8 @@
 $kind: http-request
-name: Delete Egresado Soft (Happy)
+name: Delete Postulacion (Happy)
 method: DELETE
-url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/'
-order: 10000
+url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/'
+order: 2000
 auth:
   type: bearer
   credentials:
@@ -16,6 +16,6 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status code is 204", function () {
+      pm.test("Status 204 - Postulacion eliminada", function () {
           pm.response.to.have.status(204);
       });

@@ -17,7 +17,12 @@ body:
     {
       "matricula": "UTH2021001",
       "curp": "ABCD123456HDFXXX01",
-      "telefono": "7719998888",
+      "telefono_celular": "7719998888",
+      "telefono_casa": "7717654321",
+      "domicilio": "Av. Universidad #456, Pachuca, Hidalgo",
+      "nivel_estudios": "ING_LIC",
+      "genero": "M",
+      "habilidades": "Desarrollo Python, Django, PostgreSQL, React",
       "carrera": 1
     }
 scripts:

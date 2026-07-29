@@ -17,12 +17,15 @@ body:
     {
       "nombre": "Segunda Empresa Falsa",
       "domicilio": "Calle Falsa 456",
-      "telefono": "7710000000",
+      "telefono_oficina": "7710000000",
+      "telefono_celular": "7711112222",
       "correo_contacto": "segunda@empresa.com",
       "actividad_de_la_empresa": "Software",
       "campo": "Tecnología",
       "giro": 1,
-      "sector": 1
+      "sector": 1,
+      "nombre_contacto": "Contacto Test",
+      "cargo_contacto": "Gerente"
     }
 scripts:
   - type: beforeRequest

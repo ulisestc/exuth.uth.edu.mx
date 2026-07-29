@@ -1,0 +1,32 @@
+$kind: http-request
+name: Create Colocación por Egresado (Sad - RBAC)
+method: POST
+url: '{{baseUrl}}/vacantes/colocaciones/'
+order: 2000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "egresado": {{egresadoId}},
+      "vacante": {{vacanteId}},
+      "observaciones": "Intento no autorizado"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Egresado no puede registrar colocaciones", function () {
+          pm.response.to.have.status(403);
+      });

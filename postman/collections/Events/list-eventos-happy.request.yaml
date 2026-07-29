@@ -1,7 +1,7 @@
 $kind: http-request
-name: Get Vacante (Happy)
+name: List Eventos (Happy)
 method: GET
-url: '{{baseUrl}}/vacantes/{{vacanteId}}/'
+url: '{{baseUrl}}/events/'
 order: 3000
 auth:
   type: bearer
@@ -19,11 +19,8 @@ scripts:
       pm.test("Status 200", function () {
           pm.response.to.have.status(200);
       });
-      pm.test("Tiene campos requeridos", function () {
+      pm.test("Response es paginado y tiene eventos", function () {
           var json = pm.response.json();
-          pm.expect(json).to.have.property('titulo');
-          pm.expect(json).to.have.property('nivel_estudios');
-          pm.expect(json).to.have.property('sueldo_minimo');
-          pm.expect(json).to.have.property('sueldo_maximo');
-          pm.expect(json).to.have.property('idiomas');
+          pm.expect(json).to.have.property('results');
+          pm.expect(json.results).to.be.an('array');
       });

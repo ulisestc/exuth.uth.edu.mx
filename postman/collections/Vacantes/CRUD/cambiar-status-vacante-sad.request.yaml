@@ -1,0 +1,30 @@
+$kind: http-request
+name: Cambiar Status Vacante por Empresa (Sad - RBAC)
+method: PATCH
+url: '{{baseUrl}}/vacantes/{{vacanteId}}/cambiar_status/'
+order: 7100
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "aprobada"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Empresa no puede cambiar el estatus de su vacante", function () {
+          pm.response.to.have.status(403);
+      });

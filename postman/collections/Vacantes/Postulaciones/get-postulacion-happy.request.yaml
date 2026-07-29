@@ -2,7 +2,7 @@ $kind: http-request
 name: Get Postulacion (Happy)
 method: GET
 url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/'
-order: 5600
+order: 4000
 auth:
   type: bearer
   credentials:

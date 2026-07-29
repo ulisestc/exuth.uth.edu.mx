@@ -1,8 +1,8 @@
 $kind: http-request
-name: Delete Empresa Soft (Happy)
+name: Delete Vacante (Happy)
 method: DELETE
-url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/'
-order: 9000
+url: '{{baseUrl}}/vacantes/{{vacanteId}}/'
+order: 1000
 auth:
   type: bearer
   credentials:
@@ -16,6 +16,6 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status code is 204", function () {
+      pm.test("Status 204", function () {
           pm.response.to.have.status(204);
       });

@@ -9,6 +9,10 @@ auth:
     - key: token
       value: '{{accessToken}}'
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-

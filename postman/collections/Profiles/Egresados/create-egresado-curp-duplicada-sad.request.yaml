@@ -15,13 +15,20 @@ body:
   type: json
   content: |-
     {
-      "user": 2,
       "matricula": "UTH2021002",
       "curp": "ABCD123456HDFXXX01",
-      "telefono": "7711234568",
+      "telefono_celular": "7711234568",
+      "domicilio": "Calle Falsa #123, Pachuca, Hidalgo",
+      "nivel_estudios": "ING_LIC",
+      "genero": "F",
+      "habilidades": "Testing",
       "carrera": 1
     }
 scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-

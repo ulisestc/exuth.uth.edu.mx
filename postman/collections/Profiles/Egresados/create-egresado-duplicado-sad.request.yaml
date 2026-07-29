@@ -17,7 +17,11 @@ body:
     {
       "matricula": "UTH2021002",
       "curp": "NEWCURP1234567890",
-      "telefono": "7710000000",
+      "telefono_celular": "7710000000",
+      "domicilio": "Calle Falsa #456",
+      "nivel_estudios": "ING_LIC",
+      "genero": "F",
+      "habilidades": "Testing",
       "carrera": 1
     }
 scripts:

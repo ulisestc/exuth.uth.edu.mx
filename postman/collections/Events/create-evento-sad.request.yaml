@@ -1,0 +1,36 @@
+$kind: http-request
+name: Create Evento por Egresado (Sad - RBAC)
+method: POST
+url: '{{baseUrl}}/events/'
+order: 2000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Evento No Autorizado",
+      "tipo_evento": "taller",
+      "fecha_inicio": "2026-10-15T09:00:00Z",
+      "fecha_fin": "2026-10-15T18:00:00Z",
+      "lugar": "Virtual",
+      "descripcion": "Testing RBAC",
+      "is_active": true
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Egresado no puede crear eventos", function () {
+          pm.response.to.have.status(403);
+      });

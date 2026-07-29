@@ -34,8 +34,8 @@ scripts:
               const res = await sendRequest("http://localhost:5000/api/messages");
               const messages = res.json().results;
               
-              // Find latest message for egresado@test.com with reactivation subject
-              const msg = messages.find(m => m.to.includes("egresado@test.com") && m.subject.includes("Reactivación"));
+              // Find latest message for desactivado@test.com with reactivation subject
+              const msg = messages.find(m => m.to.includes("desactivado@test.com") && m.subject.includes("Reactivación"));
               if (msg) {
                   const bodyRes = await sendRequest("http://localhost:5000/api/messages/" + msg.id + "/plaintext");
                   const body = bodyRes.text();
@@ -49,6 +49,7 @@ scripts:
               console.error(e);
           }
       })();
+scripts:
   - type: afterResponse
     language: text/javascript
     code: |-

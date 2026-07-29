@@ -1,8 +1,8 @@
 $kind: http-request
-name: Delete Postulacion (Happy)
+name: Delete Empresa Soft (Happy)
 method: DELETE
-url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/'
-order: 5900
+url: '{{baseUrl}}/profiles/empresas/{{empresaId}}/'
+order: 4000
 auth:
   type: bearer
   credentials:
@@ -12,10 +12,10 @@ scripts:
   - type: beforeRequest
     language: text/javascript
     code: |-
-      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status 204 - Postulacion eliminada", function () {
+      pm.test("Status code is 204", function () {
           pm.response.to.have.status(204);
       });

@@ -16,24 +16,31 @@ body:
   content: |-
     {
       "titulo": "Desarrollador Backend Python",
-      "nivel_estudios": "Licenciatura",
-      "edad_minima": 22,
-      "edad_maxima": 35,
-      "sexo": "Indistinto",
-      "estado_civil": "Soltero",
+      "tipo_contratacion": "tiempo_completo",
+      "modalidad": "presencial",
+      "num_candidatos": 2,
+      "horario_trabajo": "Lunes a Viernes 9:00 a 18:00",
+      "nivel_estudios": "ING_LIC",
+      "edad": "22 a 35 años",
+      "genero": "indistinto",
+      "estado_civil": "soltero",
+      "es_inclusiva": false,
       "experiencia": "1 año de experiencia en Django o FastAPI",
-      "funciones_y_actividades": "Desarrollo y mantenimiento de APIs REST",
-      "habilidades_y_competencias": "Python, Django, PostgreSQL, Git",
-      "transporte": "Transporte público",
-      "oferta_laboral": "Sueldo competitivo, prestaciones de ley",
+      "conocimientos": "Python, Django, PostgreSQL, Git",
+      "habilidades": "Trabajo en equipo, análisis lógico",
+      "actitudes": "Responsabilidad, Proactividad",
+      "responsabilidades": "Desarrollo y mantenimiento de APIs REST",
       "sueldo_minimo": "8000.00",
       "sueldo_maximo": "12000.00",
-      "horario": {"lunes": "09:00-18:00", "viernes": "09:00-15:00"},
-      "entrevistador": "Ing. García",
-      "confidencial": false,
+      "salario_a_tratar": false,
+      "prestaciones": "Sueldo competitivo, prestaciones de ley",
+      "incluye_transporte": false,
+      "incluye_comedor": false,
+      "documentos_requeridos": "Título o Cédula Profesional",
+      "persona_contacto": "Ing. García",
       "area_estudio": 1,
       "idiomas": [
-        {"idioma": 1, "nivel": "Intermedio", "obligatorio": false}
+        {"idioma": 1, "nivel": "B2", "obligatorio": false}
       ]
     }
 scripts:

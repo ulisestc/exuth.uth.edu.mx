@@ -17,12 +17,15 @@ body:
     {
       "nombre": "Tech Solutions SA de CV",
       "domicilio": "Blvd. Everardo Márquez 123, Pachuca, Hidalgo",
-      "telefono": "7719876543",
+      "telefono_oficina": "7719876543",
+      "telefono_celular": "7711112222",
       "correo_contacto": "contacto@techsolutions.com",
       "actividad_de_la_empresa": "Desarrollo de software y consultoría",
       "campo": "Tecnología",
       "giro": 1,
-      "sector": 1
+      "sector": 1,
+      "nombre_contacto": "Ing. Juan Pérez",
+      "cargo_contacto": "Director de RH"
     }
 scripts:
   - type: beforeRequest

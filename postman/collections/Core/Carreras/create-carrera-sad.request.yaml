@@ -1,0 +1,32 @@
+$kind: http-request
+name: Create Carrera por Egresado (Sad - RBAC)
+method: POST
+url: '{{baseUrl}}/core/carreras/'
+order: 5000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Carrera No Autorizada",
+      "abreviatura": "CNA",
+      "area": 1
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Egresado no puede crear carreras", function () {
+          pm.response.to.have.status(403);
+      });

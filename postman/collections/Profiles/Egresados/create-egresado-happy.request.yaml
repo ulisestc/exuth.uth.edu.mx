@@ -15,10 +15,14 @@ body:
   type: json
   content: |-
     {
-      "user": {{userId}},
       "matricula": "UTH2021001",
       "curp": "ABCD123456HDFXXX01",
-      "telefono": "7711234567",
+      "telefono_celular": "7711234567",
+      "telefono_casa": "7717654321",
+      "domicilio": "Calle Real #123, Huejotzingo, Puebla",
+      "nivel_estudios": "ING_LIC",
+      "genero": "M",
+      "habilidades": "Desarrollo Python, Django, SQL",
       "carrera": 1
     }
 scripts:

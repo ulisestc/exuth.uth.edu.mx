@@ -2,7 +2,7 @@ $kind: http-request
 name: Create Postulacion (Happy)
 method: POST
 url: '{{baseUrl}}/vacantes/postulaciones/'
-order: 5100
+order: 1000
 auth:
   type: bearer
   credentials:

@@ -1,0 +1,39 @@
+$kind: http-request
+name: Create Evento por Admin (Happy)
+method: POST
+url: '{{baseUrl}}/events/'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Feria de Empleo UTH 2026",
+      "tipo_evento": "feria_empleo",
+      "fecha_inicio": "2026-10-15T09:00:00Z",
+      "fecha_fin": "2026-10-15T18:00:00Z",
+      "lugar": "Auditorio Principal UTH",
+      "descripcion": "Feria anual de reclutamiento y empleabilidad para egresados UTH",
+      "is_active": true
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 201 - Evento creado exitosamente", function () {
+          pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+          pm.environment.set("eventoId", pm.response.json().id);
+      }
