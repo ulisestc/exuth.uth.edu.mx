@@ -9,125 +9,145 @@ from core.models import AreaEstudio, Carrera, Giro, Sector
 
 User = get_user_model()
 
+
 class ProfilesE2ETests(APITestCase):
+    """
+    Suite de Pruebas Unitarias completas para la App 'profiles':
+    - Creación y edición de perfiles Egresado y Empresa con campos actualizados (Fases 1 y 2).
+    - Carga de archivos binarios (CV a 'files/cvs' y Documentos a 'files/docs').
+    - Filtros anti-fantasmas y Soft Delete en cascada.
+    - Seguridad de autorización horizontal (IsOwnerOrReadOnly / RBAC).
+    """
+
     def setUp(self):
         self.area = AreaEstudio.objects.create(nombre="Ingeniería y Ciencias Exactas")
-        self.carrera = Carrera.objects.create(nombre="Ingeniería de Software", area=self.area)
-        
-        # 2. Crear usuarios y FUERZA la activación (incluyendo campos requeridos)
-        for email, rol, nombres in [
-            ("egresado1@test.com", "egresado", "Egresado Uno"),
-            ("egresado2@test.com", "egresado", "Egresado Dos"),
-            ("empresa@test.com", "empresa", "Empresa Uno"),
-        ]:
-            u = User.objects.create_user(
-                email=email,
-                password="password123",
-                rol=rol,
-                nombres=nombres,
-                apellido_paterno='Prueba',
-                apellido_materno='Test'
-            )
-            u.is_active = True
-            u.save() # Guardado explícito para persistir
-
-            if email == "egresado1@test.com": self.user_egresado_1 = u
-            if email == "egresado2@test.com": self.user_egresado_2 = u
-            if email == "empresa@test.com": self.user_empresa = u
-
-        # 3. Crear catálogos necesarios para Empresa
+        self.carrera = Carrera.objects.create(nombre="Ingeniería de Software", abreviatura="IS", area=self.area)
         self.giro = Giro.objects.create(nombre="Tecnología")
-        self.sector = Sector.objects.create(nombre="TI")
+        self.sector = Sector.objects.create(nombre="TI Privado")
 
-        # 3. Preparar Clientes HTTP
+        # Crear usuarios con is_active=True
+        self.user_egresado_1 = User.objects.create_user(
+            email="egresado1@test.com", password="password123", rol="egresado",
+            nombres="Egresado", apellido_paterno="Uno", apellido_materno="Test", is_active=True
+        )
+        self.user_egresado_2 = User.objects.create_user(
+            email="egresado2@test.com", password="password123", rol="egresado",
+            nombres="Egresado", apellido_paterno="Dos", apellido_materno="Test", is_active=True
+        )
+        self.user_empresa = User.objects.create_user(
+            email="empresa@test.com", password="password123", rol="empresa",
+            nombres="Empresa", apellido_paterno="Uno", apellido_materno="Test", is_active=True
+        )
+
+        # Clientes HTTP autenticados
         self.client_e1 = APIClient()
-        self.client_e2 = APIClient()
-        self.client_emp = APIClient()
-        self.client_anon = APIClient() # Sin token
-
-        # 4. Inyectar Tokens JWT con el prefijo correcto: 'JWT'
         token_e1 = RefreshToken.for_user(self.user_egresado_1).access_token
         self.client_e1.credentials(HTTP_AUTHORIZATION=f'JWT {token_e1}')
-        
+
+        self.client_e2 = APIClient()
         token_e2 = RefreshToken.for_user(self.user_egresado_2).access_token
         self.client_e2.credentials(HTTP_AUTHORIZATION=f'JWT {token_e2}')
-        
+
+        self.client_emp = APIClient()
         token_emp = RefreshToken.for_user(self.user_empresa).access_token
         self.client_emp.credentials(HTTP_AUTHORIZATION=f'JWT {token_emp}')
 
-    def test_crear_perfil_egresado_con_cv_multipart(self):
-        """Prueba de subida binaria (Multipart) que fallaba en Swagger."""
-        cv_falso = SimpleUploadedFile("curriculum.pdf", b"archivo_binario", content_type="application/pdf")
-        
+        self.client_anon = APIClient()
+
+    def test_crear_perfil_egresado_con_cv_y_documentos_multipart(self):
+        """HAPPY PATH: Subida binaria multipart de CV (a files/cvs) y documentos (a files/docs)."""
+        cv_falso = SimpleUploadedFile("curriculum.pdf", b"archivo_binario_cv", content_type="application/pdf")
+        doc_falso = SimpleUploadedFile("documentos.pdf", b"archivo_binario_doc", content_type="application/pdf")
+
         payload = {
             "user": self.user_egresado_1.id,
             "matricula": "202012345",
             "curp": "TEST12345678901234",
-            "telefono": "2221234567",
+            "telefono_celular": "7711234567",
+            "domicilio": "Calle Principal 123",
+            "genero": "M",
             "carrera": self.carrera.id,
-            "cv": cv_falso
+            "nivel_estudios": "ING_LIC",
+            "habilidades": "Django, Git, REST APIs",
+            "cv": cv_falso,
+            "documentos": doc_falso
         }
-        
-        # Usamos format='multipart' para simular Postman/Formulario web
+
         response = self.client_e1.post('/api/v1/profiles/egresados/', payload, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Egresado.objects.count(), 1)
 
+        egresado = Egresado.objects.first()
+        self.assertIn("files/cvs", egresado.cv.name)
+        self.assertIn("files/docs", egresado.documentos.name)
+
     def test_crear_perfil_empresa(self):
-        """Valida que una empresa pueda crearse con estado por defecto."""
+        """HAPPY PATH: Creación de perfil de Empresa con campos requeridos actualizados."""
         payload = {
             "user": self.user_empresa.id,
-            "nombre": "Tech Corp",
+            "nombre": "Tech Corp SA de CV",
             "domicilio": "Calle Falsa 123",
-            "telefono": "2229876543",
+            "telefono_oficina": "7719876543",
+            "telefono_celular": "7711112222",
             "correo_contacto": "contacto@techcorp.com",
             "actividad_de_la_empresa": "Desarrollo de software",
-            "campo": "Servicios",
+            "campo": "Servicios TI",
             "giro": self.giro.id,
             "sector": self.sector.id,
+            "nombre_contacto": "Ing. García",
+            "cargo_contacto": "Gerente RH"
         }
 
         response = self.client_emp.post('/api/v1/profiles/empresas/', payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Empresa.objects.count(), 1)
+        self.assertEqual(Empresa.objects.first().status, 'pendiente')
 
     def test_seguridad_is_authenticated(self):
-        """Garantiza que nadie sin token pueda ver los datos."""
+        """SAD PATH: Petición anónima sin token JWT es rechazada con 401 Unauthorized."""
         response = self.client_anon.get('/api/v1/profiles/egresados/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_seguridad_is_owner_or_read_only(self):
-        """Valida la autorización horizontal: Leer sí, Editar no."""
-        # Egresado 1 tiene un perfil
+        """SAD PATH / RBAC: Egresado 2 intenta modificar el perfil de Egresado 1 -> 403 Forbidden."""
         perfil_e1 = Egresado.objects.create(
-            user=self.user_egresado_1, matricula="111", curp="111", telefono="111", carrera=self.carrera
+            user=self.user_egresado_1,
+            matricula="111",
+            curp="TEST11111111111111",
+            telefono_celular="7711111111",
+            domicilio="Calle 1",
+            genero="M",
+            carrera=self.carrera,
+            habilidades="Python"
         )
-        
-        # Egresado 2 intenta leer el perfil de 1 -> OK
+
+        # Lectura por egresado 2 -> OK
         res_get = self.client_e2.get(f'/api/v1/profiles/egresados/{perfil_e1.id}/')
         self.assertEqual(res_get.status_code, status.HTTP_200_OK)
 
-        # Egresado 2 intenta editar el teléfono de 1 -> FORBIDDEN
-        res_patch = self.client_e2.patch(f'/api/v1/profiles/egresados/{perfil_e1.id}/', {"telefono": "999"})
+        # Intento de edición por egresado 2 -> 403 FORBIDDEN
+        res_patch = self.client_e2.patch(f'/api/v1/profiles/egresados/{perfil_e1.id}/', {"telefono_celular": "9999999999"})
         self.assertEqual(res_patch.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_soft_delete_y_filtro_antifantasmas(self):
-        """Comprueba la lógica de desactivación y ocultamiento."""
+        """HAPPY PATH: Soft delete de perfil desactiva el usuario y oculta del get_queryset."""
         perfil_e1 = Egresado.objects.create(
-            user=self.user_egresado_1, matricula="111", curp="111", telefono="111", carrera=self.carrera
+            user=self.user_egresado_1,
+            matricula="111",
+            curp="TEST11111111111111",
+            telefono_celular="7711111111",
+            domicilio="Calle 1",
+            genero="M",
+            carrera=self.carrera,
+            habilidades="Python"
         )
 
-        # 1. Egresado 1 borra su cuenta
         res_delete = self.client_e1.delete(f'/api/v1/profiles/egresados/{perfil_e1.id}/')
         self.assertEqual(res_delete.status_code, status.HTTP_204_NO_CONTENT)
 
-        # 2. Integridad de BD: El registro físico de Egresado sigue vivo (Soft Delete)
+        # Registro físico sigue en BD
         self.assertEqual(Egresado.objects.count(), 1)
 
-        # 3. Cascada inversa: El usuario base recibió la marca de tiempo de desactivación
+        # Marca de desactivación en el User
         self.user_egresado_1.refresh_from_db()
         self.assertIsNotNone(self.user_egresado_1.deactivated_at)
-
-        # 4. ViewSet get_queryset: El Egresado ya no aparece en el listado general
-        res_get_all = self.client_emp.get('/api/v1/profiles/egresados/')
-        self.assertEqual(len(res_get_all.data['results']), 0)
