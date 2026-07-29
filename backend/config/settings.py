@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'core',
     'vacantes',
     'events',
+    'notificaciones',
 ]
 
 MIDDLEWARE = [
