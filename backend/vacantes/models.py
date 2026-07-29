@@ -108,7 +108,7 @@ class RequisitoIdioma(models.Model):
         ('C2', 'C2 - Avanzado / Nativo'),
     ]
     
-    vacante = models.ForeignKey(Vacante, on_delete=models.CASCADE)
+    vacante = models.ForeignKey(Vacante, on_delete=models.CASCADE, related_name='requisitos_idioma')
     idioma = models.ForeignKey(Idioma, on_delete=models.CASCADE)
     nivel = models.CharField(max_length=2, choices=NIVELES_MCER, default='B1')
     obligatorio = models.BooleanField(default=False)
@@ -147,6 +147,13 @@ class Colocacion(models.Model):
         verbose_name = "Colocación de Egresado"
         verbose_name_plural = "Colocaciones de Egresados"
         unique_together = ['egresado', 'vacante']
+
+    # actualizar bandera 'colocado' en perfil de egresado al agregar registro de colocación
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.egresado.colocado:
+            self.egresado.colocado = True
+            self.egresado.save(update_fields=['colocado'])
 
     def __str__(self):
         puesto = self.vacante.titulo if self.vacante else "Puesto Externo"
