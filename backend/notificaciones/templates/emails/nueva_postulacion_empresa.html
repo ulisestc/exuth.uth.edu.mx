@@ -1,0 +1,26 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Nueva Postulación Recibida - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-info">Postulación Recibida</span>
+<h2>¡Un candidato se ha postulado a tu vacante!</h2>
+
+<p>Estimado(a) <strong>{{ empresa.nombre_contacto }}</strong> ({{ empresa.nombre }}),</p>
+
+<p>Le informamos que un egresado de la UTH ha enviado su candidatura para una de sus vacantes activas:</p>
+
+<div class="card">
+    <div class="card-title">Detalles del Candidato</div>
+    <p><strong>Vacante:</strong> [{{ vacante.clave_vacante }}] {{ vacante.titulo }}</p>
+    <p><strong>Candidato:</strong> {{ egresado.user.nombres }} {{ egresado.user.apellido_paterno }} {{ egresado.user.apellido_materno }}</p>
+    <p><strong>Carrera:</strong> {{ egresado.carrera.nombre }}</p>
+    <p><strong>Nivel de Estudios:</strong> {{ egresado.get_nivel_estudios_display }}</p>
+    <p><strong>Correo Electrónico:</strong> {{ egresado.user.email }}</p>
+    <p><strong>Teléfono de Contacto:</strong> {{ egresado.telefono_celular }}</p>
+</div>
+
+<p>Puede consultar el perfil completo y currículum del egresado directamente desde su panel de control en la plataforma.</p>
+
+<p>Atentamente,<br><strong>Sistema de Empleabilidad EXUTH</strong></p>
+{% endblock %}

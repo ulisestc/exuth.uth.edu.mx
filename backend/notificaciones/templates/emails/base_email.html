@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bolsa de Trabajo UTH{% endblock %}</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #f4f6f8;
+            padding: 30px 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .header {
+            background-color: #006633;
+            color: #ffffff;
+            padding: 24px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .header p {
+            margin: 4px 0 0 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+            color: #333333;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+        .badge-info { background-color: #e3f2fd; color: #0d47a1; }
+        .badge-success { background-color: #e8f5e9; color: #1b5e20; }
+        .badge-warning { background-color: #fff8e1; color: #f57f17; }
+        .badge-danger { background-color: #ffebee; color: #b71c1c; }
+
+        .card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #006633;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .card-title {
+            font-weight: 700;
+            color: #006633;
+            margin: 0 0 8px 0;
+            font-size: 16px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #006633;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .footer {
+            background-color: #f1f3f5;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer a {
+            color: #006633;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <h1>Universidad Tecnológica de Huejotzingo</h1>
+                <p>Sistema Institucional de Bolsa de Trabajo y Empleabilidad</p>
+            </div>
+            <div class="content">
+                {% block content %}
+                {% endblock %}
+            </div>
+            <div class="footer">
+                <p>&copy; {% now "Y" %} Universidad Tecnológica de Huejotzingo. Todos los derechos reservados.</p>
+                <p>Camino Real a San Mateo s/n, Sta Ana Xalmimilulco, Huejotzingo, Pue.</p>
+                <p>Este es un mensaje automático del sistema EXUTH, por favor no responda a este correo.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

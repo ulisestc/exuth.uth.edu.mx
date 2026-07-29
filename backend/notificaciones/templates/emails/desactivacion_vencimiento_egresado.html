@@ -1,0 +1,19 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Cuenta Desactivada por Inactividad - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-danger">Cuenta Desactivada</span>
+<h2>Tu registro en Bolsa de Trabajo UTH ha sido desactivado temporalmente</h2>
+
+<p>Hola <strong>{{ user.nombres }} {{ user.apellido_paterno }}</strong>,</p>
+
+<p>Te notificamos que al haber transcurrido <strong>6 meses (180 días)</strong> sin inicio de sesión en la plataforma EXUTH, tu cuenta ha sido desactivada temporalmente conforme a los lineamientos institucionales.</p>
+
+<div class="card">
+    <div class="card-title">¿Cómo reactivar tu cuenta?</div>
+    <p>Si deseas reactivar tu perfil para postularte a nuevas vacantes y recibir convocatorias laborales, por favor ponte en contacto con el Departamento de Empleabilidad y Bolsa de Trabajo UTH o solicita tu reactivación a través del portal.</p>
+</div>
+
+<p>Atentamente,<br><strong>Departamento de Empleabilidad y Bolsa de Trabajo UTH</strong></p>
+{% endblock %}

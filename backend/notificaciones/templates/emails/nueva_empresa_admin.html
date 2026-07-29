@@ -1,0 +1,25 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Nueva Empresa Registrada - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-warning">Aprobación Pendiente</span>
+<h2>Nueva Empresa Registrada en la Plataforma</h2>
+
+<p>Estimado equipo del Departamento de Vinculación y Empleabilidad UTH,</p>
+
+<p>La empresa <strong>{{ empresa.nombre }}</strong> se ha registrado recientemente en la Bolsa de Trabajo UTH y requiere verificación administrativa:</p>
+
+<div class="card">
+    <div class="card-title">Datos de la Organización</div>
+    <p><strong>Empresa:</strong> {{ empresa.nombre }}</p>
+    <p><strong>Giro / Sector:</strong> {{ empresa.giro.nombre }} / {{ empresa.sector.nombre }}</p>
+    <p><strong>Contacto Principal:</strong> {{ empresa.nombre_contacto }} ({{ empresa.cargo_contacto }})</p>
+    <p><strong>Correo de Contacto:</strong> {{ empresa.correo_contacto }}</p>
+    <p><strong>Teléfono Oficina:</strong> {{ empresa.telefono_oficina|default:"No especificado" }}</p>
+</div>
+
+<p>Por favor, ingresa al Panel Administrativo para revisar y validar el perfil de la organización.</p>
+
+<p>Atentamente,<br><strong>Plataforma Institucional EXUTH</strong></p>
+{% endblock %}

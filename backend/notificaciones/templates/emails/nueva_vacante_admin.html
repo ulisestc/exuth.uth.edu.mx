@@ -1,0 +1,26 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Nueva Vacante Registrada - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-warning">Revisión Pendiente</span>
+<h2>Nueva Vacante Registrada para Aprobación</h2>
+
+<p>Estimado equipo del Departamento de Empleabilidad UTH,</p>
+
+<p>La empresa <strong>{{ empresa.nombre }}</strong> ha publicado una nueva vacante laboral que requiere revisión y aprobación administrativa antes de ser visible para la comunidad de egresados.</p>
+
+<div class="card">
+    <div class="card-title">Detalles de la Vacante</div>
+    <p><strong>Clave Interna:</strong> {{ vacante.clave_vacante }}</p>
+    <p><strong>Título:</strong> {{ vacante.titulo }}</p>
+    <p><strong>Área de Estudio:</strong> {{ vacante.area_estudio.nombre }}</p>
+    <p><strong>Modalidad:</strong> {{ vacante.get_modalidad_display }}</p>
+    <p><strong>Sueldo Ofrecido:</strong> ${{ vacante.sueldo_minimo }} - ${{ vacante.sueldo_maximo }} MXN</p>
+    <p><strong>Persona de Contacto:</strong> {{ vacante.persona_contacto }} ({{ empresa.correo_contacto }})</p>
+</div>
+
+<p>Por favor, ingresa al Panel Administrativo institucional para revisar la oferta y proceder con su aprobación o rechazo.</p>
+
+<p>Atentamente,<br><strong>Plataforma Institucional EXUTH</strong></p>
+{% endblock %}

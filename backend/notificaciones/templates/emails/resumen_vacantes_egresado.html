@@ -1,0 +1,28 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Resumen Diario de Vacantes - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-info">Resumen Diario</span>
+<h2>Nuevas Vacantes Aprobadas en tu Área ({{ area.nombre }})</h2>
+
+<p>Hola <strong>Estimado(a) Egresado(a) UTH</strong>,</p>
+
+<p>Te compartimos el resumen de las ofertas laborales publicadas y aprobadas en las últimas 24 horas afines a tu área de estudio:</p>
+
+<div class="card">
+    <div class="card-title">Vacantes Disponibles Hoy ({{ vacantes|length }})</div>
+    <ul>
+        {% for vacante in vacantes %}
+        <li style="margin-bottom: 10px;">
+            <strong>{{ vacante.titulo }}</strong> - {{ vacante.empresa.nombre }}<br>
+            <small>Modalidad: {{ vacante.get_modalidad_display }} | Sueldo: ${{ vacante.sueldo_minimo }} - ${{ vacante.sueldo_maximo }} MXN</small>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<p>Ingresa a la plataforma EXUTH para consultar los detalles completos de cada puesto y enviar tu postulación.</p>
+
+<p>Atentamente,<br><strong>Bolsa de Trabajo UTH</strong></p>
+{% endblock %}

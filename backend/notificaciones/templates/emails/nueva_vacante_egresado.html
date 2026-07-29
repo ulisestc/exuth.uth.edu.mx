@@ -1,0 +1,27 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Nueva Oportunidad Laboral - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-info">Nueva Oportunidad</span>
+<h2>¡Se ha publicado una vacante afín a tu área de estudio!</h2>
+
+<p>Hola <strong>Estimado(a) Egresado(a) UTH</strong>,</p>
+
+<p>La Bolsa de Trabajo UTH te notifica que se acaba de publicar una nueva oportunidad laboral alineada a tu área académica (<strong>{{ vacante.area_estudio.nombre }}</strong>):</p>
+
+<div class="card">
+    <div class="card-title">{{ vacante.titulo }}</div>
+    <p><strong>Empresa:</strong> {{ vacante.empresa.nombre }}</p>
+    <p><strong>Modalidad:</strong> {{ vacante.get_modalidad_display }}</p>
+    <p><strong>Tipo de Contratación:</strong> {{ vacante.get_tipo_contratacion_display }}</p>
+    <p><strong>Sueldo Ofrecido:</strong> ${{ vacante.sueldo_minimo }} - ${{ vacante.sueldo_maximo }} MXN</p>
+    <p><strong>Requisitos:</strong> {{ vacante.conocimientos|truncatewords:20 }}</p>
+</div>
+
+<p>¡No dejes pasar esta oportunidad! Inicia sesión en la plataforma EXUTH y postúlate hoy mismo.</p>
+
+<p>¡Mucho éxito en tu desarrollo profesional!</p>
+
+<p>Atentamente,<br><strong>Bolsa de Trabajo UTH</strong></p>
+{% endblock %}

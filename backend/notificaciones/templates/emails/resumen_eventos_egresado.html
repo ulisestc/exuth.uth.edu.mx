@@ -1,0 +1,28 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Resumen de Eventos de Empleabilidad - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-success">Próximos Eventos</span>
+<h2>Nuevos Eventos de Empleabilidad UTH Programados</h2>
+
+<p>Hola <strong>Estimado(a) Egresado(a) UTH</strong>,</p>
+
+<p>Te invitamos a participar en los próximos eventos de desarrollo profesional, ferias y reclutamientos organizados por la universidad:</p>
+
+<div class="card">
+    <div class="card-title">Eventos Programados</div>
+    <ul>
+        {% for evento in eventos %}
+        <li style="margin-bottom: 12px;">
+            <strong>{{ evento.nombre }}</strong> ({{ evento.get_tipo_evento_display }})<br>
+            <small>📅 Fecha: {{ evento.fecha_inicio|date:"d/m/Y H:i" }} hrs | 📍 Lugar: {{ evento.lugar }}</small>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<p>No te pierdas estas oportunidades de vinculación laboral y networking profesional.</p>
+
+<p>Atentamente,<br><strong>Departamento de Vinculación y Empleabilidad UTH</strong></p>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Resumen Diario de Postulaciones - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-info">Resumen Diario</span>
+<h2>Resumen Diario de Candidatos Postulados</h2>
+
+<p>Estimado(a) <strong>{{ empresa.nombre_contacto }}</strong> ({{ empresa.nombre }}),</p>
+
+<p>Te presentamos el resumen consolidado de las postulaciones recibidas en las últimas 24 horas para tus vacantes activas:</p>
+
+<div class="card">
+    <div class="card-title">Nuevos Candidatos Hoy (Total: {{ total_postulaciones }})</div>
+    <ul>
+        {% for postulacion in postulaciones %}
+        <li>
+            <strong>{{ postulacion.egresado.user.nombres }} {{ postulacion.egresado.user.apellido_paterno }}</strong> - 
+            Vacante: <em>{{ postulacion.vacante.titulo }}</em> ({{ postulacion.egresado.carrera.nombre }})
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<p>Ingresa a tu panel de control en la plataforma EXUTH para revisar los currículums detallados y avanzar en el proceso de selección.</p>
+
+<p>Atentamente,<br><strong>Bolsa de Trabajo UTH</strong></p>
+{% endblock %}

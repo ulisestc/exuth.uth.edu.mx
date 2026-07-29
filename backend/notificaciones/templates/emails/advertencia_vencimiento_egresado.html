@@ -1,0 +1,21 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Aviso de Próximo Vencimiento - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-warning">Aviso Importante</span>
+<h2>Tu cuenta en la Bolsa de Trabajo UTH vencerá pronto</h2>
+
+<p>Hola <strong>{{ user.nombres }} {{ user.apellido_paterno }}</strong>,</p>
+
+<p>Te informamos que han transcurrido <strong>5 meses y medio (165 días)</strong> desde tu último inicio de sesión en el Sistema de Bolsa de Trabajo y Empleabilidad UTH.</p>
+
+<div class="card">
+    <div class="card-title">¿Qué ocurrirá si no inicias sesión?</div>
+    <p>En <strong>15 días</strong> (al cumplir 6 meses de inactividad), tu cuenta será desactivada temporalmente para proteger tu privacidad y mantener actualizado nuestro padrón de egresados.</p>
+</div>
+
+<p>Para mantener tu cuenta activa y continuar recibiendo oportunidades laborales afines a tu perfil, simplemente **inicia sesión** en la plataforma EXUTH hoy mismo.</p>
+
+<p>Atentamente,<br><strong>Departamento de Empleabilidad y Vinculación UTH</strong></p>
+{% endblock %}

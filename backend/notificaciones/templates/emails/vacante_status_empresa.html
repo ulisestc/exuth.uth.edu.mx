@@ -1,0 +1,34 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Estatus de Vacante Actualizado - UTH{% endblock %}
+
+{% block content %}
+{% if vacante.status == 'aprobada' %}
+    <span class="badge badge-success">Vacante Aprobada</span>
+    <h2>¡Tu oferta laboral ha sido Aprobada!</h2>
+{% else %}
+    <span class="badge badge-danger">Vacante Rechazada</span>
+    <h2>Estatus de Oferta Laboral: Rechazada</h2>
+{% endif %}
+
+<p>Estimado(a) <strong>{{ empresa.nombre_contacto }}</strong> ({{ empresa.nombre }}),</p>
+
+<p>Le informamos que el Departamento de Empleabilidad de la Universidad Tecnológica de Huejotzingo ha actualizado el estatus de su vacante laboral:</p>
+
+<div class="card">
+    <div class="card-title">Resumen de la Vacante</div>
+    <p><strong>Clave:</strong> {{ vacante.clave_vacante }}</p>
+    <p><strong>Título:</strong> {{ vacante.titulo }}</p>
+    <p><strong>Estatus Actual:</strong> {{ vacante.get_status_display }}</p>
+</div>
+
+{% if vacante.status == 'aprobada' %}
+    <p>Su oferta ya se encuentra visible para nuestra comunidad de egresados calificados y comenzará a recibir postulaciones directamente en su panel de empresa.</p>
+{% else %}
+    <p>Si requiere mayor información o realizar adecuaciones a la oferta laboral para cumplir con los lineamientos institucionales, por favor comuníquese con el departamento de vinculación.</p>
+{% endif %}
+
+<p>Agradecemos su confianza en la Universidad Tecnológica de Huejotzingo.</p>
+
+<p>Atentamente,<br><strong>Departamento de Empleabilidad y Bolsa de Trabajo UTH</strong></p>
+{% endblock %}

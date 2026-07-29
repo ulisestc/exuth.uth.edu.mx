@@ -1,0 +1,32 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Estatus de Postulación Actualizado - UTH{% endblock %}
+
+{% block content %}
+{% if postulacion.estado == 'Aceptada' %}
+    <span class="badge badge-success">Postulación Aceptada</span>
+    <h2>¡Felicidades! Tu postulación ha sido Aceptada</h2>
+{% else %}
+    <span class="badge badge-warning">Postulación Finalizada</span>
+    <h2>Estatus de tu Postulación Laboral</h2>
+{% endif %}
+
+<p>Hola <strong>{{ egresado.user.nombres }}</strong>,</p>
+
+<p>La empresa <strong>{{ vacante.empresa.nombre }}</strong> ha revisado tu postulación para la vacante <strong>{{ vacante.titulo }}</strong> y ha actualizado tu estatus a: <strong>{{ postulacion.estado }}</strong>.</p>
+
+<div class="card">
+    <div class="card-title">Resumen de la Oferta</div>
+    <p><strong>Puesto:</strong> {{ vacante.titulo }}</p>
+    <p><strong>Empresa:</strong> {{ vacante.empresa.nombre }}</p>
+    <p><strong>Contacto Empresa:</strong> {{ vacante.persona_contacto }} ({{ vacante.empresa.correo_contacto }})</p>
+</div>
+
+{% if postulacion.estado == 'Aceptada' %}
+    <p>La empresa se pondrá en contacto contigo próximamente para continuar con el proceso de contratación o entrevista final. ¡Mucho éxito!</p>
+{% else %}
+    <p>Agradecemos tu participación en esta convocatoria. Te invitamos a consultar las demás vacantes disponibles en la plataforma que se adapten a tu perfil profesional.</p>
+{% endif %}
+
+<p>Atentamente,<br><strong>Bolsa de Trabajo y Empleabilidad UTH</strong></p>
+{% endblock %}
