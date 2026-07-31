@@ -1,0 +1,36 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Estatus de Registro de Empresa - UTH{% endblock %}
+
+{% block content %}
+{% if empresa.status == 'aprobada' %}
+    <span class="badge badge-success">Cuenta Aprobada</span>
+    <h2>¡Tu Empresa ha sido Aprobada en EXUTH!</h2>
+
+    <p>Estimados representantes de <strong>{{ empresa.nombre }}</strong>,</p>
+
+    <p>Nos complace informarle que el Departamento de Desempeño de Egresados de la Universidad Tecnológica de Huejotzingo (UTH) ha revisado y <strong>aprobado</strong> su registro institucional.</p>
+
+    <div class="card">
+        <div class="card-title">Resumen de Registro</div>
+        <p><strong>Empresa:</strong> {{ empresa.nombre }}</p>
+        <p><strong>Giro / Sector:</strong> {{ empresa.giro.nombre }} / {{ empresa.sector.nombre }}</p>
+        <p><strong>Contacto Principal:</strong> {{ empresa.nombre_contacto }} ({{ empresa.cargo_contacto }})</p>
+    </div>
+
+    <p>A partir de este momento, pueden acceder a la plataforma institucional para comenzar a publicar vacantes laborales y conectar con nuestros graduados talentosos.</p>
+{% else %}
+    <span class="badge badge-danger">Registro No Aprobado</span>
+    <h2>Actualización sobre tu Registro de Empresa</h2>
+
+    <p>Estimados representantes de <strong>{{ empresa.nombre }}</strong>,</p>
+
+    <p>Le informamos que tras la revisión de su solicitud de registro, la administración de la UTH ha determinado no aprobar el perfil en este momento.</p>
+
+    <div class="card">
+        <p>Si considera que se trata de un malentendido o desea más información, puede comunicarse directamente con el departamento de vinculación institucional.</p>
+    </div>
+{% endif %}
+
+<p>Atentamente,<br><strong>Departamento de Desempeño de Egresados UTH</strong></p>
+{% endblock %}

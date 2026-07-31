@@ -1,4 +1,4 @@
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.core import mail
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -17,8 +17,9 @@ User = get_user_model()
 class NotificacionesTestSuite(TestCase):
     """
     Suite de Pruebas exhaustiva para la Fase 3 (Notificaciones):
-    Cubre Happy y Sad Paths para Signals, Estado Anterior (pre_save), Batching (BCC en lotes de 50),
-    Comandos Cron (resumen_diario y limpieza_inactivos).
+    Cubre Happy y Sad Paths para Signals (Empresa, Vacante, Postulacion),
+    Rastreo de Estado Anterior (pre_save), Batching (BCC en lotes de 50),
+    Comandos Cron (resumen_diario para Empresas, resumen_semanal para Egresados, limpieza_inactivos).
     """
 
     def setUp(self):
@@ -70,7 +71,7 @@ class NotificacionesTestSuite(TestCase):
                 thread.join(timeout=2)
 
     # -------------------------------------------------------------------------
-    # 1. HAPPY PATHS: SIGNALS E INMEDIATOS
+    # 1. HAPPY PATHS: SIGNALS E INMEDIATOS (EMPRESA, VACANTE, POSTULACION)
     # -------------------------------------------------------------------------
 
     def test_happy_signal_nueva_empresa_notifica_admin(self):
@@ -97,6 +98,38 @@ class NotificacionesTestSuite(TestCase):
         self.assertIn("Nueva Empresa Registrada", ultimo_correo.subject)
         self.assertIn("admin@test.com", ultimo_correo.to)
 
+    def test_happy_signal_aprobacion_empresa_notifica_empresa(self):
+        """HAPPY PATH: Al cambiar estatus de Empresa a 'aprobada', notifica a la Empresa."""
+        mail.outbox = []
+        self.empresa.status = 'aprobada'
+        self.empresa.save()
+        self._ejecutar_hilos()
+
+        self.assertTrue(len(mail.outbox) >= 1)
+        correo_empresa = mail.outbox[-1]
+        self.assertIn("Estatus de Cuenta de Empresa UTH", correo_empresa.subject)
+        self.assertIn("contacto@techsolutions.com", correo_empresa.to)
+
+    def test_happy_signal_nueva_vacante_notifica_admin(self):
+        """HAPPY PATH: Al crear una Vacante, notifica inmediatamente al Administrador UTH."""
+        mail.outbox = []
+        Vacante.objects.create(
+            empresa=self.empresa,
+            area_estudio=self.area,
+            titulo="Nueva Vacante Python",
+            tipo_contratacion="tiempo_completo",
+            modalidad="presencial",
+            sueldo_minimo=10000,
+            sueldo_maximo=15000,
+            persona_contacto="Carlos Ruiz"
+        )
+        self._ejecutar_hilos()
+
+        self.assertTrue(len(mail.outbox) >= 1)
+        correo_admin = mail.outbox[-1]
+        self.assertIn("Nueva Vacante Pendiente de Revisión", correo_admin.subject)
+        self.assertIn("admin@test.com", correo_admin.to)
+
     def test_happy_signal_aprobacion_vacante_notifica_empresa(self):
         """HAPPY PATH: Al cambiar estatus de vacante a 'aprobada', notifica a la empresa."""
         vacante = Vacante.objects.create(
@@ -109,6 +142,7 @@ class NotificacionesTestSuite(TestCase):
             sueldo_maximo=15000,
             persona_contacto="Carlos Ruiz"
         )
+        self._ejecutar_hilos()
         mail.outbox = []
 
         # Cambiar estado a aprobada
@@ -134,6 +168,7 @@ class NotificacionesTestSuite(TestCase):
             persona_contacto="Carlos Ruiz"
         )
         postulacion = Postulacion.objects.create(vacante=vacante, egresado=self.egresado)
+        self._ejecutar_hilos()
         mail.outbox = []
 
         # Cambiar estado a Aceptada
@@ -149,6 +184,20 @@ class NotificacionesTestSuite(TestCase):
     # -------------------------------------------------------------------------
     # 2. PRE_SAVE STATE TRACKING (SAD PATH PREVENCION DE SPAM)
     # -------------------------------------------------------------------------
+
+    def test_sad_path_no_reenvia_correo_si_estatus_empresa_no_cambia(self):
+        """SAD PATH / ANTI-SPAM: Editar domicilio de empresa ya aprobada NO reenvía correo."""
+        self.empresa.status = 'aprobada'
+        self.empresa.save()
+        self._ejecutar_hilos()
+        mail.outbox = []
+
+        # Editar otro campo
+        self.empresa.domicilio = "Nueva Calle 456"
+        self.empresa.save()
+        self._ejecutar_hilos()
+
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_sad_path_no_reenvia_correo_si_estatus_vacante_no_cambia(self):
         """SAD PATH / ANTI-SPAM: Editar observaciones de vacante ya aprobada NO reenvía correo."""
@@ -172,7 +221,6 @@ class NotificacionesTestSuite(TestCase):
         vacante.save()
         self._ejecutar_hilos()
 
-        # Debe ser 0 correos enviados
         self.assertEqual(len(mail.outbox), 0)
 
     def test_sad_path_no_reenvia_correo_si_estado_postulacion_no_cambia(self):
@@ -220,7 +268,6 @@ class NotificacionesTestSuite(TestCase):
         # 110 destinatarios / 50 = 3 mensajes (50, 50, 10)
         self.assertEqual(len(mail.outbox), 3)
 
-        # Verificar que todos van en bcc y to no expone la lista
         lote1 = mail.outbox[0]
         lote2 = mail.outbox[1]
         lote3 = mail.outbox[2]
@@ -243,11 +290,11 @@ class NotificacionesTestSuite(TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     # -------------------------------------------------------------------------
-    # 4. CRONJOBS (RESUMEN DIARIO & LIMPIEZA DE INACTIVOS)
+    # 4. CRONJOBS (RESUMEN DIARIO EMPRESAS, RESUMEN SEMANAL EGRESADOS & LIMPIEZA)
     # -------------------------------------------------------------------------
 
-    def test_happy_cronjob_resumen_diario(self):
-        """HAPPY PATH: resumen_diario agrupa postulaciones y vacantes recientes de 24 horas."""
+    def test_happy_cronjob_resumen_diario_empresa(self):
+        """HAPPY PATH: resumen_diario agrupa postulaciones recientes de las últimas 24h para Empresas."""
         vacante = Vacante.objects.create(
             empresa=self.empresa,
             area_estudio=self.area,
@@ -270,6 +317,38 @@ class NotificacionesTestSuite(TestCase):
         self.assertIn("Resumen Diario", out.getvalue())
         self.assertTrue(len(mail.outbox) >= 1)
 
+    def test_happy_cronjob_resumen_semanal_egresados(self):
+        """HAPPY PATH: resumen_semanal agrupa vacantes y eventos de los últimos 7 días para Egresados."""
+        vacante = Vacante.objects.create(
+            empresa=self.empresa,
+            area_estudio=self.area,
+            titulo="Dev FullStack Python",
+            tipo_contratacion="tiempo_completo",
+            modalidad="presencial",
+            sueldo_minimo=12000,
+            sueldo_maximo=18000,
+            persona_contacto="Carlos Ruiz",
+            status="aprobada"
+        )
+        Evento.objects.create(
+            nombre="Feria Semanal de Empleo UTH",
+            tipo_evento="feria_empleo",
+            fecha_inicio=timezone.now() + timedelta(days=2),
+            fecha_fin=timezone.now() + timedelta(days=2, hours=4),
+            lugar="Auditorio UTH",
+            descripcion="Reclutamiento directo.",
+            is_active=True
+        )
+        self._ejecutar_hilos()
+        mail.outbox = []
+
+        out = io.StringIO()
+        call_command("resumen_semanal", stdout=out)
+        self._ejecutar_hilos()
+
+        self.assertIn("Resumen Semanal", out.getvalue())
+        self.assertTrue(len(mail.outbox) >= 1)
+
     def test_happy_cronjob_limpieza_inactivos_aviso_y_desactivacion(self):
         """HAPPY PATH & SAD PATH: limpieza_inactivos alerta a los 165 días y desactiva a los 180 días exactos."""
         hoy = timezone.now().date()
@@ -277,28 +356,16 @@ class NotificacionesTestSuite(TestCase):
         fecha_180 = hoy - timedelta(days=180)
         fecha_reciente = hoy - timedelta(days=10)
 
-        # 1. Egresado para aviso (165 días)
         u_aviso = User.objects.create_user(
             email="aviso@test.com", password="Pass123!", nombres="User Aviso", rol="egresado", is_active=True
         )
-        u_aviso.last_login = timezone.now() - timedelta(days=165)
-        u_aviso.save()
-
-        # 2. Egresado para desactivación (180 días)
         u_desact = User.objects.create_user(
             email="desact@test.com", password="Pass123!", nombres="User Desact", rol="egresado", is_active=True
         )
-        u_desact.last_login = timezone.now() - timedelta(days=180)
-        u_desact.save()
-
-        # 3. Egresado activo reciente (10 días) -> SAD PATH: No debe ser afectado
         u_activo = User.objects.create_user(
             email="activo@test.com", password="Pass123!", nombres="User Activo", rol="egresado", is_active=True
         )
-        u_activo.last_login = timezone.now() - timedelta(days=10)
-        u_activo.save()
 
-        # Ajustar last_login en BD mediante update directo para evitar auto_now overrides si aplican
         User.objects.filter(id=u_aviso.id).update(last_login=timezone.make_aware(timezone.datetime.combine(fecha_165, timezone.datetime.min.time())))
         User.objects.filter(id=u_desact.id).update(last_login=timezone.make_aware(timezone.datetime.combine(fecha_180, timezone.datetime.min.time())))
         User.objects.filter(id=u_activo.id).update(last_login=timezone.make_aware(timezone.datetime.combine(fecha_reciente, timezone.datetime.min.time())))
@@ -308,13 +375,10 @@ class NotificacionesTestSuite(TestCase):
         call_command("limpieza_inactivos", stdout=out)
         self._ejecutar_hilos()
 
-        # Verificar que u_desact fue desactivado
         u_desact.refresh_from_db()
         self.assertFalse(u_desact.is_active)
 
-        # Verificar que u_activo sigue activo
         u_activo.refresh_from_db()
         self.assertTrue(u_activo.is_active)
 
-        # Verificar correos despachados
         self.assertTrue(len(mail.outbox) >= 2)
