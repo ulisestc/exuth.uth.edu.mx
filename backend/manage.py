@@ -2,6 +2,11 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+import warnings
+
+# Suprimir warning cosmético de compatibilidad entre urllib3 y chardet
+warnings.filterwarnings('ignore', message='.*urllib3.*or chardet.*')
+
 
 
 def main():

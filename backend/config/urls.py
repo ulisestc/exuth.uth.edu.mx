@@ -38,5 +38,14 @@ urlpatterns = [
     #endpoints de la app eventos
     path('api/v1/events/', include('events.urls')),
     #endpoints de la app core
-    path('api/v1/core/', include('core.urls'))
+    path('api/v1/core/', include('core.urls')),
+    #endpoints de la app reports
+    path('api/v1/reports/', include('reports.urls')),
 ]
+
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

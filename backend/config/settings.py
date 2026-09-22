@@ -11,9 +11,14 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import warnings
+
+# Suprimir warning cosmético de compatibilidad entre urllib3 y chardet
+warnings.filterwarnings('ignore', message='.*urllib3.*or chardet.*')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -61,7 +66,9 @@ INSTALLED_APPS = [
     'vacantes',
     'events',
     'notificaciones',
+    'reports',
 ]
+
 
 MIDDLEWARE = [
     #Default
@@ -211,10 +218,13 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
 STATIC_URL = 'static/'
+
+# Media files (Uploads: CVs, Documentos)
+MEDIA_URL = '/files/'
+MEDIA_ROOT = BASE_DIR / 'files'
+
+CORS_EXPOSE_HEADERS = ['Content-Disposition']
 
 # DOCS configuration
 SPECTACULAR_SETTINGS = {
