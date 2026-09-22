@@ -25,16 +25,17 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status 201 - Postulacion creada", function () {
+      pm.test("Status 201 - Postulacion creada en revision_uth", function () {
           pm.response.to.have.status(201);
       });
-      pm.test("Tiene id, vacante, egresado y estado inicial Pendiente", function () {
+      pm.test("Tiene id, vacante, egresado y estado inicial revision_uth", function () {
           var json = pm.response.json();
           pm.expect(json).to.have.property('id');
           pm.expect(json).to.have.property('vacante');
           pm.expect(json).to.have.property('egresado');
-          pm.expect(json.estado).to.eql("Pendiente");
+          pm.expect(json.estado).to.eql("revision_uth");
       });
       if (pm.response.code === 201) {
           pm.environment.set("postulacionId", pm.response.json().id);
       }
+

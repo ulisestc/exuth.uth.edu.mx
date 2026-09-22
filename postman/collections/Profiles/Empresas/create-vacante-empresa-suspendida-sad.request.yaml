@@ -1,5 +1,5 @@
 $kind: http-request
-name: Create Vacante Empresa Pendiente (Sad - RBAC)
+name: Create Vacante Empresa Suspendida (Sad - RBAC)
 method: POST
 url: '{{baseUrl}}/vacantes/'
 order: 7150
@@ -15,7 +15,7 @@ body:
   type: json
   content: |-
     {
-      "titulo": "Vacante Empresa No Aprobada",
+      "titulo": "Vacante Empresa Suspendida",
       "tipo_contratacion": "tiempo_completo",
       "modalidad": "presencial",
       "num_candidatos": 2,
@@ -49,6 +49,6 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Status 403 - Empresa pendiente no puede crear vacante", function () {
+      pm.test("Status 403 - Empresa suspendida no puede crear vacante", function () {
           pm.response.to.have.status(403);
       });

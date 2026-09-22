@@ -1,0 +1,26 @@
+$kind: http-request
+name: List Padron Egresados por Admin (Happy)
+method: GET
+url: '{{baseUrl}}/profiles/padron/'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Admin consulta padron de egresados", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response es paginado y contiene results", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.have.property('results');
+          pm.expect(json.results).to.be.an('array');
+      });

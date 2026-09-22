@@ -38,6 +38,10 @@ scripts:
       pm.test("Status code is 201", function () {
           pm.response.to.have.status(201);
       });
+      pm.test("Empresa nace automáticamente aprobada", function () {
+          var json = pm.response.json();
+          pm.expect(json.status).to.eql("aprobada");
+      });
       if (pm.response.code === 201) {
           pm.environment.set("empresaId", pm.response.json().id);
       }

@@ -1,0 +1,12 @@
+$kind: http-request
+name: Get CV Sin Token (Sad - 401)
+method: GET
+url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/cv/'
+order: 8300
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 401 - Token requerido para visualizar CV", function () {
+          pm.response.to.have.status(401);
+      });

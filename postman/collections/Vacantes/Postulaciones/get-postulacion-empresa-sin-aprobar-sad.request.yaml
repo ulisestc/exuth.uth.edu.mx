@@ -1,0 +1,21 @@
+$kind: http-request
+name: Get Postulacion Empresa Sin Aprobar UTH (Sad - 404)
+method: GET
+url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/'
+order: 5420
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 404 - Empresa no puede ver postulaciones antes de aprobacion UTH", function () {
+          pm.response.to.have.status(404);
+      });

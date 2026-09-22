@@ -1,0 +1,25 @@
+$kind: http-request
+name: Get Reporte Egresados PDF por Admin (Happy)
+method: GET
+url: '{{baseUrl}}/reports/egresados/?format=pdf'
+order: 1400
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Reporte PDF generado", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Header Content-Type es application/pdf", function () {
+          var contentType = pm.response.headers.get("Content-Type");
+          pm.expect(contentType).to.include("application/pdf");
+      });

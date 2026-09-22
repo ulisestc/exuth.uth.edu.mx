@@ -1,0 +1,21 @@
+$kind: http-request
+name: Get CV Empresa Sin Postulacion Aprobada (Sad - RBAC)
+method: GET
+url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/cv/'
+order: 8350
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresa2AccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 o 404 - Empresa no autorizada para consultar CV", function () {
+          pm.expect([403, 404]).to.include(pm.response.code);
+      });

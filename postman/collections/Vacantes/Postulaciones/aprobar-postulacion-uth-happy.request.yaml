@@ -1,0 +1,35 @@
+$kind: http-request
+name: Aprobar Postulacion por Admin UTH (Happy)
+method: POST
+url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/aprobar-uth/'
+order: 5460
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "notas_uth": "Candidato idóneo validado por el departamento de egresados UTH."
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Postulacion aprobada por UTH", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Estado actualizado a enviada_empresa con notas", function () {
+          var json = pm.response.json();
+          pm.expect(json.estado).to.eql("enviada_empresa");
+          pm.expect(json.notas_uth).to.eql("Candidato idóneo validado por el departamento de egresados UTH.");
+      });

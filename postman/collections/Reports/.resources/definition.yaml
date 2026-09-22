@@ -1,0 +1,5 @@
+$kind: collection
+name: Reports
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8000'

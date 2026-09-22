@@ -1,0 +1,34 @@
+$kind: http-request
+name: Rechazar Postulacion por Admin UTH (Happy)
+method: POST
+url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/rechazar-uth/'
+order: 5900
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "notas_uth": "El perfil del egresado no coincide con el área solicitada."
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Postulacion rechazada en filtro UTH", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Estado actualizado a rechazada_uth", function () {
+          var json = pm.response.json();
+          pm.expect(json.estado).to.eql("rechazada_uth");
+      });

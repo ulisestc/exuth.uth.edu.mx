@@ -1,0 +1,29 @@
+$kind: http-request
+name: Get Dashboard Stats por Admin (Happy)
+method: GET
+url: '{{baseUrl}}/reports/dashboard/'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Dashboard obtenido con éxito", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Contiene KPIs calculados y analítica", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.have.property('total_egresados');
+          pm.expect(json).to.have.property('tasa_colocacion_global');
+          pm.expect(json).to.have.property('vacantes_vigentes');
+          pm.expect(json).to.have.property('postulaciones_pendientes_uth');
+          pm.expect(json).to.have.property('grafica_colocados_por_carrera');
+      });

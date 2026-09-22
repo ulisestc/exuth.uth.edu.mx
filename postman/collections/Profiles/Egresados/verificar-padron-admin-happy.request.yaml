@@ -1,0 +1,34 @@
+$kind: http-request
+name: Verificar Padron por Admin (Happy)
+method: PATCH
+url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/verificar-padron/'
+order: 8200
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "es_verificado_padron": true
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 - Admin verifica egresado en padron", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("es_verificado_padron es true", function () {
+          var json = pm.response.json();
+          pm.expect(json.es_verificado_padron).to.eql(true);
+      });

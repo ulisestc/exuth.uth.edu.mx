@@ -1,0 +1,30 @@
+$kind: http-request
+name: Aprobar Postulacion por Empresa (Sad - RBAC)
+method: POST
+url: '{{baseUrl}}/vacantes/postulaciones/{{postulacionId}}/aprobar-uth/'
+order: 5440
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "notas_uth": "Intento de auto-aprobación por empresa"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Solo personal UTH puede aprobar filtro", function () {
+          pm.response.to.have.status(403);
+      });

@@ -1,0 +1,12 @@
+$kind: http-request
+name: Get Reportes Sin Token (Sad - 401)
+method: GET
+url: '{{baseUrl}}/reports/vacantes/'
+order: 1500
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 401 - Autenticacion requerida", function () {
+          pm.response.to.have.status(401);
+      });

@@ -1,0 +1,30 @@
+$kind: http-request
+name: Verificar Padron por Egresado (Sad - RBAC)
+method: PATCH
+url: '{{baseUrl}}/profiles/egresados/{{egresadoId}}/verificar-padron/'
+order: 8250
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "es_verificado_padron": true
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Solo administradores pueden verificar en padron", function () {
+          pm.response.to.have.status(403);
+      });

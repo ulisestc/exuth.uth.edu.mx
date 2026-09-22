@@ -1,0 +1,21 @@
+$kind: http-request
+name: List Padron Egresados por Egresado (Sad - RBAC)
+method: GET
+url: '{{baseUrl}}/profiles/padron/'
+order: 1100
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("egresadoAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Egresado no tiene permiso para consultar padron", function () {
+          pm.response.to.have.status(403);
+      });

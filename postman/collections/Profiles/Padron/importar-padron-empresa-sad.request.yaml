@@ -1,0 +1,21 @@
+$kind: http-request
+name: Importar Padron por Empresa (Sad - RBAC)
+method: POST
+url: '{{baseUrl}}/profiles/padron/importar/'
+order: 1400
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Empresa no puede importar padron", function () {
+          pm.response.to.have.status(403);
+      });

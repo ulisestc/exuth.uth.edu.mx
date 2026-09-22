@@ -1,0 +1,21 @@
+$kind: http-request
+name: Importar Padron Sin Archivo (Sad - 400)
+method: POST
+url: '{{baseUrl}}/profiles/padron/importar/'
+order: 1300
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("adminAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 400 - Archivo requerido para importacion", function () {
+          pm.response.to.have.status(400);
+      });

@@ -1,0 +1,21 @@
+$kind: http-request
+name: Get Dashboard Stats por Empresa (Sad - RBAC)
+method: GET
+url: '{{baseUrl}}/reports/dashboard/'
+order: 1200
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      pm.environment.set("accessToken", pm.environment.get("empresaAccessToken"));
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 403 - Empresa no tiene acceso a reportes", function () {
+          pm.response.to.have.status(403);
+      });
