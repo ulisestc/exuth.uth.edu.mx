@@ -182,3 +182,72 @@ class VacantesUnitTestSuite(APITestCase):
 
         response = self.client_empresa.post('/api/v1/vacantes/postulaciones/', {"vacante": vacante.id})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_opcion_b_flujo_completo_filtro_uth(self):
+        """
+        OPCIÓN B - FLUJO CON FILTRO UTH:
+        1. Egresado se postula -> Estado inicial: 'revision_uth'.
+        2. Empresa NO ve la postulación mientras esté en 'revision_uth'.
+        3. Admin UTH aprueba la postulación -> Estado cambia a 'enviada_empresa'.
+        4. Empresa ya puede ver la postulación.
+        5. Empresa evalúa y marca 'Aceptada' -> Genera Colocación y egresado.colocado=True.
+        """
+        vacante = Vacante.objects.create(
+            empresa=self.empresa, area_estudio=self.area, titulo="Ingeniero DevOps",
+            tipo_contratacion="tiempo_completo", modalidad="presencial",
+            sueldo_minimo=12000, sueldo_maximo=18000, persona_contacto="Carlos Ruiz"
+        )
+
+        # 1. Egresado se postula
+        res_post = self.client_egresado.post('/api/v1/vacantes/postulaciones/', {"vacante": vacante.id})
+        self.assertEqual(res_post.status_code, status.HTTP_201_CREATED)
+        post_id = res_post.data['id']
+        self.assertEqual(res_post.data['estado'], 'revision_uth')
+
+        # 2. Empresa NO debe verla aún en su listado
+        res_empresa_list = self.client_empresa.get('/api/v1/vacantes/postulaciones/')
+        self.assertEqual(res_empresa_list.status_code, status.HTTP_200_OK)
+        ids_visibles_empresa = [p['id'] for p in res_empresa_list.data.get('results', res_empresa_list.data)]
+        self.assertNotIn(post_id, ids_visibles_empresa)
+
+        # 3. Admin UTH revisa y aprueba (Enviar a Empresa)
+        res_aprobar = self.client_admin.post(f'/api/v1/vacantes/postulaciones/{post_id}/aprobar-uth/')
+        self.assertEqual(res_aprobar.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_aprobar.data['estado'], 'enviada_empresa')
+
+        # 4. Empresa ahora SÍ puede verla
+        res_empresa_list2 = self.client_empresa.get('/api/v1/vacantes/postulaciones/')
+        ids_visibles_empresa2 = [p['id'] for p in res_empresa_list2.data.get('results', res_empresa_list2.data)]
+        self.assertIn(post_id, ids_visibles_empresa2)
+
+        # 5. Empresa evalúa y acepta al egresado
+        res_aceptar = self.client_empresa.patch(f'/api/v1/vacantes/postulaciones/{post_id}/', {'estado': 'Aceptada'})
+        self.assertEqual(res_aceptar.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_aceptar.data['estado'], 'Aceptada')
+
+        # Verifica sincronización automática de Colocación
+        self.egresado.refresh_from_db()
+        self.assertTrue(self.egresado.colocado)
+        self.assertTrue(Colocacion.objects.filter(egresado=self.egresado, vacante=vacante).exists())
+
+    def test_opcion_b_uth_rechaza_postulacion_detenida(self):
+        """OPCIÓN B: UTH rechaza postulación en filtro -> Estado 'rechazada_uth', nunca llega a la empresa."""
+        vacante = Vacante.objects.create(
+            empresa=self.empresa, area_estudio=self.area, titulo="Data Scientist",
+            tipo_contratacion="tiempo_completo", modalidad="presencial",
+            sueldo_minimo=15000, sueldo_maximo=25000, persona_contacto="Carlos Ruiz"
+        )
+        post = Postulacion.objects.create(vacante=vacante, egresado=self.egresado, estado='revision_uth')
+
+        # Admin UTH rechaza por no cumplir perfil
+        res_rechazar = self.client_admin.post(
+            f'/api/v1/vacantes/postulaciones/{post.id}/rechazar-uth/',
+            {'notas_uth': 'No cubre perfil de experiencia'}
+        )
+        self.assertEqual(res_rechazar.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_rechazar.data['estado'], 'rechazada_uth')
+
+        # Empresa nunca la ve
+        res_emp = self.client_empresa.get('/api/v1/vacantes/postulaciones/')
+        ids_visibles = [p['id'] for p in res_emp.data.get('results', res_emp.data)]
+        self.assertNotIn(post.id, ids_visibles)

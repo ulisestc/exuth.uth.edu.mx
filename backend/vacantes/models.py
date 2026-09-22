@@ -115,14 +115,17 @@ class RequisitoIdioma(models.Model):
 
 class Postulacion(models.Model):
     ESTADOS_POSTULACION = (
-        ('Pendiente', 'Pendiente'),
+        ('revision_uth', 'En Revisión por UTH'),
+        ('rechazada_uth', 'Rechazada por UTH'),
+        ('enviada_empresa', 'Enviada a Empresa'),
         ('Aceptada', 'Aceptada'),
         ('Rechazada', 'Rechazada'),
     )
     vacante = models.ForeignKey(Vacante, on_delete=models.CASCADE, related_name='postulaciones')
     egresado = models.ForeignKey('profiles.Egresado', on_delete=models.CASCADE, related_name='postulaciones')
     fecha_postulacion = models.DateTimeField(auto_now_add=True)
-    estado = models.CharField(max_length=20, choices=ESTADOS_POSTULACION, default='Pendiente')
+    estado = models.CharField(max_length=20, choices=ESTADOS_POSTULACION, default='revision_uth')
+    notas_uth = models.TextField(blank=True, null=True, verbose_name="Observaciones de revisión UTH")
 
     class Meta:
         constraints = [

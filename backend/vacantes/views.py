@@ -11,7 +11,7 @@ from django.db import transaction
 class VacanteViewSet(viewsets.ModelViewSet):
     queryset = Vacante.objects.all()
     serializer_class = VacanteSerializer
-    permission_classes = [permissions.IsAuthenticated, IsEmpresaAuthorOrReadOnly, IsEmpresaAprobadaOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsEmpresaAuthorOrReadOnly]
 
     #filtros, busquedas y ordenamiento
     filterset_fields = [
@@ -32,7 +32,7 @@ class VacanteViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         if not hasattr(self.request.user, 'empresa'):
-            raise PermissionDenied("Solo las empresas registradas y aprobadas pueden crear vacantes desde la API. Los administradores deben usar el panel interno de Django.")       
+            raise PermissionDenied("Solo las empresas registradas pueden crear vacantes desde la API. Los administradores deben usar el panel interno de Django.")       
         # Asignar la empresa del usuario autenticado al crear una vacante
         serializer.save(empresa=self.request.user.empresa)
 
@@ -64,45 +64,87 @@ class PostulacionViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Si es empresa. .. mostrar todas las postulaciones de sus vacantes. si es egresado, mostrar solo sus postulaciones
-        if hasattr(self.request.user, 'empresa'):
-            return self.queryset.filter(vacante__empresa=self.request.user.empresa)
-        elif hasattr(self.request.user, 'egresado'):
-            return self.queryset.filter(egresado=self.request.user.egresado)
-        return self.queryset if (self.request.user.rol in ['soporte_ti', 'admin_uth'] or self.request.user.is_superuser) else self.queryset.none()
+        user = self.request.user
+        # Si es empresa, SOLO puede ver las postulaciones aprobadas por la UTH (enviada_empresa, Aceptada, Rechazada)
+        if hasattr(user, 'empresa'):
+            return self.queryset.filter(
+                vacante__empresa=user.empresa,
+                estado__in=['enviada_empresa', 'Aceptada', 'Rechazada']
+            )
+        # Si es egresado, ve todas sus postulaciones
+        elif hasattr(user, 'egresado'):
+            return self.queryset.filter(egresado=user.egresado)
+        # Admin UTH y Soporte TI ven todas (incluidas las pendientes en revision_uth)
+        return self.queryset if (user.rol in ['soporte_ti', 'admin_uth'] or user.is_superuser) else self.queryset.none()
 
     def get_serializer_class(self):
-        if self.action == 'update' or self.action == 'partial_update':
-            return PostulacionEstadoSerializer  # Usar el serializer de estado para actualizaciones
-        return PostulacionSerializer  # Usar el serializer completo para otras acciones
+        if self.action in ['update', 'partial_update', 'cambiar_estado']:
+            return PostulacionEstadoSerializer
+        return PostulacionSerializer
 
     def perform_create(self, serializer):
-        # si es empresa, no puede crear postulaciones. si es egresado, asignar el egresado del usuario autenticado al crear una postulacion
         if hasattr(self.request.user, 'egresado'):
             egresado = self.request.user.egresado
             vacante = serializer.validated_data.get('vacante')
             if Postulacion.objects.filter(vacante=vacante, egresado=egresado).exists():
                 raise exceptions.ValidationError("Ya te has postulado a esta vacante.") #400
-            serializer.save(egresado=egresado)
+            # Nace automáticamente con estado 'revision_uth'
+            serializer.save(egresado=egresado, estado='revision_uth')
         else:
             raise exceptions.PermissionDenied("Solo los egresados pueden crear postulaciones.") #403
     
+    @action(detail=True, methods=['patch', 'post'], url_path='aprobar-uth')
+    def aprobar_uth(self, request, pk=None):
+        """Filtro UTH: El Administrador aprueba el CV y lo envía a la Empresa."""
+        if request.user.rol not in ['admin_uth', 'soporte_ti'] and not request.user.is_superuser:
+            raise exceptions.PermissionDenied("Solo el personal de la UTH puede validar y aprobar postulaciones.")
+        
+        postulacion = self.get_object()
+        postulacion.estado = 'enviada_empresa'
+        if 'notas_uth' in request.data:
+            postulacion.notas_uth = request.data['notas_uth']
+        postulacion.save()
+        return Response(PostulacionSerializer(postulacion).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['patch', 'post'], url_path='rechazar-uth')
+    def rechazar_uth(self, request, pk=None):
+        """Filtro UTH: El Administrador detiene la postulación por no cubrir el perfil."""
+        if request.user.rol not in ['admin_uth', 'soporte_ti'] and not request.user.is_superuser:
+            raise exceptions.PermissionDenied("Solo el personal de la UTH puede rechazar postulaciones en filtro.")
+        
+        postulacion = self.get_object()
+        postulacion.estado = 'rechazada_uth'
+        if 'notas_uth' in request.data:
+            postulacion.notas_uth = request.data['notas_uth']
+        postulacion.save()
+        return Response(PostulacionSerializer(postulacion).data, status=status.HTTP_200_OK)
+
     @transaction.atomic
     def perform_update(self, serializer):
-        # (RBAC): Solo empresas, soporte_ti, admin_uth o superusuarios pueden cambiar el estado
-        if not (hasattr(self.request.user, 'empresa') or self.request.user.rol in ['soporte_ti', 'admin_uth'] or self.request.user.is_superuser):
-            raise exceptions.PermissionDenied("No tienes permiso para actualizar el estado de esta postulación.") # 403
+        user = self.request.user
+        instance = self.get_object()
 
-        instance = serializer.save()
+        # Validación estricta por rol
+        if hasattr(user, 'empresa'):
+            # La empresa solo puede evaluar candidatos que ya hayan pasado el filtro UTH
+            if instance.estado not in ['enviada_empresa', 'Aceptada', 'Rechazada']:
+                raise exceptions.PermissionDenied("Esta postulación aún no ha sido aprobada por la UTH.")
+            nuevo_estado = serializer.validated_data.get('estado')
+            if nuevo_estado not in ['Aceptada', 'Rechazada']:
+                raise exceptions.ValidationError({"estado": "La empresa solo puede establecer el estado en 'Aceptada' o 'Rechazada'."})
+        elif user.rol not in ['soporte_ti', 'admin_uth'] and not user.is_superuser:
+            raise exceptions.PermissionDenied("No tienes permiso para actualizar el estado de esta postulación.")
+
+        updated_instance = serializer.save()
         
-        #  Si el nuevo estado es 'Aceptada', creamos o verificamos la Colocación
-        if instance.estado == 'Aceptada':
+        # Si el nuevo estado es 'Aceptada', creamos o verificamos la Colocación
+        if updated_instance.estado == 'Aceptada':
             Colocacion.objects.get_or_create(
-                egresado=instance.egresado,
-                vacante=instance.vacante,
+                egresado=updated_instance.egresado,
+                vacante=updated_instance.vacante,
                 defaults={
-                    'registrado_por': self.request.user,
-                    'observaciones': f'Colocación generada automáticamente al aceptar la postulación #{instance.id}.'
+                    'registrado_por': user,
+                    'observaciones': f'Colocación generada automáticamente al aceptar la postulación #{updated_instance.id}.'
                 }
             )
 class ColocacionViewSet(viewsets.ModelViewSet):

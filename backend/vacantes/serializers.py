@@ -69,8 +69,8 @@ class PostulacionSerializer(serializers.ModelSerializer):
 class PostulacionEstadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Postulacion
-        fields = ['estado', 'id']  # Solo se permite actualizar el estado de la postulación
-        read_only_fields = ['id']  # El ID es de solo lectura, no se puede modificar
+        fields = ['estado', 'notas_uth', 'id']  # Se permite actualizar estado y notas de UTH
+        read_only_fields = ['id']
 
 class ColocacionSerializer(serializers.ModelSerializer):
     class Meta:
