@@ -49,9 +49,11 @@ class NotificacionesTestSuite(TestCase):
             actividad_de_la_empresa="Software",
             giro=self.giro,
             sector=self.sector,
+            status="pendiente",
             nombre_contacto="Carlos Ruiz",
             cargo_contacto="RH"
         )
+
         self.egresado = Egresado.objects.create(
             user=self.user_egresado,
             matricula="2026001",
@@ -303,11 +305,12 @@ class NotificacionesTestSuite(TestCase):
             modalidad="presencial",
             sueldo_minimo=10000,
             sueldo_maximo=15000,
-            persona_contacto="Carlos Ruiz",
             status="aprobada"
         )
-        Postulacion.objects.create(vacante=vacante, egresado=self.egresado)
+        Postulacion.objects.create(vacante=vacante, egresado=self.egresado, estado='enviada_empresa')
+
         self._ejecutar_hilos()
+
         mail.outbox = []
 
         out = io.StringIO()

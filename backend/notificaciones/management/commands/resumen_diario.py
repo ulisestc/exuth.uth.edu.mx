@@ -12,9 +12,10 @@ class Command(BaseCommand):
         desde = timezone.now() - timedelta(days=1)
         self.stdout.write(self.style.SUCCESS(f"Iniciando Resumen Diario para Empresas desde {desde.strftime('%Y-%m-%d %H:%M')}..."))
 
-        # Resumen de Postulaciones (Para Empresas)
+        # Resumen de Postulaciones (Para Empresas: Solo las aprobadas por filtro UTH)
         postulaciones_recientes = Postulacion.objects.filter(
-            fecha_postulacion__gte=desde
+            fecha_postulacion__gte=desde,
+            estado__in=['enviada_empresa', 'Aceptada', 'Rechazada']
         ).select_related('vacante__empresa', 'egresado__user', 'egresado__carrera')
 
         postulaciones_por_empresa = {}

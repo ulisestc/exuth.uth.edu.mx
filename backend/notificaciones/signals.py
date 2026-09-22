@@ -137,14 +137,17 @@ def capturar_estado_anterior_postulacion(sender, instance, **kwargs):
 @receiver(post_save, sender=Postulacion)
 def notificar_estatus_postulacion_egresado(sender, instance, created, **kwargs):
     """
-    Notifica al Egresado SOLO cuando el estado de la postulación CAMBIÓ a 'Aceptada' o 'Rechazada'.
+    Notifica al Egresado cuando el estado de la postulación cambia:
+    - rechazada_uth: Notificación de no cubrir perfil por filtro UTH.
+    - enviada_empresa: Postulación aprobada por UTH y turnada a la Empresa.
+    - Aceptada / Rechazada: Decisión final de la empresa.
     """
     estado_anterior = getattr(instance, '_estado_anterior', None)
 
-    if not created and estado_anterior != instance.estado and instance.estado in ['Aceptada', 'Rechazada']:
+    if not created and estado_anterior != instance.estado and instance.estado in ['Aceptada', 'Rechazada', 'rechazada_uth', 'enviada_empresa']:
         if instance.egresado.user and instance.egresado.user.email:
             enviar_correo_institucional(
-                subject=f"Actualización de Postulación: {instance.vacante.titulo} - {instance.estado}",
+                subject=f"Actualización de Postulación: {instance.vacante.titulo} - {instance.get_estado_display()}",
                 template_name='emails/postulacion_status_egresado.html',
                 context={
                     'postulacion': instance,
@@ -153,3 +156,4 @@ def notificar_estatus_postulacion_egresado(sender, instance, created, **kwargs):
                 },
                 recipient_list=[instance.egresado.user.email]
             )
+
