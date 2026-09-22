@@ -28,5 +28,5 @@ class IsEmpresaAprobadaOrReadOnly(permissions.BasePermission):
             return True  # Usuarios con rol de soporte o admin pueden crear/editar
         if not hasattr(request.user, 'empresa'):
             return False
-        # Check if the empresa is approved
-        return request.user.empresa.status == 'aprobada'
+        # Las empresas registradas pueden operar inmediatamente sin aprobación manual previa
+        return True

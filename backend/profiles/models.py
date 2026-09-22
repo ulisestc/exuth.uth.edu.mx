@@ -53,9 +53,46 @@ class Empresa(models.Model):
     giro = models.ForeignKey(Giro, on_delete=models.PROTECT, related_name='empresas')
     sector = models.ForeignKey(Sector, on_delete=models.PROTECT, related_name='empresas')
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='empresa')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pendiente')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='aprobada')
     nombre_contacto = models.CharField(max_length=150, verbose_name="Nombre del contacto")
     cargo_contacto = models.CharField(max_length=100, verbose_name="Cargo del Contacto")
 
     def __str__(self):
         return f"{self.nombre} - {self.correo_contacto}"
+
+
+class PadronEgresado(models.Model):
+    """
+    Representa el Padrón Institucional oficial de alumnos y egresados de la UTH,
+    importado periódicamente desde los reportes de Servicios Escolares (Excel 78 columnas).
+    """
+    matricula = models.CharField(max_length=50, unique=True, db_index=True, verbose_name="Matrícula Institucional")
+    nombre = models.CharField(max_length=255, verbose_name="Nombre Completo")
+    carrera = models.CharField(max_length=255, verbose_name="Carrera")
+    periodo = models.CharField(max_length=100, blank=True, null=True, verbose_name="Periodo de Egreso")
+    anio_egreso = models.CharField(max_length=10, blank=True, null=True, verbose_name="Año de Egreso")
+    estatus_titulacion = models.CharField(max_length=150, blank=True, null=True, verbose_name="Estatus de Titulación")
+    estatus_tsu = models.CharField(max_length=150, blank=True, null=True, verbose_name="Estatus TSU")
+    etnia_indigena = models.CharField(max_length=100, blank=True, null=True, verbose_name="Etnia Indígena")
+    discapacidad = models.CharField(max_length=150, blank=True, null=True, verbose_name="Discapacidad")
+    genero = models.CharField(max_length=20, blank=True, null=True, verbose_name="Género")
+    nivel = models.CharField(max_length=50, blank=True, null=True, verbose_name="Nivel de Estudios")
+    tel_escolares = models.CharField(max_length=255, blank=True, null=True, verbose_name="Teléfono Escolares")
+    correo_escolares = models.CharField(max_length=255, blank=True, null=True, verbose_name="Correo Escolares")
+    domicilio = models.TextField(blank=True, null=True, verbose_name="Domicilio")
+    estado_domicilio = models.CharField(max_length=100, blank=True, null=True, verbose_name="Estado")
+    municipio = models.CharField(max_length=150, blank=True, null=True, verbose_name="Municipio")
+    curp = models.CharField(max_length=25, blank=True, null=True, verbose_name="CURP")
+    fecha_nacimiento = models.CharField(max_length=50, blank=True, null=True, verbose_name="Fecha de Nacimiento")
+    trabaja_actualmente = models.CharField(max_length=50, blank=True, null=True, verbose_name="¿Actualmente trabaja?")
+    correo_personal = models.CharField(max_length=255, blank=True, null=True, verbose_name="Correo Electrónico Personal")
+    telefono_movil = models.CharField(max_length=100, blank=True, null=True, verbose_name="Teléfono Móvil")
+    fecha_importacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Importación")
+
+    class Meta:
+        verbose_name = "Padrón de Egresado"
+        verbose_name_plural = "Padrón de Egresados"
+        ordering = ['-fecha_importacion', 'matricula']
+
+    def __str__(self):
+        return f"{self.matricula} - {self.nombre} ({self.carrera})"

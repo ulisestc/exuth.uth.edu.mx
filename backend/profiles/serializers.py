@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Egresado, Empresa
+from .models import Egresado, Empresa, PadronEgresado
 
 class EgresadoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,3 +42,9 @@ class EmpresaStatusSerializer(serializers.ModelSerializer):
         model = Empresa
         fields = ['status', 'id']
         read_only_fields = ['id']  # Solo se puede actualizar el status, no el id
+
+class PadronEgresadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PadronEgresado
+        fields = '__all__'
+        read_only_fields = ['id', 'fecha_importacion']
