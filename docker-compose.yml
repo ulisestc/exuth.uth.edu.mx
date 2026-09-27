@@ -7,7 +7,7 @@ services:
   db:
     image: mysql:8.0
     container_name: exuth_mysql
-    restart: always #Docker intentará reinciar el contenedor siempre que se detenga
+    restart: no 
     environment: #Acá no basta con .env porque mysql no sabe que es "DB_...", docker detecta automaticamente del .env
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER} #usuario limitado
@@ -22,6 +22,7 @@ services:
   backend:
     build: ./backend
     container_name: exuth_backend
+    restart: no
     command: python manage.py runserver 0.0.0.0:8000
     volumes: 
       - ./backend:/app #se monta un volumen para updates del codigo en tiempo real sin hacer rebuild
@@ -34,7 +35,7 @@ services:
 
   smtp4dev: #4dev
     image: rnwood/smtp4dev:v3
-    restart: on-failure
+    restart: no
     ports:
     - '127.0.0.1:5000:80'   # Web interface (localhost only)
     - '127.0.0.1:25:25'     # SMTP server (localhost only)  
