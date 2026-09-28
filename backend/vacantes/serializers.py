@@ -14,6 +14,8 @@ class RequisitoIdiomaSerializer(serializers.ModelSerializer):
 class VacanteSerializer(serializers.ModelSerializer):
     #anidar serializer de RequisitoIdioma
     idiomas = RequisitoIdiomaSerializer(many=True, source='requisitos_idioma')
+    empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
+    area_estudio_nombre = serializers.ReadOnlyField(source='area_estudio.nombre')
 
     class Meta:
         model = Vacante

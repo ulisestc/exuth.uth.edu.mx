@@ -11,7 +11,7 @@ from django.db import transaction
 class VacanteViewSet(viewsets.ModelViewSet):
     queryset = Vacante.objects.all()
     serializer_class = VacanteSerializer
-    permission_classes = [permissions.IsAuthenticated, IsEmpresaAuthorOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsEmpresaAuthorOrReadOnly]
 
     #filtros, busquedas y ordenamiento
     filterset_fields = [
