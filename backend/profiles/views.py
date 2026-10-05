@@ -56,6 +56,47 @@ class EgresadoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Egresado.objects.filter(user__deactivated_at__isnull=True)
 
+    @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """Obtiene o actualiza el perfil del egresado autenticado."""
+        if not hasattr(request.user, 'egresado'):
+            raise NotFound("No cuentas con un perfil de egresado registrado.")
+        
+        egresado = request.user.egresado
+        if request.method == 'GET':
+            serializer = self.get_serializer(egresado)
+            return Response(serializer.data)
+        
+        elif request.method == 'PATCH':
+            serializer = self.get_serializer(egresado, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
+    @action(detail=False, methods=['get', 'delete'], url_path='me/cv', permission_classes=[IsAuthenticated])
+    def me_cv(self, request):
+        """Descarga o elimina el CV del egresado autenticado."""
+        if not hasattr(request.user, 'egresado'):
+            raise NotFound("No cuentas con un perfil de egresado registrado.")
+        
+        egresado = request.user.egresado
+        if request.method == 'GET':
+            if not egresado.cv:
+                raise NotFound("No cuentas con un currículum vitae registrado.")
+            try:
+                archivo = egresado.cv.open('rb')
+                response = FileResponse(archivo, content_type='application/pdf')
+                nombre_archivo = os.path.basename(egresado.cv.name)
+                response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
+                return response
+            except FileNotFoundError:
+                raise NotFound("El archivo físico del currículum no fue encontrado en el servidor.")
+        
+        elif request.method == 'DELETE':
+            if egresado.cv:
+                egresado.cv.delete(save=True)
+            return Response({"detail": "Currículum eliminado correctamente."}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['get'])
     def cv(self, request, pk=None):
         """Endpoint protegido para que el Frontend de Angular visualice o descargue el CV."""

@@ -4,7 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { fetchMisPostulaciones, Postulacion } from '@/lib/api';
+import { 
+  fetchMisPostulaciones, 
+  fetchMiPerfilEgresado, 
+  Postulacion, 
+  EgresadoProfile 
+} from '@/lib/api';
+import { CvManager } from '@/components/egresados/CvManager';
 import { 
   GraduationCap, 
   Briefcase, 
@@ -19,7 +25,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Eye,
-  Send
+  Send,
+  BookOpen,
+  Award
 } from 'lucide-react';
 
 export default function PortalEgresadoPage() {
@@ -29,6 +37,9 @@ export default function PortalEgresadoPage() {
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
   const [loadingPostulaciones, setLoadingPostulaciones] = useState(true);
 
+  const [profile, setProfile] = useState<EgresadoProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
   // Redirigir a login si no está autenticado
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -36,25 +47,31 @@ export default function PortalEgresadoPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Cargar postulaciones del egresado
+  // Cargar perfil y postulaciones del egresado
   useEffect(() => {
-    async function loadPostulaciones() {
+    async function loadData() {
       if (accessToken && user?.rol === 'egresado') {
         try {
-          const data = await fetchMisPostulaciones(accessToken);
-          setPostulaciones(data);
+          const [postulacionesData, profileData] = await Promise.all([
+            fetchMisPostulaciones(accessToken),
+            fetchMiPerfilEgresado(accessToken),
+          ]);
+          setPostulaciones(postulacionesData);
+          setProfile(profileData);
         } catch (error) {
-          console.error('Error loading postulaciones:', error);
+          console.error('Error loading egresado data:', error);
         } finally {
           setLoadingPostulaciones(false);
+          setLoadingProfile(false);
         }
       } else {
         setLoadingPostulaciones(false);
+        setLoadingProfile(false);
       }
     }
 
     if (accessToken) {
-      loadPostulaciones();
+      loadData();
     }
   }, [accessToken, user]);
 
@@ -116,7 +133,20 @@ export default function PortalEgresadoPage() {
     }
   };
 
-  if (authLoading) {
+  const getNivelEstudiosLabel = (nivel?: string) => {
+    switch (nivel) {
+      case 'TSU':
+        return 'Técnico Superior Universitario';
+      case 'ING_LIC':
+        return 'Ingeniería / Licenciatura';
+      case 'MTRIA':
+        return 'Maestría';
+      default:
+        return nivel || 'TSU / Ingeniería';
+    }
+  };
+
+  if (authLoading || (loadingProfile && !profile)) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -140,17 +170,42 @@ export default function PortalEgresadoPage() {
         </div>
 
         <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#00A887]/20 text-[#00A887] border border-[#00A887]/30">
-              <GraduationCap className="w-3.5 h-3.5" />
-              Egresado UTH Verificado
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {profile?.es_verificado_padron ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#00A887]/20 text-[#00A887] border border-[#00A887]/30">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  Egresado UTH Verificado
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  <Clock className="w-3.5 h-3.5" />
+                  En Validación de Padrón
+                </span>
+              )}
+
+              {profile?.matricula && (
+                <span className="text-xs font-mono font-bold bg-white/10 px-2.5 py-0.5 rounded text-zinc-300">
+                  Matrícula: {profile.matricula}
+                </span>
+              )}
             </div>
+
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
               Bienvenida(o), {user.nombres} {user.apellido_paterno}
             </h1>
-            <p className="text-sm text-zinc-300 max-w-2xl">
-              Portal institucional de vinculación y desarrollo profesional de la Universidad Tecnológica de Huejotzingo.
-            </p>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300">
+              <span className="flex items-center gap-1.5 font-medium">
+                <BookOpen className="w-3.5 h-3.5 text-[#00A887]" />
+                {profile?.carrera || 'Programa Académico UTH'}
+              </span>
+              <span className="text-zinc-500 hidden sm:inline">•</span>
+              <span className="flex items-center gap-1.5 text-zinc-300">
+                <Award className="w-3.5 h-3.5 text-[#C2BA98]" />
+                {getNivelEstudiosLabel(profile?.nivel_estudios)}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
@@ -206,22 +261,42 @@ export default function PortalEgresadoPage() {
         {/* Tarjeta: Curriculum Vitae */}
         <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+              profile?.cv 
+                ? 'bg-emerald-50 border border-emerald-100 text-[#00A887]' 
+                : 'bg-amber-50 border border-amber-100 text-amber-700'
+            }`}>
               <FileText className="w-5 h-5" />
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-              Pendiente
-            </span>
+            {profile?.cv ? (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                ✓ Activo
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                ⚠️ Pendiente
+              </span>
+            )}
           </div>
           <div>
             <h2 className="text-base font-bold text-[#2D2926]">Currículum Vitae (PDF)</h2>
             <p className="text-xs text-[#636569] mt-1">
-              Sube tu CV actualizado para postularte con 1 clic a las empresas vinculadas.
+              {profile?.cv 
+                ? 'Tu CV está cargado y listo para vincularte con empresas.' 
+                : 'Sube tu CV actualizado para postularte con 1 clic a las empresas.'}
             </p>
           </div>
-          <span className="text-xs font-semibold text-zinc-400">
-            Próximamente disponible
-          </span>
+          <a
+            href="#seccion-cv"
+            className={`inline-flex items-center gap-1.5 text-xs font-bold ${
+              profile?.cv 
+                ? 'text-[#00A887] hover:text-[#008F73]' 
+                : 'text-amber-700 hover:text-amber-800'
+            }`}
+          >
+            {profile?.cv ? 'Gestionar o actualizar CV' : 'Subir mi CV en PDF'}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
         </div>
 
         {/* Tarjeta: Estado Institucional */}
@@ -230,14 +305,18 @@ export default function PortalEgresadoPage() {
             <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
               <UserCheck className="w-5 h-5" />
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
-              Activo
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+              profile?.es_verificado_padron 
+                ? 'bg-blue-50 text-blue-800 border border-blue-200' 
+                : 'bg-zinc-100 text-zinc-700 border border-zinc-200'
+            }`}>
+              {profile?.es_verificado_padron ? 'Verificado' : 'En Validación'}
             </span>
           </div>
           <div>
             <h2 className="text-base font-bold text-[#2D2926]">Padrón de Egresados</h2>
             <p className="text-xs text-[#636569] mt-1">
-              Cuenta vinculada al sistema de Servicios Escolares de la UTH.
+              {profile?.curp ? `CURP: ${profile.curp}` : 'Cuenta vinculada a Servicios Escolares'}
             </p>
           </div>
           <div className="text-[11px] text-[#636569] flex items-center gap-1.5 font-medium truncate">
@@ -246,6 +325,13 @@ export default function PortalEgresadoPage() {
           </div>
         </div>
       </div>
+
+      {/* Módulo Interactivo: Gestión de CV (PDF) */}
+      <CvManager 
+        profile={profile} 
+        token={accessToken || ''} 
+        onProfileUpdated={(updated) => setProfile(updated)} 
+      />
 
       {/* Listado de Postulaciones en Tiempo Real */}
       <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden space-y-6">
@@ -347,24 +433,24 @@ export default function PortalEgresadoPage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#00A887]">Paso 1: Postulación</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Registro de Interés</h3>
+            <div className="text-xs font-bold text-[#00A887]">Paso 1: Perfil y CV</div>
+            <h3 className="text-sm font-bold text-[#2D2926]">Expediente Digital</h3>
             <p className="text-xs text-[#636569]">
-              Al hacer clic en "Postularme", tu perfil entra al filtro de revisión institucional de la UTH.
+              Mantén tu CV en formato PDF cargado para que el departamento de vinculación cuente con tu historial.
             </p>
           </div>
           <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
             <div className="text-xs font-bold text-[#691C32]">Paso 2: Validación UTH</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Filtro de Vinculación</h3>
+            <h3 className="text-sm font-bold text-[#2D2926]">Filtro Institucional</h3>
             <p className="text-xs text-[#636569]">
-              El Departamento de Vinculación valida que tu carrera y competencias empaten con los requisitos de la empresa.
+              La UTH revisa que cumplas con los requisitos de la vacante antes de turnar tu CV a la empresa.
             </p>
           </div>
           <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
             <div className="text-xs font-bold text-[#C2BA98]">Paso 3: Envío y Entrevista</div>
             <h3 className="text-sm font-bold text-[#2D2926]">Contacto de la Empresa</h3>
             <p className="text-xs text-[#636569]">
-              La empresa recibe tu expediente aprobado y te convoca para el proceso de selección y contratación.
+              La empresa revisa tu currículum oficial y te contacta para agendar entrevistas de trabajo.
             </p>
           </div>
         </div>

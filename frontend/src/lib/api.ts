@@ -288,3 +288,144 @@ export async function fetchSectores(): Promise<Sector[]> {
     return [];
   }
 }
+
+export interface EgresadoProfile {
+  id: number;
+  user: number;
+  matricula: string;
+  curp: string;
+  cv: string | null;
+  carrera: string;
+  telefono_celular: string | null;
+  telefono_casa: string | null;
+  domicilio: string;
+  nivel_estudios: 'TSU' | 'ING_LIC' | 'MTRIA';
+  genero: 'M' | 'F' | 'O';
+  capacidades_especiales: string | null;
+  habilidades: string;
+  documentos: string | null;
+  colocado: boolean;
+  es_verificado_padron: boolean;
+}
+
+export async function fetchMiPerfilEgresado(token: string): Promise<EgresadoProfile | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/me/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching perfil egresado:', error);
+    return null;
+  }
+}
+
+export async function uploadMiCv(
+  token: string,
+  file: File
+): Promise<{ success: boolean; profile?: EgresadoProfile; error?: string }> {
+  try {
+    const formData = new FormData();
+    formData.append('cv', file);
+
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/me/`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      const errorMsg = data.cv?.[0] || data.detail || 'Error al subir el currículum.';
+      return { success: false, error: errorMsg };
+    }
+
+    return { success: true, profile: data };
+  } catch (error: any) {
+    console.error('Error uploading CV:', error);
+    return { success: false, error: error.message || 'Error de conexión al subir el archivo.' };
+  }
+}
+
+export async function deleteMiCv(
+  token: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/me/cv/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.detail || 'Error al eliminar el archivo.' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting CV:', error);
+    return { success: false, error: error.message || 'Error de conexión al eliminar el archivo.' };
+  }
+}
+
+export async function downloadMiCv(token: string, filename = 'Curriculum_UTH.pdf'): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/me/cv/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    return true;
+  } catch (error) {
+    console.error('Error downloading CV:', error);
+    return false;
+  }
+}
+
+export async function updateMiPerfilEgresado(
+  token: string,
+  data: Partial<{
+    telefono_celular: string;
+    domicilio: string;
+    habilidades: string;
+    nivel_estudios: 'TSU' | 'ING_LIC' | 'MTRIA';
+  }>
+): Promise<{ success: boolean; profile?: EgresadoProfile; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/me/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    const resData = await res.json();
+    if (!res.ok) {
+      const errorMsg = resData.detail || 'Error al actualizar el perfil.';
+      return { success: false, error: errorMsg };
+    }
+
+    return { success: true, profile: resData };
+  } catch (error: any) {
+    console.error('Error updating perfil egresado:', error);
+    return { success: false, error: error.message || 'Error de conexión al actualizar el perfil.' };
+  }
+}
