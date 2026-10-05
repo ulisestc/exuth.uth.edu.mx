@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { fetchMisPostulaciones, Postulacion } from '@/lib/api';
 import { 
   GraduationCap, 
   Briefcase, 
@@ -12,24 +13,110 @@ import {
   ArrowRight, 
   Clock, 
   Building2, 
-  ExternalLink,
-  LogOut,
-  Calendar,
-  CheckCircle2
+  ExternalLink, 
+  LogOut, 
+  Calendar, 
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  Send
 } from 'lucide-react';
 
 export default function PortalEgresadoPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, accessToken, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+
+  const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
+  const [loadingPostulaciones, setLoadingPostulaciones] = useState(true);
 
   // Redirigir a login si no está autenticado
-  React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
       router.push('/login?tipo=egresado&redirect=/portal-egresado');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router]);
 
-  if (isLoading) {
+  // Cargar postulaciones del egresado
+  useEffect(() => {
+    async function loadPostulaciones() {
+      if (accessToken && user?.rol === 'egresado') {
+        try {
+          const data = await fetchMisPostulaciones(accessToken);
+          setPostulaciones(data);
+        } catch (error) {
+          console.error('Error loading postulaciones:', error);
+        } finally {
+          setLoadingPostulaciones(false);
+        }
+      } else {
+        setLoadingPostulaciones(false);
+      }
+    }
+
+    if (accessToken) {
+      loadPostulaciones();
+    }
+  }, [accessToken, user]);
+
+  const getStatusBadge = (estado: string) => {
+    switch (estado) {
+      case 'revision_uth':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            En Revisión por UTH
+          </span>
+        );
+      case 'enviada_empresa':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
+            <Send className="w-3.5 h-3.5 text-blue-600" />
+            Enviada a Empresa
+          </span>
+        );
+      case 'Aceptada':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-[#00A887] border border-emerald-200">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
+            Aceptada
+          </span>
+        );
+      case 'rechazada_uth':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-[#A8123E] border border-rose-200">
+            <AlertCircle className="w-3.5 h-3.5 text-[#A8123E]" />
+            No cubre perfil UTH
+          </span>
+        );
+      case 'Rechazada':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
+            Proceso Concluido
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700">
+            {estado}
+          </span>
+        );
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const d = new Date(dateString);
+      return d.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  if (authLoading) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -72,14 +159,14 @@ export default function PortalEgresadoPage() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-sm"
             >
               <Briefcase className="w-4 h-4" />
-              Ver Vacantes
+              Explorar Vacantes
             </Link>
             <button
               onClick={() => {
                 logout();
                 router.push('/login');
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-zinc-300 bg-white/10 hover:bg-white/15 transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-zinc-300 bg-white/10 hover:bg-white/15 transition-all cursor-pointer"
               title="Cerrar sesión"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -97,7 +184,9 @@ export default function PortalEgresadoPage() {
             <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#00A887]">
               <Briefcase className="w-5 h-5" />
             </div>
-            <span className="text-2xl font-black text-[#2D2926]">0</span>
+            <span className="text-2xl font-black text-[#2D2926]">
+              {loadingPostulaciones ? '...' : postulaciones.length}
+            </span>
           </div>
           <div>
             <h2 className="text-base font-bold text-[#2D2926]">Mis Postulaciones</h2>
@@ -151,38 +240,131 @@ export default function PortalEgresadoPage() {
               Cuenta vinculada al sistema de Servicios Escolares de la UTH.
             </p>
           </div>
-          <div className="text-[11px] text-[#636569] flex items-center gap-1.5 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
-            {user.email}
+          <div className="text-[11px] text-[#636569] flex items-center gap-1.5 font-medium truncate">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887] shrink-0" />
+            <span className="truncate">{user.email}</span>
           </div>
         </div>
+      </div>
+
+      {/* Listado de Postulaciones en Tiempo Real */}
+      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden space-y-6">
+        <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-black text-[#2D2926]">
+              Historial de Postulaciones Laborales
+            </h2>
+            <p className="text-xs text-[#636569] mt-0.5">
+              Estado de avance del filtro institucional UTH y envío a empresas aliadas.
+            </p>
+          </div>
+          <span className="text-xs font-bold text-[#00A887] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+            {postulaciones.length} registro(s)
+          </span>
+        </div>
+
+        {loadingPostulaciones ? (
+          <div className="p-12 text-center space-y-3">
+            <div className="w-6 h-6 border-2 border-[#00A887] border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-xs text-zinc-500 font-medium">Cargando tus postulaciones...</p>
+          </div>
+        ) : postulaciones.length === 0 ? (
+          <div className="p-10 text-center space-y-3">
+            <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-400">
+              <Briefcase className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-bold text-[#2D2926]">
+              Aún no tienes postulaciones activas
+            </h3>
+            <p className="text-xs text-[#636569] max-w-sm mx-auto">
+              Explora las oportunidades laborales exclusivas para egresados de la UTH y postúlate con un solo clic.
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/vacantes"
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all"
+              >
+                Explorar Catálogo de Vacantes
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-zinc-100">
+            {postulaciones.map((p) => (
+              <div key={p.id} className="p-6 hover:bg-zinc-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+                      {p.vacante_clave || `VAC-${p.vacante}`}
+                    </span>
+                    {p.vacante_modalidad && (
+                      <span className="text-[11px] font-semibold text-zinc-600 uppercase bg-zinc-100 px-2 py-0.5 rounded">
+                        {p.vacante_modalidad}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-base font-bold text-[#2D2926]">
+                    {p.vacante_titulo || `Vacante #${p.vacante}`}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
+                    <span className="flex items-center gap-1 font-medium text-zinc-700">
+                      <Building2 className="w-3.5 h-3.5 text-[#00A887]" />
+                      {p.vacante_empresa || 'Empresa Vinculada UTH'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                      Postulado el {formatDate(p.fecha_postulacion)}
+                    </span>
+                  </div>
+                  {p.notas_uth && (
+                    <p className="text-xs text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 mt-2">
+                      <strong className="font-semibold">Nota UTH:</strong> {p.notas_uth}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center gap-3 shrink-0">
+                  {getStatusBadge(p.estado)}
+                  <Link
+                    href={`/vacantes/${p.vacante}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00A887] hover:underline"
+                  >
+                    Ver detalles
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Sección Informativa: Pasos para postularte */}
       <div className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm space-y-6">
         <h2 className="text-lg font-black text-[#2D2926]">
-          ¿Cómo funciona la Bolsa de Trabajo UTH?
+          ¿Cómo funciona el proceso de vinculación laboral?
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#00A887]">Paso 1</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Explora y Filtra</h3>
+            <div className="text-xs font-bold text-[#00A887]">Paso 1: Postulación</div>
+            <h3 className="text-sm font-bold text-[#2D2926]">Registro de Interés</h3>
             <p className="text-xs text-[#636569]">
-              Revisa vacantes exclusivas para egresados de TSU e Ingeniería de la región de Huejotzingo y Puebla.
+              Al hacer clic en "Postularme", tu perfil entra al filtro de revisión institucional de la UTH.
             </p>
           </div>
           <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#691C32]">Paso 2</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Postúlate Directamente</h3>
+            <div className="text-xs font-bold text-[#691C32]">Paso 2: Validación UTH</div>
+            <h3 className="text-sm font-bold text-[#2D2926]">Filtro de Vinculación</h3>
             <p className="text-xs text-[#636569]">
-              El Departamento de Vinculación UTH revisa tu perfil y envía tu información curricular a la empresa.
+              El Departamento de Vinculación valida que tu carrera y competencias empaten con los requisitos de la empresa.
             </p>
           </div>
           <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#C2BA98]">Paso 3</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Entrevista y Colocación</h3>
+            <div className="text-xs font-bold text-[#C2BA98]">Paso 3: Envío y Entrevista</div>
+            <h3 className="text-sm font-bold text-[#2D2926]">Contacto de la Empresa</h3>
             <p className="text-xs text-[#636569]">
-              Recibe notificaciones sobre el estado de tu postulación y fechas de entrevista laboral.
+              La empresa recibe tu expediente aprobado y te convoca para el proceso de selección y contratación.
             </p>
           </div>
         </div>

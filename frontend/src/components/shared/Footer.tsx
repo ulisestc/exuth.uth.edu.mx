@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { UthLogo } from '../brand/UthLogo';
 
 export const Footer = () => {
   return (
@@ -9,9 +10,9 @@ export const Footer = () => {
           {/* Columna Institucional */}
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
-              <span className="text-xl font-bold tracking-wider italic">
-                UNIVERSIDAD TECNOLÓGICA DE <span className="text-[#00A887]">HUEJOTZINGO</span>
-              </span>
+              <div className="bg-white px-3 py-2 rounded-lg inline-flex items-center shadow-xs">
+                <UthLogo variant="horizontal" imgClassName="h-9 sm:h-10" />
+              </div>
             </div>
             <p className="text-xs text-[#D6D1C4] max-w-md leading-relaxed">
               Organismo Público Descentralizado del Gobierno del Estado de Puebla. 

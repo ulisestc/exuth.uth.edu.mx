@@ -87,7 +87,7 @@ function LoginForm() {
         {/* Cabecera con imagotipo oficial */}
         <div className="text-center space-y-3">
           <div className="flex justify-center mb-2">
-            <UthLogo variant="vertical" className="w-48 h-auto" />
+            <UthLogo variant="cuadrado" />
           </div>
           <h1 className="text-2xl font-black text-[#2D2926] tracking-tight">
             Iniciar Sesión

@@ -19,6 +19,7 @@ import {
   Send,
   AlertCircle
 } from 'lucide-react';
+import { ApplyButton } from '@/components/vacantes/ApplyButton';
 
 interface VacanteDetailPageProps {
   params: Promise<{ id: string }>;
@@ -117,13 +118,11 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
 
           {/* Botón de Postulación Primario */}
           <div className="sm:self-center">
-            <Link
-              href={`/login?tipo=egresado&next=/vacantes/${vacante.id}`}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all w-full sm:w-auto"
-            >
-              <Send className="w-4 h-4" />
-              Postularme a esta Vacante
-            </Link>
+            <ApplyButton 
+              vacanteId={vacante.id} 
+              vacanteTitulo={vacante.titulo} 
+              empresaNombre={vacante.empresa_nombre} 
+            />
           </div>
         </div>
 

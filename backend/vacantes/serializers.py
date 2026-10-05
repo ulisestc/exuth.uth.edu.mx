@@ -63,6 +63,11 @@ class VacanteEstadoSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 class PostulacionSerializer(serializers.ModelSerializer):
+    vacante_titulo = serializers.ReadOnlyField(source='vacante.titulo')
+    vacante_empresa = serializers.ReadOnlyField(source='vacante.empresa.nombre')
+    vacante_modalidad = serializers.ReadOnlyField(source='vacante.modalidad')
+    vacante_clave = serializers.ReadOnlyField(source='vacante.clave_vacante')
+
     class Meta:
         model = Postulacion
         fields = '__all__'

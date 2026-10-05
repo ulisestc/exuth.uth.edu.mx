@@ -141,3 +141,76 @@ export async function fetchCarreras(): Promise<Carrera[]> {
     return [];
   }
 }
+
+export interface Postulacion {
+  id: number;
+  vacante: number;
+  vacante_titulo?: string;
+  vacante_empresa?: string;
+  vacante_modalidad?: string;
+  vacante_clave?: string;
+  egresado: number;
+  fecha_postulacion: string;
+  estado: 'revision_uth' | 'rechazada_uth' | 'enviada_empresa' | 'Aceptada' | 'Rechazada';
+  notas_uth?: string | null;
+}
+
+export interface PostulacionesResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Postulacion[];
+}
+
+export async function fetchMisPostulaciones(accessToken: string): Promise<Postulacion[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/postulaciones/`, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      console.error(`Error fetching postulaciones: HTTP ${res.status}`);
+      return [];
+    }
+
+    const data: PostulacionesResponse = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Network error fetching postulaciones:', error);
+    return [];
+  }
+}
+
+export async function crearPostulacion(
+  vacanteId: number, 
+  accessToken: string
+): Promise<{ success: boolean; data?: Postulacion; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/postulaciones/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ vacante: vacanteId }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      const errorMsg = Array.isArray(data) && data[0]
+        ? data[0]
+        : data.detail || (data.non_field_errors && data.non_field_errors[0]) || 'No fue posible registrar la postulación.';
+      return { success: false, error: errorMsg };
+    }
+
+    return { success: true, data: data as Postulacion };
+  } catch (error: any) {
+    console.error('Error creating postulacion:', error);
+    return { success: false, error: 'Error de conexión con el servidor de vinculación.' };
+  }
+}
