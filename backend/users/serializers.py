@@ -18,9 +18,14 @@ class UserCreateSerializer(BaseUserCreateSerializer):
             raise serializers.ValidationError("Solo se permite crear usuarios con rol 'egresado' o 'empresa'.")
         return value
     
+    def create(self, validated_data):
+        if validated_data.get('acepta_aviso_privacidad'):
+            validated_data['fecha_aviso_privacidad'] = timezone.now()
+        return super().create(validated_data)
+
     class Meta(BaseUserCreateSerializer.Meta):
         model = User
-        fields = ('id', 'email', 'password', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol')
+        fields = ('id', 'email', 'password', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'acepta_aviso_privacidad')
 
 class CustomUserSerializer(BaseUserSerializer):
     """Serializer para editar el propio usuario /users/me/"""

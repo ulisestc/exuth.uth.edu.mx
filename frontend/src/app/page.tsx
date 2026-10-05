@@ -138,13 +138,21 @@ export default function HomePage() {
                 </li>
               </ul>
             </div>
-            <Link
-              href="/login?tipo=egresado"
-              className="mt-6 inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-md transition-colors"
-            >
-              Ingresar como Egresado
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <div className="mt-6 flex flex-col gap-2">
+              <Link
+                href="/login?tipo=egresado"
+                className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-md transition-colors"
+              >
+                Ingresar como Egresado
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <Link
+                href="/registro?tipo=egresado"
+                className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 text-xs font-semibold text-[#00A887] hover:underline"
+              >
+                ¿No tienes cuenta? Regístrate aquí
+              </Link>
+            </div>
           </div>
 
           {/* Card Empresa */}
@@ -168,13 +176,21 @@ export default function HomePage() {
                 </li>
               </ul>
             </div>
-            <Link
-              href="/login?tipo=empresa"
-              className="mt-6 inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-white bg-[#2D2926] hover:bg-black rounded-md transition-colors"
-            >
-              Portal de Empresas
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <div className="mt-6 flex flex-col gap-2">
+              <Link
+                href="/login?tipo=empresa"
+                className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-white bg-[#2D2926] hover:bg-black rounded-md transition-colors"
+              >
+                Portal de Empresas
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <Link
+                href="/registro?tipo=empresa"
+                className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 text-xs font-semibold text-[#691C32] hover:underline"
+              >
+                ¿Nueva empresa? Registrarse
+              </Link>
+            </div>
           </div>
 
           {/* Card Vinculación / Admin */}

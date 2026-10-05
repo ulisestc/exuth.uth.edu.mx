@@ -105,6 +105,12 @@ export const Navbar = () => {
             ) : (
               <>
                 <Link
+                  href="/registro"
+                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#00A887] hover:text-[#008F73] hover:bg-emerald-50 rounded-md transition-all"
+                >
+                  Registrarse
+                </Link>
+                <Link
                   href="/login?tipo=empresa"
                   className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#2D2926] bg-zinc-100 hover:bg-zinc-200 rounded-md border border-zinc-300 transition-all"
                 >

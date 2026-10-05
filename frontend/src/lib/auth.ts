@@ -1,3 +1,5 @@
+import type { RegistroEgresadoData, RegistroEmpresaData } from './api';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
 export type UserRole = 'egresado' | 'empresa' | 'admin_uth' | 'soporte_ti';
@@ -177,5 +179,125 @@ export function getRoleDisplayName(role: UserRole): string {
       return 'Soporte TI / Admin';
     default:
       return 'Usuario';
+  }
+}
+
+export async function registerEgresado(data: RegistroEgresadoData): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+  try {
+    const userRes = await fetch(`${API_BASE_URL}/auth/users/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: data.email.trim(),
+        password: data.password,
+        nombres: data.nombres.trim(),
+        apellido_paterno: data.apellido_paterno.trim(),
+        apellido_materno: data.apellido_materno.trim(),
+        rol: 'egresado',
+        acepta_aviso_privacidad: data.acepta_aviso_privacidad,
+      }),
+    });
+
+    const userData = await userRes.json();
+    if (!userRes.ok) {
+      const errorMsg = userData.email?.[0] || userData.password?.[0] || (userData.non_field_errors && userData.non_field_errors[0]) || 'Error al crear la cuenta de usuario.';
+      return { success: false, error: errorMsg };
+    }
+
+    const tokens = await loginRequest({ email: data.email.trim(), password: data.password });
+    saveAuthTokens(tokens);
+
+    const profileRes = await fetch(`${API_BASE_URL}/profiles/egresados/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokens.access}`,
+      },
+      body: JSON.stringify({
+        matricula: data.matricula.trim(),
+        curp: data.curp.trim().toUpperCase(),
+        carrera: data.carrera,
+        nivel_estudios: data.nivel_estudios,
+        genero: data.genero,
+        telefono_celular: data.telefono_celular.trim(),
+        domicilio: data.domicilio.trim(),
+        habilidades: data.habilidades.trim(),
+      }),
+    });
+
+    const profileData = await profileRes.json();
+    if (!profileRes.ok) {
+      const errorMsg = profileData.matricula?.[0] || profileData.curp?.[0] || profileData.detail || 'Error al vincular los datos académicos del egresado.';
+      return { success: false, error: errorMsg };
+    }
+
+    const fullUser = await fetchCurrentUser(tokens.access);
+    saveUserData(fullUser);
+
+    return { success: true, user: fullUser };
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    return { success: false, error: error.message || 'Error de conexión durante el registro institucional.' };
+  }
+}
+
+export async function registerEmpresa(data: RegistroEmpresaData): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+  try {
+    const userRes = await fetch(`${API_BASE_URL}/auth/users/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: data.email.trim(),
+        password: data.password,
+        nombres: data.nombres.trim(),
+        apellido_paterno: data.apellido_paterno.trim(),
+        apellido_materno: data.apellido_materno.trim(),
+        rol: 'empresa',
+        acepta_aviso_privacidad: data.acepta_aviso_privacidad,
+      }),
+    });
+
+    const userData = await userRes.json();
+    if (!userRes.ok) {
+      const errorMsg = userData.email?.[0] || userData.password?.[0] || (userData.non_field_errors && userData.non_field_errors[0]) || 'Error al crear la cuenta empresarial.';
+      return { success: false, error: errorMsg };
+    }
+
+    const tokens = await loginRequest({ email: data.email.trim(), password: data.password });
+    saveAuthTokens(tokens);
+
+    const profileRes = await fetch(`${API_BASE_URL}/profiles/empresas/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokens.access}`,
+      },
+      body: JSON.stringify({
+        nombre: data.nombre.trim(),
+        domicilio: data.domicilio.trim(),
+        correo_contacto: data.correo_contacto.trim(),
+        actividad_de_la_empresa: data.actividad_de_la_empresa.trim(),
+        giro: data.giro,
+        sector: data.sector,
+        nombre_contacto: data.nombre_contacto.trim(),
+        cargo_contacto: data.cargo_contacto.trim(),
+        telefono_oficina: data.telefono_oficina?.trim(),
+        telefono_celular: data.telefono_celular?.trim(),
+      }),
+    });
+
+    const profileData = await profileRes.json();
+    if (!profileRes.ok) {
+      const errorMsg = profileData.nombre?.[0] || profileData.correo_contacto?.[0] || profileData.detail || 'Error al vincular el perfil de empresa.';
+      return { success: false, error: errorMsg };
+    }
+
+    const fullUser = await fetchCurrentUser(tokens.access);
+    saveUserData(fullUser);
+
+    return { success: true, user: fullUser };
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    return { success: false, error: error.message || 'Error de conexión durante el registro empresarial.' };
   }
 }

@@ -214,3 +214,77 @@ export async function crearPostulacion(
     return { success: false, error: 'Error de conexión con el servidor de vinculación.' };
   }
 }
+
+export interface Giro {
+  id: number;
+  nombre: string;
+}
+
+export interface Sector {
+  id: number;
+  nombre: string;
+}
+
+export interface RegistroEgresadoData {
+  matricula: string;
+  curp: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno: string;
+  carrera: number;
+  nivel_estudios: 'TSU' | 'ING_LIC' | 'MTRIA';
+  genero: 'M' | 'F' | 'O';
+  telefono_celular: string;
+  domicilio: string;
+  habilidades: string;
+  email: string;
+  password: string;
+  acepta_aviso_privacidad: boolean;
+}
+
+export interface RegistroEmpresaData {
+  nombre: string;
+  domicilio: string;
+  correo_contacto: string;
+  actividad_de_la_empresa: string;
+  giro: number;
+  sector: number;
+  nombre_contacto: string;
+  cargo_contacto: string;
+  telefono_oficina?: string;
+  telefono_celular?: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno: string;
+  email: string;
+  password: string;
+  acepta_aviso_privacidad: boolean;
+}
+
+export async function fetchGiros(): Promise<Giro[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/core/giros/`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Error fetching giros:', error);
+    return [];
+  }
+}
+
+export async function fetchSectores(): Promise<Sector[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/core/sectores/`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Error fetching sectores:', error);
+    return [];
+  }
+}
