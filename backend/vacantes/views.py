@@ -58,6 +58,23 @@ class VacanteViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['get'], url_path='mis-vacantes', permission_classes=[permissions.IsAuthenticated])
+    def mis_vacantes(self, request):
+        """Devuelve todas las vacantes creadas por la empresa autenticada."""
+        if not hasattr(request.user, 'empresa'):
+            raise PermissionDenied("Solo las empresas vinculadas pueden consultar sus ofertas de empleo.")
+        vacantes = Vacante.objects.filter(empresa=request.user.empresa).order_by('-id')
+        serializer = self.get_serializer(vacantes, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'], url_path='cerrar-vacante', permission_classes=[permissions.IsAuthenticated, IsEmpresaAuthorOrReadOnly])
+    def cerrar_vacante(self, request, pk=None):
+        """Permite a la empresa autora marcar como cerrada una vacante concluida."""
+        vacante = self.get_object()
+        vacante.status = 'cerrada'
+        vacante.save(update_fields=['status'])
+        return Response(self.get_serializer(vacante).data, status=status.HTTP_200_OK)
+
 class PostulacionViewSet(viewsets.ModelViewSet):
     queryset = Postulacion.objects.all()
     serializer_class = PostulacionSerializer

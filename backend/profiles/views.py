@@ -201,6 +201,23 @@ class EmpresaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Empresa.objects.filter(user__deactivated_at__isnull=True)
+
+    @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """Obtiene o actualiza el perfil corporativo de la empresa autenticada."""
+        if not hasattr(request.user, 'empresa'):
+            raise NotFound("No cuentas con un perfil de empresa registrado.")
+        
+        empresa = request.user.empresa
+        if request.method == 'GET':
+            serializer = self.get_serializer(empresa)
+            return Response(serializer.data)
+        
+        elif request.method == 'PATCH':
+            serializer = self.get_serializer(empresa, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
     
     def destroy(self, request, *args, **kwargs):
         #SOFT DELETE USANDO DEACTIVATED_AT DE USER

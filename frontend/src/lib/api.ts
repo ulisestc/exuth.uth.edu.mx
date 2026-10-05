@@ -429,3 +429,183 @@ export async function updateMiPerfilEgresado(
     return { success: false, error: error.message || 'Error de conexión al actualizar el perfil.' };
   }
 }
+
+export interface IdiomaCatalogo {
+  id: number;
+  nombre: string;
+}
+
+export interface EmpresaProfile {
+  id: number;
+  user: number;
+  nombre: string;
+  domicilio: string;
+  correo_contacto: string;
+  actividad_de_la_empresa: string;
+  campo: string | null;
+  giro: string;
+  sector: string;
+  status: 'pendiente' | 'aprobada' | 'rechazada';
+  telefono_oficina?: string;
+  telefono_celular?: string;
+  nombre_contacto: string;
+  cargo_contacto: string;
+}
+
+export interface RequisitoIdiomaInput {
+  idioma: number;
+  nivel: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  obligatorio: boolean;
+}
+
+export interface NuevaVacanteData {
+  titulo: string;
+  area_estudio: number;
+  tipo_contratacion: 'tiempo_completo' | 'indeterminado' | 'temporal' | 'medio_tiempo';
+  modalidad: 'presencial' | 'home_office' | 'hibrido';
+  num_candidatos: number;
+  horario_trabajo: string;
+  nivel_estudios: 'TSU' | 'ING_LIC' | 'MTRIA';
+  edad?: string;
+  genero?: 'masculino' | 'femenino' | 'indistinto';
+  estado_civil?: 'soltero' | 'casado' | 'indistinto';
+  es_inclusiva?: boolean;
+  capacidades_especiales?: string;
+  experiencia: string;
+  conocimientos: string;
+  habilidades: string;
+  actitudes: string;
+  responsabilidades: string;
+  sueldo_minimo?: number | string | null;
+  sueldo_maximo?: number | string | null;
+  salario_a_tratar?: boolean;
+  prestaciones: string;
+  incluye_transporte?: boolean;
+  incluye_comedor?: boolean;
+  documentos_requeridos: string;
+  persona_contacto: string;
+  entrevistador?: string;
+  observaciones?: string;
+  idiomas?: RequisitoIdiomaInput[];
+}
+
+export interface VacanteEmpresaItem {
+  id: number;
+  clave_vacante: string;
+  titulo: string;
+  empresa: number;
+  empresa_nombre: string;
+  area_estudio: number;
+  area_estudio_nombre: string;
+  status: 'pendiente' | 'aprobada' | 'rechazada' | 'cerrada';
+  fecha_registro: string;
+  tipo_contratacion: string;
+  modalidad: string;
+  num_candidatos: number;
+  horario_trabajo: string;
+  nivel_estudios: string;
+  sueldo_minimo: string | null;
+  sueldo_maximo: string | null;
+  salario_a_tratar: boolean;
+  num_postulaciones: number;
+}
+
+export async function fetchIdiomas(): Promise<IdiomaCatalogo[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/core/idiomas/`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || [];
+  } catch (error) {
+    console.error('Error fetching idiomas:', error);
+    return [];
+  }
+}
+
+export async function fetchMiPerfilEmpresa(token: string): Promise<EmpresaProfile | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/empresas/me/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching perfil empresa:', error);
+    return null;
+  }
+}
+
+export async function fetchMisVacantes(token: string): Promise<VacanteEmpresaItem[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/mis-vacantes/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching mis vacantes:', error);
+    return [];
+  }
+}
+
+export async function crearVacante(
+  token: string,
+  data: NuevaVacanteData
+): Promise<{ success: boolean; vacante?: VacanteEmpresaItem; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    const resData = await res.json();
+    if (!res.ok) {
+      // Tomar primer mensaje de error
+      const firstError = Object.values(resData)[0];
+      const errorMsg = Array.isArray(firstError) ? firstError[0] : (typeof firstError === 'string' ? firstError : 'Error al registrar la vacante.');
+      return { success: false, error: errorMsg };
+    }
+
+    return { success: true, vacante: resData };
+  } catch (error: any) {
+    console.error('Error creating vacante:', error);
+    return { success: false, error: error.message || 'Error de conexión al registrar la vacante.' };
+  }
+}
+
+export async function cerrarVacante(
+  token: string,
+  vacanteId: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/${vacanteId}/cerrar-vacante/`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.detail || 'Error al cerrar la vacante.' };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error closing vacante:', error);
+    return { success: false, error: error.message || 'Error de conexión al cerrar la vacante.' };
+  }
+}
