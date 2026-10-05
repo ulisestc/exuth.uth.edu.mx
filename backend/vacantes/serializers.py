@@ -69,10 +69,35 @@ class PostulacionSerializer(serializers.ModelSerializer):
     vacante_modalidad = serializers.ReadOnlyField(source='vacante.modalidad')
     vacante_clave = serializers.ReadOnlyField(source='vacante.clave_vacante')
 
+    # Datos del egresado postulante
+    candidato_nombre = serializers.SerializerMethodField()
+    candidato_email = serializers.ReadOnlyField(source='egresado.user.email')
+    candidato_telefono = serializers.ReadOnlyField(source='egresado.telefono_celular')
+    candidato_carrera = serializers.ReadOnlyField(source='egresado.carrera.nombre')
+    candidato_nivel_estudios = serializers.ReadOnlyField(source='egresado.nivel_estudios')
+    candidato_matricula = serializers.ReadOnlyField(source='egresado.matricula')
+    candidato_cv = serializers.SerializerMethodField()
+    candidato_habilidades = serializers.ReadOnlyField(source='egresado.habilidades')
+    candidato_domicilio = serializers.ReadOnlyField(source='egresado.domicilio')
+
+    def get_candidato_nombre(self, obj):
+        if obj.egresado and obj.egresado.user:
+            u = obj.egresado.user
+            return f"{u.nombres} {u.apellido_paterno} {u.apellido_materno}".strip()
+        return "Egresado UTH"
+
+    def get_candidato_cv(self, obj):
+        if obj.egresado and obj.egresado.cv:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.egresado.cv.url)
+            return obj.egresado.cv.url
+        return None
+
     class Meta:
         model = Postulacion
         fields = '__all__'
-        read_only_fields = ['id', 'egresado', 'fecha_postulacion', 'estado'] # campos bliondados (seguridad) 
+        read_only_fields = ['id', 'egresado', 'fecha_postulacion', 'estado'] # campos blindados (seguridad) 
 
 class PostulacionEstadoSerializer(serializers.ModelSerializer):
     class Meta:

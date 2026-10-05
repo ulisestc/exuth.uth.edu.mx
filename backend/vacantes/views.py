@@ -79,6 +79,7 @@ class PostulacionViewSet(viewsets.ModelViewSet):
     queryset = Postulacion.objects.all()
     serializer_class = PostulacionSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['vacante', 'estado']
 
     def get_queryset(self):
         user = self.request.user

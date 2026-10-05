@@ -7,11 +7,14 @@ import { useAuth } from '@/context/AuthContext';
 import { 
   fetchMiPerfilEmpresa, 
   fetchMisVacantes, 
+  fetchPostulacionesEmpresa,
   cerrarVacante,
   EmpresaProfile, 
-  VacanteEmpresaItem 
+  VacanteEmpresaItem,
+  Postulacion
 } from '@/lib/api';
 import { NuevaVacanteModal } from '@/components/empresas/NuevaVacanteModal';
+import { CandidatosManager } from '@/components/empresas/CandidatosManager';
 import { 
   Building2, 
   PlusCircle, 
@@ -30,15 +33,18 @@ import {
   Tag,
   Loader2,
   Mail,
-  MapPin
+  MapPin,
+  FileText
 } from 'lucide-react';
 
 export default function PortalEmpresaPage() {
   const router = useRouter();
   const { user, accessToken, isAuthenticated, isLoading: authLoading, logout } = useAuth();
 
+  const [tabActiva, setTabActiva] = useState<'vacantes' | 'candidatos'>('vacantes');
   const [empresa, setEmpresa] = useState<EmpresaProfile | null>(null);
   const [vacantes, setVacantes] = useState<VacanteEmpresaItem[]>([]);
+  const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [accionEnProceso, setAccionEnProceso] = useState<number | null>(null);
@@ -50,17 +56,19 @@ export default function PortalEmpresaPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Cargar datos de la empresa y sus vacantes
+  // Cargar datos de la empresa, vacantes y postulaciones
   useEffect(() => {
     async function loadData() {
       if (accessToken && user?.rol === 'empresa') {
         try {
-          const [perfilData, vacantesData] = await Promise.all([
+          const [perfilData, vacantesData, postulacionesData] = await Promise.all([
             fetchMiPerfilEmpresa(accessToken),
-            fetchMisVacantes(accessToken)
+            fetchMisVacantes(accessToken),
+            fetchPostulacionesEmpresa(accessToken),
           ]);
           setEmpresa(perfilData);
           setVacantes(vacantesData);
+          setPostulaciones(postulacionesData);
         } catch (error) {
           console.error('Error loading empresa data:', error);
         } finally {
@@ -100,6 +108,10 @@ export default function PortalEmpresaPage() {
 
   const handleVacanteCreada = (nuevaVacante: VacanteEmpresaItem) => {
     setVacantes(prev => [nuevaVacante, ...prev]);
+  };
+
+  const handlePostulacionActualizada = (pActualizada: Postulacion) => {
+    setPostulaciones(prev => prev.map(p => p.id === pActualizada.id ? pActualizada : p));
   };
 
   const getStatusBadge = (status: string) => {
@@ -154,7 +166,7 @@ export default function PortalEmpresaPage() {
     }
   };
 
-  const totalCandidatos = vacantes.reduce((sum, v) => sum + (v.num_postulaciones || 0), 0);
+  const totalCandidatos = postulaciones.length;
   const vacantesAprobadas = vacantes.filter(v => v.status === 'aprobada').length;
 
   if (authLoading || (loadingData && !empresa)) {
@@ -268,7 +280,10 @@ export default function PortalEmpresaPage() {
             </p>
           </div>
           <button
-            onClick={() => setModalAbierto(true)}
+            onClick={() => {
+              setTabActiva('vacantes');
+              setModalAbierto(true);
+            }}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00A887] hover:text-[#008F73] cursor-pointer"
           >
             + Registrar otra oferta
@@ -312,182 +327,197 @@ export default function PortalEmpresaPage() {
             </span>
           </div>
           <div>
-            <h2 className="text-base font-bold text-[#2D2926]">Candidatos Recibidos</h2>
+            <h2 className="text-base font-bold text-[#2D2926]">Candidatos Turnados</h2>
             <p className="text-xs text-[#636569] mt-1">
-              Egresados UTH que han solicitado ingresar al proceso de tus ofertas.
+              Egresados con CV validado por Vinculación UTH listos para entrevista.
             </p>
           </div>
-          <div className="text-[11px] text-[#636569] flex items-center gap-1.5 font-medium truncate">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#00A887]" />
-            <span>Filtro de pertinencia UTH</span>
-          </div>
+          <button
+            onClick={() => setTabActiva('candidatos')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#691C32] hover:underline cursor-pointer"
+          >
+            Ver candidatos y expedientes
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Listado de Vacantes de la Empresa */}
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden space-y-6">
-        <div className="p-6 border-b border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-black text-[#2D2926]">
-              Gestión de Ofertas Laborales Publicadas
-            </h2>
-            <p className="text-xs text-[#636569] mt-0.5">
-              Supervisión de vacantes, estatus institucional de aprobación y recepción de candidatos.
-            </p>
-          </div>
+      {/* Pestañas de Navegación del Portal */}
+      <div className="flex items-center gap-3 border-b border-zinc-200 pb-1">
+        <button
+          onClick={() => setTabActiva('vacantes')}
+          className={`inline-flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            tabActiva === 'vacantes'
+              ? 'border-[#00A887] text-[#00A887]'
+              : 'border-transparent text-zinc-500 hover:text-[#2D2926]'
+          }`}
+        >
+          <Briefcase className="w-4 h-4" />
+          Mis Ofertas de Empleo ({vacantes.length})
+        </button>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-[#691C32] bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
-              {vacantes.length} vacante(s)
-            </span>
-            <button
-              onClick={() => setModalAbierto(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer shadow-xs"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              Publicar
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={() => setTabActiva('candidatos')}
+          className={`inline-flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            tabActiva === 'candidatos'
+              ? 'border-[#691C32] text-[#691C32]'
+              : 'border-transparent text-zinc-500 hover:text-[#2D2926]'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Candidatos y CVs Recibidos ({postulaciones.length})
+        </button>
+      </div>
 
-        {loadingData ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="w-6 h-6 border-2 border-[#691C32] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-zinc-500 font-medium">Cargando tus vacantes registradas...</p>
-          </div>
-        ) : vacantes.length === 0 ? (
-          <div className="p-10 text-center space-y-3">
-            <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-400">
-              <Briefcase className="w-6 h-6" />
+      {/* CONTENIDO PESTAÑA: VACANTES */}
+      {tabActiva === 'vacantes' && (
+        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden space-y-6">
+          <div className="p-6 border-b border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-black text-[#2D2926]">
+                Gestión de Ofertas Laborales Publicadas
+              </h2>
+              <p className="text-xs text-[#636569] mt-0.5">
+                Supervisión de vacantes, estatus institucional de aprobación y recepción de candidatos.
+              </p>
             </div>
-            <h3 className="text-sm font-bold text-[#2D2926]">
-              Aún no has registrado vacantes de empleo
-            </h3>
-            <p className="text-xs text-[#636569] max-w-sm mx-auto">
-              Publica tu primera oferta de empleo para vincularte con los egresados de TSU, Ingeniería y Licenciatura de la UTH.
-            </p>
-            <div className="pt-2">
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-[#691C32] bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                {vacantes.length} vacante(s)
+              </span>
               <button
                 onClick={() => setModalAbierto(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer shadow-xs"
               >
-                <PlusCircle className="w-4 h-4" />
-                Publicar Primera Vacante
+                <PlusCircle className="w-3.5 h-3.5" />
+                Publicar
               </button>
             </div>
           </div>
-        ) : (
-          <div className="divide-y divide-zinc-100">
-            {vacantes.map((v) => (
-              <div 
-                key={v.id} 
-                className="p-6 hover:bg-zinc-50/60 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
-              >
-                <div className="space-y-2 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-mono font-bold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
-                      {v.clave_vacante}
-                    </span>
-                    <span className="text-[11px] font-semibold text-zinc-600 uppercase bg-zinc-100 px-2 py-0.5 rounded">
-                      {v.modalidad}
-                    </span>
-                    <span className="text-[11px] font-semibold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded">
-                      {v.tipo_contratacion?.replace('_', ' ')}
-                    </span>
-                    {getStatusBadge(v.status)}
-                  </div>
 
-                  <h3 className="text-base font-bold text-[#2D2926]">
-                    {v.titulo}
-                  </h3>
-
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
-                    <span className="flex items-center gap-1 font-medium text-zinc-700">
-                      <Briefcase className="w-3.5 h-3.5 text-[#00A887]" />
-                      {v.area_estudio_nombre || 'Área Tecnológica UTH'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                      Registrada el {formatFecha(v.fecha_registro)}
-                    </span>
-                    <span className="flex items-center gap-1 font-semibold text-zinc-800">
-                      <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                      {v.salario_a_tratar 
-                        ? 'Salario a tratar' 
-                        : v.sueldo_minimo && v.sueldo_maximo 
-                          ? `$${Number(v.sueldo_minimo).toLocaleString('es-MX')} - $${Number(v.sueldo_maximo).toLocaleString('es-MX')} MXN`
-                          : 'Sueldo competitivo'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-zinc-100">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-800">
-                    <Users className="w-3.5 h-3.5 text-[#00A887]" />
-                    <span>{v.num_postulaciones || 0} candidato(s)</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/vacantes/${v.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#00A887] hover:underline"
-                    >
-                      Ver en bolsa
-                      <ExternalLink className="w-3 h-3" />
-                    </Link>
-
-                    {v.status === 'aprobada' && (
-                      <button
-                        onClick={() => handleCerrarVacante(v.id, v.titulo)}
-                        disabled={accionEnProceso === v.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-zinc-600 hover:text-red-700 hover:bg-red-50 border border-zinc-200 transition-all cursor-pointer disabled:opacity-50"
-                        title="Concluir y cerrar recepción de postulantes"
-                      >
-                        {accionEnProceso === v.id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Lock className="w-3 h-3" />
-                        )}
-                        Cerrar vacante
-                      </button>
-                    )}
-                  </div>
-                </div>
+          {loadingData ? (
+            <div className="p-12 text-center space-y-3">
+              <div className="w-6 h-6 border-2 border-[#691C32] border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-xs text-zinc-500 font-medium">Cargando tus vacantes registradas...</p>
+            </div>
+          ) : vacantes.length === 0 ? (
+            <div className="p-10 text-center space-y-3">
+              <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-400">
+                <Briefcase className="w-6 h-6" />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <h3 className="text-sm font-bold text-[#2D2926]">
+                Aún no has registrado vacantes de empleo
+              </h3>
+              <p className="text-xs text-[#636569] max-w-sm mx-auto">
+                Publica tu primera oferta de empleo para vincularte con los egresados de TSU, Ingeniería y Licenciatura de la UTH.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={() => setModalAbierto(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Publicar Primera Vacante
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-100">
+              {vacantes.map((v) => (
+                <div 
+                  key={v.id} 
+                  className="p-6 hover:bg-zinc-50/60 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-mono font-bold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+                        {v.clave_vacante}
+                      </span>
+                      <span className="text-[11px] font-semibold text-zinc-600 uppercase bg-zinc-100 px-2 py-0.5 rounded">
+                        {v.modalidad}
+                      </span>
+                      <span className="text-[11px] font-semibold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded">
+                        {v.tipo_contratacion?.replace('_', ' ')}
+                      </span>
+                      {getStatusBadge(v.status)}
+                    </div>
 
-      {/* Guía Informativa para Empresas */}
-      <div className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm space-y-6">
-        <h2 className="text-lg font-black text-[#2D2926]">
-          Ciclo de Vinculación y Reclutamiento UTH
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#691C32]">Fase 1: Publicación</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Registro de la Oferta</h3>
-            <p className="text-xs text-[#636569]">
-              Completas los requisitos y condiciones del puesto. La vacante se registra con estatus <em>Pendiente</em>.
-            </p>
-          </div>
-          <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#00A887]">Fase 2: Aprobación UTH</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Validación de Pertinencia</h3>
-            <p className="text-xs text-[#636569]">
-              El Departamento de Vinculación UTH revisa la oferta y la publica para que los egresados afines comiencen a postularse.
-            </p>
-          </div>
-          <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#C2BA98]">Fase 3: Candidatos</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Filtro Curricular</h3>
-            <p className="text-xs text-[#636569]">
-              Recibes los expedientes de los egresados cuyo perfil y currículum han sido validados institucionalmente por la universidad.
-            </p>
-          </div>
+                    <h3 className="text-base font-bold text-[#2D2926]">
+                      {v.titulo}
+                    </h3>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
+                      <span className="flex items-center gap-1 font-medium text-zinc-700">
+                        <Briefcase className="w-3.5 h-3.5 text-[#00A887]" />
+                        {v.area_estudio_nombre || 'Área Tecnológica UTH'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                        Registrada el {formatFecha(v.fecha_registro)}
+                      </span>
+                      <span className="flex items-center gap-1 font-semibold text-zinc-800">
+                        <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                        {v.salario_a_tratar 
+                          ? 'Salario a tratar' 
+                          : v.sueldo_minimo && v.sueldo_maximo 
+                            ? `$${Number(v.sueldo_minimo).toLocaleString('es-MX')} - $${Number(v.sueldo_maximo).toLocaleString('es-MX')} MXN`
+                            : 'Sueldo competitivo'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-zinc-100">
+                    <button
+                      onClick={() => setTabActiva('candidatos')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 text-[#00A887]" />
+                      <span>{v.num_postulaciones || 0} candidato(s)</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/vacantes/${v.id}`}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#00A887] hover:underline"
+                      >
+                        Ver en bolsa
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+
+                      {v.status === 'aprobada' && (
+                        <button
+                          onClick={() => handleCerrarVacante(v.id, v.titulo)}
+                          disabled={accionEnProceso === v.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-zinc-600 hover:text-red-700 hover:bg-red-50 border border-zinc-200 transition-all cursor-pointer disabled:opacity-50"
+                          title="Concluir y cerrar recepción de postulantes"
+                        >
+                          {accionEnProceso === v.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Lock className="w-3 h-3" />
+                          )}
+                          Cerrar vacante
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
+      )}
+
+      {/* CONTENIDO PESTAÑA: CANDIDATOS */}
+      {tabActiva === 'candidatos' && (
+        <CandidatosManager
+          postulaciones={postulaciones}
+          vacantes={vacantes}
+          token={accessToken || ''}
+          onPostulacionActualizada={handlePostulacionActualizada}
+        />
+      )}
 
       {/* Modal de Publicación */}
       <NuevaVacanteModal

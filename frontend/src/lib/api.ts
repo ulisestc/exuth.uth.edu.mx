@@ -153,6 +153,15 @@ export interface Postulacion {
   fecha_postulacion: string;
   estado: 'revision_uth' | 'rechazada_uth' | 'enviada_empresa' | 'Aceptada' | 'Rechazada';
   notas_uth?: string | null;
+  candidato_nombre?: string;
+  candidato_email?: string;
+  candidato_telefono?: string | null;
+  candidato_carrera?: string;
+  candidato_nivel_estudios?: string;
+  candidato_matricula?: string;
+  candidato_cv?: string | null;
+  candidato_habilidades?: string;
+  candidato_domicilio?: string;
 }
 
 export interface PostulacionesResponse {
@@ -607,5 +616,97 @@ export async function cerrarVacante(
   } catch (error: any) {
     console.error('Error closing vacante:', error);
     return { success: false, error: error.message || 'Error de conexión al cerrar la vacante.' };
+  }
+}
+
+export async function fetchPostulacionesEmpresa(
+  accessToken: string,
+  vacanteId?: number
+): Promise<Postulacion[]> {
+  try {
+    const url = new URL(`${API_BASE_URL}/vacantes/postulaciones/`);
+    if (vacanteId) {
+      url.searchParams.append('vacante', String(vacanteId));
+    }
+
+    const res = await fetch(url.toString(), {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      console.error(`Error fetching postulaciones empresa: HTTP ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching postulaciones empresa:', error);
+    return [];
+  }
+}
+
+export async function downloadCvCandidato(
+  accessToken: string,
+  egresadoId: number,
+  nombreArchivo?: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/${egresadoId}/cv/`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      console.error(`Error downloading candidate CV: HTTP ${res.status}`);
+      return false;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo || `CV_Candidato_${egresadoId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    return true;
+  } catch (error) {
+    console.error('Error downloading candidate CV:', error);
+    return false;
+  }
+}
+
+export async function evaluarPostulacion(
+  accessToken: string,
+  postulacionId: number,
+  estado: 'Aceptada' | 'Rechazada'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/postulaciones/${postulacionId}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ estado }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const errorMsg = data.estado?.[0] || data.detail || 'Error al actualizar el estado del candidato.';
+      return { success: false, error: errorMsg };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error evaluando postulacion:', error);
+    return { success: false, error: error.message || 'Error de conexión al evaluar al candidato.' };
   }
 }
