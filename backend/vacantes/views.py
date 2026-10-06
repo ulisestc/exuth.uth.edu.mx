@@ -7,11 +7,29 @@ from profiles.permissions import IsEmpresaAprobadaOrReadOnly
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from django.db import transaction
+from django.db.models import Count, Q
 
 class VacanteViewSet(viewsets.ModelViewSet):
     queryset = Vacante.objects.all()
     serializer_class = VacanteSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsEmpresaAuthorOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Vacante.objects.select_related('empresa', 'area_estudio') \
+                            .prefetch_related('requisitos_idioma__idioma') \
+                            .annotate(num_postulaciones=Count('postulaciones'))
+
+        # Administrador UTH y Soporte TI ven todas las vacantes
+        if user.is_authenticated and (user.rol in ['admin_uth', 'soporte_ti'] or user.is_superuser):
+            return qs
+
+        # Empresas ven vacantes aprobadas y sus propias vacantes (en cualquier estado)
+        if user.is_authenticated and hasattr(user, 'empresa'):
+            return qs.filter(Q(status='aprobada') | Q(empresa=user.empresa))
+
+        # Egresados y usuarios anónimos SOLO pueden explorar vacantes aprobadas
+        return qs.filter(status='aprobada')
 
     #filtros, busquedas y ordenamiento
     filterset_fields = [
@@ -63,7 +81,11 @@ class VacanteViewSet(viewsets.ModelViewSet):
         """Devuelve todas las vacantes creadas por la empresa autenticada."""
         if not hasattr(request.user, 'empresa'):
             raise PermissionDenied("Solo las empresas vinculadas pueden consultar sus ofertas de empleo.")
-        vacantes = Vacante.objects.filter(empresa=request.user.empresa).order_by('-id')
+        vacantes = Vacante.objects.select_related('empresa', 'area_estudio') \
+                                  .prefetch_related('requisitos_idioma__idioma') \
+                                  .annotate(num_postulaciones=Count('postulaciones')) \
+                                  .filter(empresa=request.user.empresa) \
+                                  .order_by('-id')
         serializer = self.get_serializer(vacantes, many=True)
         return Response(serializer.data)
 

@@ -16,7 +16,14 @@ class VacanteSerializer(serializers.ModelSerializer):
     idiomas = RequisitoIdiomaSerializer(many=True, source='requisitos_idioma', required=False)
     empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
     area_estudio_nombre = serializers.ReadOnlyField(source='area_estudio.nombre')
-    num_postulaciones = serializers.IntegerField(source='postulaciones.count', read_only=True)
+    num_postulaciones = serializers.SerializerMethodField()
+
+    def get_num_postulaciones(self, obj):
+        # Lectura directa en O(1) si viene anotado por el queryset
+        if hasattr(obj, 'num_postulaciones'):
+            return obj.num_postulaciones
+        # Fallback de seguridad si es una instancia recién creada en memoria
+        return obj.postulaciones.count()
 
     class Meta:
         model = Vacante
