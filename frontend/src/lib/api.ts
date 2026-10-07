@@ -909,3 +909,91 @@ export async function cambiarStatusEmpresa(
   }
 }
 
+export interface PadronEgresadoItem {
+  id: number;
+  matricula: string;
+  nombre: string;
+  carrera: string;
+  periodo?: string | null;
+  anio_egreso?: string | null;
+  estatus_titulacion?: string | null;
+  estatus_tsu?: string | null;
+  etnia_indigena?: string | null;
+  discapacidad?: string | null;
+  genero?: string | null;
+  nivel?: string | null;
+  tel_escolares?: string | null;
+  correo_escolares?: string | null;
+  domicilio?: string | null;
+  estado_domicilio?: string | null;
+  municipio?: string | null;
+  curp?: string | null;
+  fecha_nacimiento?: string | null;
+  trabaja_actualmente?: string | null;
+  correo_personal?: string | null;
+  telefono_movil?: string | null;
+  fecha_importacion: string;
+}
+
+export interface ImportarPadronResponse {
+  mensaje: string;
+  total_filas_procesadas: number;
+  creados: number;
+  actualizados: number;
+  omitidos: number;
+}
+
+export async function fetchPadronEgresados(
+  accessToken: string,
+  search?: string
+): Promise<PadronEgresadoItem[]> {
+  try {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/profiles/padron/${queryString ? `?${queryString}` : ''}`;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching padron egresados:', error);
+    return [];
+  }
+}
+
+export async function importarPadronExcel(
+  accessToken: string,
+  file: File
+): Promise<{ success: boolean; data?: ImportarPadronResponse; error?: string }> {
+  try {
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/profiles/padron/importar/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      const errorMsg = data.archivo || data.detail || (Array.isArray(data) && data[0]) || 'Error al procesar el archivo Excel del padrón.';
+      return { success: false, error: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg) };
+    }
+
+    return { success: true, data: data as ImportarPadronResponse };
+  } catch (error: any) {
+    console.error('Error importando padron excel:', error);
+    return { success: false, error: error.message || 'Error de conexión al cargar archivo.' };
+  }
+}
+

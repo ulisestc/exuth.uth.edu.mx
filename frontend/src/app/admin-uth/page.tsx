@@ -19,21 +19,24 @@ import {
   Award,
   Layers,
   Send,
-  RefreshCw
+  RefreshCw,
+  FileSpreadsheet
 } from 'lucide-react';
 import VacantesAuditor from '@/components/admin/VacantesAuditor';
 import PostulacionesFiltro from '@/components/admin/PostulacionesFiltro';
 import EmpresasValidador from '@/components/admin/EmpresasValidador';
+import PadronManager from '@/components/admin/PadronManager';
 import { 
   fetchAdminVacantes, 
   fetchAdminPostulaciones, 
-  fetchAdminEmpresas 
+  fetchAdminEmpresas,
+  fetchPadronEgresados
 } from '@/lib/api';
 
 export default function AdminUthPage() {
   const router = useRouter();
   const { user, accessToken, isAuthenticated, isLoading, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'vacantes' | 'postulaciones' | 'empresas'>('vacantes');
+  const [activeTab, setActiveTab] = useState<'vacantes' | 'postulaciones' | 'empresas' | 'padron'>('vacantes');
 
   // Métricas en vivo
   const [stats, setStats] = useState({
@@ -44,6 +47,7 @@ export default function AdminUthPage() {
     empresasPendientes: 0,
     empresasActivas: 0,
     colocados: 0,
+    padronTotal: 0,
   });
   const [loadingStats, setLoadingStats] = useState<boolean>(true);
 
@@ -51,10 +55,11 @@ export default function AdminUthPage() {
     if (!accessToken) return;
     setLoadingStats(true);
     try {
-      const [vacs, posts, emps] = await Promise.all([
+      const [vacs, posts, emps, padr] = await Promise.all([
         fetchAdminVacantes(accessToken, 'todas'),
         fetchAdminPostulaciones(accessToken, 'todas'),
         fetchAdminEmpresas(accessToken, 'todas'),
+        fetchPadronEgresados(accessToken),
       ]);
 
       const vacPend = vacs.filter((v) => v.status === 'pendiente').length;
@@ -75,6 +80,7 @@ export default function AdminUthPage() {
         empresasPendientes: empPend,
         empresasActivas: empAct,
         colocados: colocadosCount,
+        padronTotal: padr.length,
       });
     } catch (err) {
       console.error('Error cargando métricas UTH:', err);
@@ -321,6 +327,23 @@ export default function AdminUthPage() {
                 </span>
               )}
             </button>
+
+            <button
+              onClick={() => setActiveTab('padron')}
+              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+                activeTab === 'padron'
+                  ? 'border-[#00A887] text-[#00A887]'
+                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              4. Padrón Escolar e Importación Excel
+              {stats.padronTotal > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800">
+                  {stats.padronTotal}
+                </span>
+              )}
+            </button>
           </div>
 
           <button
@@ -344,6 +367,10 @@ export default function AdminUthPage() {
 
           {activeTab === 'empresas' && (
             <EmpresasValidador token={accessToken} onStatsChange={loadStats} />
+          )}
+
+          {activeTab === 'padron' && (
+            <PadronManager token={accessToken} onStatsChange={loadStats} />
           )}
         </div>
       </div>
