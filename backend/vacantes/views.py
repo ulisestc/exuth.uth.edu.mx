@@ -35,7 +35,8 @@ class VacanteViewSet(viewsets.ModelViewSet):
     filterset_fields = [
         'area_estudio', 
         'nivel_estudios', 
-        'incluye_transporte'
+        'incluye_transporte',
+        'status',
     ]
 
     search_fields = [
@@ -57,7 +58,8 @@ class VacanteViewSet(viewsets.ModelViewSet):
     @action(
         detail=True, 
         methods=['patch'], 
-        serializer_class=VacanteEstadoSerializer
+        serializer_class=VacanteEstadoSerializer,
+        permission_classes=[permissions.IsAuthenticated]
     )
     def cambiar_status(self, request, pk=None):
         #RBAC

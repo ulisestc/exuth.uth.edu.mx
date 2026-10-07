@@ -710,3 +710,202 @@ export async function evaluarPostulacion(
     return { success: false, error: error.message || 'Error de conexión al evaluar al candidato.' };
   }
 }
+
+export interface EmpresaListItem {
+  id: number;
+  user: number;
+  nombre: string;
+  domicilio: string;
+  correo_contacto: string;
+  actividad_de_la_empresa: string;
+  campo?: string | null;
+  giro: string;
+  sector: string;
+  status: 'pendiente' | 'aprobada' | 'rechazada';
+  telefono_oficina?: string | null;
+  telefono_celular?: string | null;
+  nombre_contacto: string;
+  cargo_contacto: string;
+}
+
+export async function fetchAdminVacantes(
+  accessToken: string,
+  statusFilter?: string
+): Promise<Vacante[]> {
+  try {
+    const params = new URLSearchParams();
+    if (statusFilter && statusFilter !== 'todas') {
+      params.append('status', statusFilter);
+    }
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/vacantes/${queryString ? `?${queryString}` : ''}`;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching admin vacantes:', error);
+    return [];
+  }
+}
+
+export async function cambiarStatusVacante(
+  accessToken: string,
+  vacanteId: number,
+  nuevoStatus: 'aprobada' | 'rechazada' | 'pendiente' | 'cerrada'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/${vacanteId}/cambiar_status/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: nuevoStatus }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.detail || 'Error al actualizar estatus de vacante.' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error cambiando status vacante:', error);
+    return { success: false, error: error.message || 'Error de conexión.' };
+  }
+}
+
+export async function fetchAdminPostulaciones(
+  accessToken: string,
+  estadoFilter?: string
+): Promise<Postulacion[]> {
+  try {
+    const params = new URLSearchParams();
+    if (estadoFilter && estadoFilter !== 'todas') {
+      params.append('estado', estadoFilter);
+    }
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/vacantes/postulaciones/${queryString ? `?${queryString}` : ''}`;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching admin postulaciones:', error);
+    return [];
+  }
+}
+
+export async function turnarPostulacionEmpresa(
+  accessToken: string,
+  postulacionId: number,
+  notasUth?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/postulaciones/${postulacionId}/aprobar-uth/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ notas_uth: notasUth || '' }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.detail || 'Error al turnar candidato a la empresa.' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error turnando postulacion:', error);
+    return { success: false, error: error.message || 'Error de conexión.' };
+  }
+}
+
+export async function rechazarPostulacionUth(
+  accessToken: string,
+  postulacionId: number,
+  notasUth?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/postulaciones/${postulacionId}/rechazar-uth/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ notas_uth: notasUth || '' }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.detail || 'Error al descartar la postulación.' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error descartando postulacion:', error);
+    return { success: false, error: error.message || 'Error de conexión.' };
+  }
+}
+
+export async function fetchAdminEmpresas(
+  accessToken: string,
+  statusFilter?: string
+): Promise<EmpresaListItem[]> {
+  try {
+    const params = new URLSearchParams();
+    if (statusFilter && statusFilter !== 'todas') {
+      params.append('status', statusFilter);
+    }
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/profiles/empresas/${queryString ? `?${queryString}` : ''}`;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching admin empresas:', error);
+    return [];
+  }
+}
+
+export async function cambiarStatusEmpresa(
+  accessToken: string,
+  empresaId: number,
+  nuevoStatus: 'aprobada' | 'rechazada' | 'pendiente'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/empresas/${empresaId}/cambiar_status/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: nuevoStatus }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.detail || 'Error al actualizar estatus de empresa.' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error cambiando status empresa:', error);
+    return { success: false, error: error.message || 'Error de conexión.' };
+  }
+}
+

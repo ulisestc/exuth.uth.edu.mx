@@ -10,6 +10,8 @@ class IsEmpresaAuthorOrReadOnly(permissions.BasePermission):
         # so we'll always allow GET, HEAD or OPTIONS requests.
         if request.method in permissions.SAFE_METHODS:
             return True
+        if request.user.is_authenticated and (getattr(request.user, 'rol', None) in ['soporte_ti', 'admin_uth'] or request.user.is_superuser):
+            return True
 
         # Write permissions are only allowed to the author of the vacancy.
         return obj.empresa.user == request.user
