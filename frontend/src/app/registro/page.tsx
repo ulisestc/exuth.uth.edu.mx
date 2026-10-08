@@ -577,7 +577,7 @@ function RegistroForm() {
                       className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#00A887] focus:ring-[#00A887]"
                     />
                     <span className="text-xs text-[#636569] leading-relaxed">
-                      Acepto el <strong className="text-[#2D2926]">Aviso de Privacidad Institucional</strong> de la Universidad Tecnológica de Huejotzingo para el resguardo de mis datos personales y vinculación laboral con empresas registradas.
+                      Acepto el <Link href="/aviso-privacidad" target="_blank" className="font-bold text-[#00A887] hover:underline">Aviso de Privacidad Institucional</Link> de la Universidad Tecnológica de Huejotzingo para el resguardo de mis datos personales y vinculación laboral con empresas registradas.
                     </span>
                   </label>
                 </div>
@@ -861,7 +861,7 @@ function RegistroForm() {
                       className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#691C32] focus:ring-[#691C32]"
                     />
                     <span className="text-xs text-[#636569] leading-relaxed">
-                      Acepto el <strong className="text-[#2D2926]">Aviso de Privacidad Institucional</strong> y el compromiso de tratamiento responsable y legal de las postulaciones de egresados de la Universidad Tecnológica de Huejotzingo.
+                      Acepto el <Link href="/aviso-privacidad" target="_blank" className="font-bold text-[#691C32] hover:underline">Aviso de Privacidad Institucional</Link> y el compromiso de tratamiento responsable y legal de las postulaciones de egresados de la Universidad Tecnológica de Huejotzingo.
                     </span>
                   </label>
                 </div>

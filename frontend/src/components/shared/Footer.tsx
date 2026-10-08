@@ -71,7 +71,7 @@ export const Footer = () => {
                 </a>
               </li>
               <li>
-                <Link href="/terminos" className="hover:text-[#00A887] transition-colors">
+                <Link href="/aviso-privacidad#terminos" className="hover:text-[#00A887] transition-colors">
                   Términos de Servicio
                 </Link>
               </li>
