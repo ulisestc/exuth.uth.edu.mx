@@ -100,7 +100,15 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#636569]">
               <span className="flex items-center gap-1.5 font-semibold text-[#2D2926]">
-                <Building2 className="w-4 h-4 text-[#00A887]" />
+                {vacante.empresa_logo ? (
+                  <img 
+                    src={vacante.empresa_logo} 
+                    alt={vacante.empresa_nombre || 'Empresa'} 
+                    className="w-5 h-5 object-contain rounded border border-zinc-200 shrink-0" 
+                  />
+                ) : (
+                  <Building2 className="w-4 h-4 text-[#00A887]" />
+                )}
                 {vacante.empresa_nombre || 'Empresa Aliada UTH'}
               </span>
               {vacante.area_estudio_nombre && (

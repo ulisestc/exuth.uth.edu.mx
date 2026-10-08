@@ -34,8 +34,10 @@ import {
   Loader2,
   Mail,
   MapPin,
-  FileText
+  FileText,
+  Edit3
 } from 'lucide-react';
+import EditarPerfilEmpresaModal from '@/components/empresas/EditarPerfilEmpresaModal';
 
 export default function PortalEmpresaPage() {
   const router = useRouter();
@@ -47,6 +49,7 @@ export default function PortalEmpresaPage() {
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalPerfilAbierto, setModalPerfilAbierto] = useState(false);
   const [accionEnProceso, setAccionEnProceso] = useState<number | null>(null);
 
   // Redirigir a login si no está autenticado
@@ -192,53 +195,79 @@ export default function PortalEmpresaPage() {
         </div>
 
         <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#691C32]/40 text-rose-200 border border-[#691C32]/60">
-                <Building2 className="w-3.5 h-3.5" />
-                Empresa Vinculada UTH
-              </span>
-              {empresa?.status === 'aprobada' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Convenio Acreditado
-                </span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+            {/* Logotipo de la Empresa o Ícono Oficial */}
+            <div className="w-20 h-20 rounded-2xl bg-white p-2 border border-zinc-200/40 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+              {empresa?.logo ? (
+                <img 
+                  src={empresa.logo} 
+                  alt={empresa.nombre} 
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="text-center text-zinc-400">
+                  <Building2 className="w-8 h-8 mx-auto text-[#691C32]" />
+                  <span className="text-[9px] font-bold text-zinc-500 block mt-0.5">Sin Logo</span>
+                </div>
               )}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              {empresa?.nombre || `${user.nombres} ${user.apellido_paterno}`}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300">
-              {empresa?.nombre_contacto && (
-                <span className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-[#C2BA98]" />
-                  Contacto: {empresa.nombre_contacto} ({empresa.cargo_contacto || 'Representante'})
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#691C32]/40 text-rose-200 border border-[#691C32]/60">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Empresa Vinculada UTH
                 </span>
-              )}
-              {empresa?.giro && (
-                <>
-                  <span className="text-zinc-600 hidden sm:inline">•</span>
+                {empresa?.status === 'aprobada' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Convenio Acreditado
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+                {empresa?.nombre || `${user.nombres} ${user.apellido_paterno}`}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300">
+                {empresa?.nombre_contacto && (
                   <span className="flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-[#00A887]" />
-                    {empresa.giro}
+                    <Users className="w-3.5 h-3.5 text-[#C2BA98]" />
+                    Contacto: {empresa.nombre_contacto} ({empresa.cargo_contacto || 'Representante'})
                   </span>
-                </>
-              )}
-              {empresa?.domicilio && (
-                <>
-                  <span className="text-zinc-600 hidden sm:inline">•</span>
-                  <span className="flex items-center gap-1.5 text-zinc-400 truncate max-w-xs">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {empresa.domicilio}
-                  </span>
-                </>
-              )}
+                )}
+                {empresa?.giro && (
+                  <>
+                    <span className="text-zinc-600 hidden sm:inline">•</span>
+                    <span className="flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-[#00A887]" />
+                      {empresa.giro}
+                    </span>
+                  </>
+                )}
+                {empresa?.domicilio && (
+                  <>
+                    <span className="text-zinc-600 hidden sm:inline">•</span>
+                    <span className="flex items-center gap-1.5 text-zinc-400 truncate max-w-xs">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {empresa.domicilio}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={() => setModalPerfilAbierto(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10 cursor-pointer shadow-xs"
+              title="Editar datos de contacto y subir logotipo corporativo"
+            >
+              <Edit3 className="w-4 h-4 text-[#C2BA98]" />
+              Editar Perfil y Logo
+            </button>
             <button
               onClick={() => setModalAbierto(true)}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-md cursor-pointer"
@@ -526,6 +555,15 @@ export default function PortalEmpresaPage() {
         token={accessToken || ''}
         defaultContactoNombre={empresa?.nombre_contacto}
         onVacanteCreada={handleVacanteCreada}
+      />
+
+      {/* Modal de Edición de Perfil de Empresa */}
+      <EditarPerfilEmpresaModal
+        isOpen={modalPerfilAbierto}
+        onClose={() => setModalPerfilAbierto(false)}
+        empresa={empresa}
+        token={accessToken || ''}
+        onProfileUpdated={(updated) => setEmpresa(updated)}
       />
     </div>
   );

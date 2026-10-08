@@ -56,6 +56,7 @@ class Empresa(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='aprobada')
     nombre_contacto = models.CharField(max_length=150, verbose_name="Nombre del contacto")
     cargo_contacto = models.CharField(max_length=100, verbose_name="Cargo del Contacto")
+    logo = models.ImageField(upload_to='empresas/logos/', blank=True, null=True, verbose_name="Logotipo Corporativo")
 
     def __str__(self):
         return f"{self.nombre} - {self.correo_contacto}"

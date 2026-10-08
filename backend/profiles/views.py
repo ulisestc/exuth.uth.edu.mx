@@ -68,6 +68,15 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         
         elif request.method == 'PATCH':
+            user = request.user
+            user_updated = False
+            for f in ['nombres', 'apellido_paterno', 'apellido_materno']:
+                if f in request.data and request.data[f]:
+                    setattr(user, f, request.data[f])
+                    user_updated = True
+            if user_updated:
+                user.save()
+
             serializer = self.get_serializer(egresado, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()

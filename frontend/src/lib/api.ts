@@ -18,6 +18,7 @@ export interface Vacante {
   titulo: string;
   empresa: number;
   empresa_nombre?: string;
+  empresa_logo?: string | null;
   area_estudio: number;
   area_estudio_nombre?: string;
   status: 'pendiente' | 'aprobada' | 'rechazada' | 'cerrada';
@@ -411,9 +412,14 @@ export async function updateMiPerfilEgresado(
   token: string,
   data: Partial<{
     telefono_celular: string;
+    telefono_casa: string;
     domicilio: string;
     habilidades: string;
+    capacidades_especiales: string;
     nivel_estudios: 'TSU' | 'ING_LIC' | 'MTRIA';
+    nombres: string;
+    apellido_paterno: string;
+    apellido_materno: string;
   }>
 ): Promise<{ success: boolean; profile?: EgresadoProfile; error?: string }> {
   try {
@@ -428,8 +434,8 @@ export async function updateMiPerfilEgresado(
 
     const resData = await res.json();
     if (!res.ok) {
-      const errorMsg = resData.detail || 'Error al actualizar el perfil.';
-      return { success: false, error: errorMsg };
+      const errorMsg = resData.detail || (Array.isArray(resData) && resData[0]) || Object.values(resData)[0] || 'Error al actualizar el perfil.';
+      return { success: false, error: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg) };
     }
 
     return { success: true, profile: resData };
@@ -459,6 +465,7 @@ export interface EmpresaProfile {
   telefono_celular?: string;
   nombre_contacto: string;
   cargo_contacto: string;
+  logo?: string | null;
 }
 
 export interface RequisitoIdiomaInput {
@@ -504,6 +511,7 @@ export interface VacanteEmpresaItem {
   titulo: string;
   empresa: number;
   empresa_nombre: string;
+  empresa_logo?: string | null;
   area_estudio: number;
   area_estudio_nombre: string;
   status: 'pendiente' | 'aprobada' | 'rechazada' | 'cerrada';
@@ -546,6 +554,38 @@ export async function fetchMiPerfilEmpresa(token: string): Promise<EmpresaProfil
   } catch (error) {
     console.error('Error fetching perfil empresa:', error);
     return null;
+  }
+}
+
+export async function updateMiPerfilEmpresa(
+  token: string,
+  payload: FormData | Record<string, any>
+): Promise<{ success: boolean; profile?: EmpresaProfile; error?: string }> {
+  try {
+    const isFormData = payload instanceof FormData;
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${token}`,
+    };
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const res = await fetch(`${API_BASE_URL}/profiles/empresas/me/`, {
+      method: 'PATCH',
+      headers,
+      body: isFormData ? payload : JSON.stringify(payload),
+    });
+
+    const resData = await res.json();
+    if (!res.ok) {
+      const errorMsg = resData.detail || (Array.isArray(resData) && resData[0]) || Object.values(resData)[0] || 'Error al actualizar el perfil de la empresa.';
+      return { success: false, error: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg) };
+    }
+
+    return { success: true, profile: resData };
+  } catch (error: any) {
+    console.error('Error updating perfil empresa:', error);
+    return { success: false, error: error.message || 'Error de conexión al actualizar el perfil.' };
   }
 }
 

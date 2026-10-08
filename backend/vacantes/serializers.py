@@ -15,6 +15,7 @@ class VacanteSerializer(serializers.ModelSerializer):
     #anidar serializer de RequisitoIdioma
     idiomas = RequisitoIdiomaSerializer(many=True, source='requisitos_idioma', required=False)
     empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
+    empresa_logo = serializers.ImageField(source='empresa.logo', read_only=True)
     area_estudio_nombre = serializers.ReadOnlyField(source='area_estudio.nombre')
     num_postulaciones = serializers.SerializerMethodField()
 

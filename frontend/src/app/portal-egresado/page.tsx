@@ -27,8 +27,13 @@ import {
   Eye,
   Send,
   BookOpen,
-  Award
+  Award,
+  UserCog,
+  Phone,
+  MapPin,
+  Wrench
 } from 'lucide-react';
+import EditarPerfilEgresadoModal from '@/components/egresados/EditarPerfilEgresadoModal';
 
 export default function PortalEgresadoPage() {
   const router = useRouter();
@@ -39,6 +44,7 @@ export default function PortalEgresadoPage() {
 
   const [profile, setProfile] = useState<EgresadoProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [modalEditarPerfil, setModalEditarPerfil] = useState(false);
 
   // Redirigir a login si no está autenticado
   useEffect(() => {
@@ -209,6 +215,14 @@ export default function PortalEgresadoPage() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => setModalEditarPerfil(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10 cursor-pointer shadow-xs"
+              title="Editar datos de contacto y habilidades"
+            >
+              <UserCog className="w-4 h-4 text-[#00A887]" />
+              Editar Perfil
+            </button>
             <Link
               href="/vacantes"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-sm"
@@ -322,6 +336,63 @@ export default function PortalEgresadoPage() {
           <div className="text-[11px] text-[#636569] flex items-center gap-1.5 font-medium truncate">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887] shrink-0" />
             <span className="truncate">{user.email}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tarjeta de Contacto y Habilidades */}
+      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+          <div>
+            <h2 className="text-base font-bold text-[#2D2926] flex items-center gap-2">
+              <UserCog className="w-4 h-4 text-[#00A887]" />
+              Mis Datos de Contacto y Perfil Profesional
+            </h2>
+            <p className="text-xs text-[#636569] mt-0.5">
+              Información compartida con los reclutadores una vez que tu postulación es turnada por la UTH.
+            </p>
+          </div>
+          <button
+            onClick={() => setModalEditarPerfil(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#00A887] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            <UserCog className="w-3.5 h-3.5" />
+            Modificar Datos
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase font-bold text-[#636569] flex items-center gap-1">
+              <Phone className="w-3 h-3 text-[#00A887]" />
+              Teléfonos de Contacto
+            </span>
+            <p className="font-semibold text-[#2D2926]">
+              {profile?.telefono_celular ? `Móvil: ${profile.telefono_celular}` : 'Sin celular registrado'}
+            </p>
+            {profile?.telefono_casa && (
+              <p className="text-zinc-500 text-[11px]">Casa: {profile.telefono_casa}</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase font-bold text-[#636569] flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-[#00A887]" />
+              Domicilio Registrado
+            </span>
+            <p className="font-medium text-[#2D2926] line-clamp-2">
+              {profile?.domicilio || 'No especificado'}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase font-bold text-[#636569] flex items-center gap-1">
+              <Wrench className="w-3 h-3 text-[#00A887]" />
+              Habilidades y Competencias
+            </span>
+            <p className="font-medium text-[#2D2926] line-clamp-2">
+              {profile?.habilidades || 'Sin habilidades registradas'}
+            </p>
           </div>
         </div>
       </div>
@@ -455,6 +526,15 @@ export default function PortalEgresadoPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Edición de Perfil */}
+      <EditarPerfilEgresadoModal
+        isOpen={modalEditarPerfil}
+        onClose={() => setModalEditarPerfil(false)}
+        profile={profile}
+        token={accessToken || ''}
+        onProfileUpdated={(updated) => setProfile(updated)}
+      />
     </div>
   );
 }

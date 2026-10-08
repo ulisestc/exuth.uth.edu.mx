@@ -26,7 +26,8 @@ class EmpresaSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'nombre', 'domicilio', 'correo_contacto',
             'actividad_de_la_empresa', 'campo', 'giro', 'sector', 'status',
-            'telefono_oficina', 'telefono_celular', 'nombre_contacto', 'cargo_contacto' 
+            'telefono_oficina', 'telefono_celular', 'nombre_contacto', 'cargo_contacto',
+            'logo'
         ]
         read_only_fields = ['id', 'status', 'user']  # El 'id' y 'status' son de solo lectura, y 'user' se asignará automáticamente al usuario autenticado.
 

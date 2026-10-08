@@ -95,7 +95,15 @@ export const JobCard: React.FC<JobCardProps> = ({ vacante }) => {
         {/* Empresa y Ubicación */}
         <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-[#636569]">
           <span className="flex items-center gap-1.5 font-medium text-[#2D2926]">
-            <Building2 className="w-3.5 h-3.5 text-[#00A887]" />
+            {vacante.empresa_logo ? (
+              <img 
+                src={vacante.empresa_logo} 
+                alt={vacante.empresa_nombre || 'Empresa'} 
+                className="w-4 h-4 object-contain rounded shrink-0" 
+              />
+            ) : (
+              <Building2 className="w-3.5 h-3.5 text-[#00A887]" />
+            )}
             {vacante.empresa_nombre || 'Empresa Aliada UTH'}
           </span>
           {vacante.area_estudio_nombre && (
