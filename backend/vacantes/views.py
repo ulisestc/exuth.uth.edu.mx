@@ -285,3 +285,27 @@ class ColocacionViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Solo el personal administrativo de la UTH puede eliminar registros de colocación.")
             
         instance.delete()
+
+    @action(detail=False, methods=['get'], url_path='exportar-excel', permission_classes=[permissions.IsAuthenticated])
+    def exportar_excel(self, request):
+        """
+        Descarga el Reporte Consolidado de Colocación Laboral en Excel (.xlsx)
+        con formato institucional UTH para auditorías y acreditaciones CACEI/CONAIC/ISO.
+        """
+        if request.user.rol not in ['admin_uth', 'soporte_ti'] and not request.user.is_superuser:
+            raise PermissionDenied("Solo el personal administrativo de la UTH puede exportar el reporte oficial de colocación.")
+        
+        from django.http import HttpResponse
+        from .reports import generate_colocacion_excel_report
+        from django.utils import timezone
+        
+        excel_bytes = generate_colocacion_excel_report()
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M")
+        filename = f"Reporte_Colocacion_Laboral_UTH_{timestamp}.xlsx"
+        
+        response = HttpResponse(
+            excel_bytes,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response

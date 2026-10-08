@@ -20,7 +20,10 @@ import {
   Layers,
   Send,
   RefreshCw,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Download,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import VacantesAuditor from '@/components/admin/VacantesAuditor';
 import PostulacionesFiltro from '@/components/admin/PostulacionesFiltro';
@@ -30,7 +33,8 @@ import {
   fetchAdminVacantes, 
   fetchAdminPostulaciones, 
   fetchAdminEmpresas,
-  fetchPadronEgresados
+  fetchPadronEgresados,
+  descargarReporteColocacionExcel
 } from '@/lib/api';
 
 export default function AdminUthPage() {
@@ -50,6 +54,36 @@ export default function AdminUthPage() {
     padronTotal: 0,
   });
   const [loadingStats, setLoadingStats] = useState<boolean>(true);
+  const [exportandoExcel, setExportandoExcel] = useState<boolean>(false);
+  const [notificacionExport, setNotificacionExport] = useState<{ tipo: 'success' | 'error'; mensaje: string } | null>(null);
+
+  const handleExportarExcel = async () => {
+    if (!accessToken) return;
+    setExportandoExcel(true);
+    setNotificacionExport(null);
+    try {
+      const res = await descargarReporteColocacionExcel(accessToken);
+      if (res.success) {
+        setNotificacionExport({
+          tipo: 'success',
+          mensaje: `Reporte de colocación generado exitosamente: ${res.filename || 'Reporte_Colocacion_Laboral_UTH.xlsx'}`
+        });
+        setTimeout(() => setNotificacionExport(null), 8000);
+      } else {
+        setNotificacionExport({
+          tipo: 'error',
+          mensaje: res.error || 'No se pudo generar el reporte en Excel.'
+        });
+      }
+    } catch (err: any) {
+      setNotificacionExport({
+        tipo: 'error',
+        mensaje: err.message || 'Error de conexión al generar el reporte.'
+      });
+    } finally {
+      setExportandoExcel(false);
+    }
+  };
 
   const loadStats = async () => {
     if (!accessToken) return;
@@ -138,6 +172,20 @@ export default function AdminUthPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={handleExportarExcel}
+              disabled={exportandoExcel}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-sm border border-[#00A887]/40 cursor-pointer disabled:opacity-60"
+              title="Descargar Reporte Oficial de Colocación Laboral en Excel para acreditaciones CACEI/CONAIC/ISO"
+            >
+              {exportandoExcel ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span>{exportandoExcel ? 'Generando Excel...' : 'Exportar Reporte CACEI / ISO (.xlsx)'}</span>
+            </button>
+
             <a
               href="http://localhost:8080/admin/"
               target="_blank"
@@ -176,6 +224,32 @@ export default function AdminUthPage() {
           </div>
         </div>
       </div>
+
+      {/* Alerta de Notificación de Exportación */}
+      {notificacionExport && (
+        <div
+          className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
+            notificacionExport.tipo === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : 'bg-rose-50 border-rose-200 text-rose-900'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {notificacionExport.tipo === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-[#00A887] shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            )}
+            <p className="text-xs font-semibold">{notificacionExport.mensaje}</p>
+          </div>
+          <button
+            onClick={() => setNotificacionExport(null)}
+            className="text-xs font-bold text-zinc-500 hover:text-zinc-800 ml-4 cursor-pointer"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Tarjetas de Métricas en Vivo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -255,7 +329,7 @@ export default function AdminUthPage() {
         </div>
 
         {/* Colocaciones Universitarias */}
-        <div className="p-5 rounded-xl border border-zinc-200 bg-white">
+        <div className="p-5 rounded-xl border border-zinc-200 bg-white flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <div className="w-10 h-10 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700">
               <Award className="w-5 h-5" />
@@ -264,11 +338,26 @@ export default function AdminUthPage() {
               {loadingStats ? '...' : stats.colocados}
             </span>
           </div>
-          <div className="mt-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Colocación UTH</h3>
-            <p className="text-[11px] text-purple-600 font-semibold mt-0.5">
-              Egresados contratados en vivo
-            </p>
+          <div className="mt-3 flex items-end justify-between">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Colocación UTH</h3>
+              <p className="text-[11px] text-purple-600 font-semibold mt-0.5">
+                Egresados contratados en vivo
+              </p>
+            </div>
+            <button
+              onClick={handleExportarExcel}
+              disabled={exportandoExcel}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold text-[#00A887] bg-emerald-50 hover:bg-emerald-100 border border-[#00A887]/20 transition-all cursor-pointer disabled:opacity-50"
+              title="Descargar Reporte Oficial CACEI/ISO (.xlsx)"
+            >
+              {exportandoExcel ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Download className="w-3 h-3" />
+              )}
+              <span>Excel</span>
+            </button>
           </div>
         </div>
       </div>

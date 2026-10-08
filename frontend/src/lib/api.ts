@@ -997,3 +997,51 @@ export async function importarPadronExcel(
   }
 }
 
+export async function descargarReporteColocacionExcel(
+  accessToken: string
+): Promise<{ success: boolean; filename?: string; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/colocaciones/exportar-excel/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errData.detail || 'No se pudo generar el reporte de colocación en el servidor.',
+      };
+    }
+
+    const blob = await res.blob();
+    const contentDisposition = res.headers.get('content-disposition');
+    let filename = `Reporte_Colocacion_Laboral_UTH_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    if (contentDisposition && contentDisposition.includes('filename=')) {
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) filename = match[1];
+    }
+
+    // Disparar descarga en el navegador
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+
+    return { success: true, filename };
+  } catch (error: any) {
+    console.error('Error descargando reporte de colocación:', error);
+    return {
+      success: false,
+      error: error.message || 'Error de conexión al descargar el reporte.',
+    };
+  }
+}
+
+
