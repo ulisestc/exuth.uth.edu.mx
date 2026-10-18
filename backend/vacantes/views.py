@@ -16,7 +16,7 @@ class VacanteViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = Vacante.objects.select_related('empresa', 'area_estudio') \
+        qs = Vacante.objects.select_related('empresa', 'empresa__giro', 'empresa__sector', 'area_estudio') \
                             .prefetch_related('requisitos_idioma__idioma') \
                             .annotate(num_postulaciones=Count('postulaciones'))
 
@@ -33,6 +33,7 @@ class VacanteViewSet(viewsets.ModelViewSet):
 
     #filtros, busquedas y ordenamiento
     filterset_fields = [
+        'empresa',
         'area_estudio', 
         'nivel_estudios', 
         'incluye_transporte',
@@ -88,7 +89,7 @@ class VacanteViewSet(viewsets.ModelViewSet):
         """Devuelve todas las vacantes creadas por la empresa autenticada."""
         if not hasattr(request.user, 'empresa'):
             raise PermissionDenied("Solo las empresas vinculadas pueden consultar sus ofertas de empleo.")
-        vacantes = Vacante.objects.select_related('empresa', 'area_estudio') \
+        vacantes = Vacante.objects.select_related('empresa', 'empresa__giro', 'empresa__sector', 'area_estudio') \
                                   .prefetch_related('requisitos_idioma__idioma') \
                                   .annotate(num_postulaciones=Count('postulaciones')) \
                                   .filter(empresa=request.user.empresa) \
@@ -133,11 +134,29 @@ class PostulacionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if hasattr(self.request.user, 'egresado'):
             egresado = self.request.user.egresado
+            if not egresado.cv:
+                raise exceptions.ValidationError("Debes subir tu Currículum Vitae en formato PDF en tu expediente antes de postularte a una vacante.")
             vacante = serializer.validated_data.get('vacante')
+            documentos_ids = serializer.validated_data.pop('documentos_ids', None)
             if Postulacion.objects.filter(vacante=vacante, egresado=egresado).exists():
                 raise exceptions.ValidationError("Ya te has postulado a esta vacante.") #400
+
+            incluir_docs = serializer.validated_data.get('incluir_documentos', True)
+            if documentos_ids is not None and len(documentos_ids) == 0:
+                incluir_docs = False
+
             # Nace automáticamente con estado 'revision_uth'
-            postulacion = serializer.save(egresado=egresado, estado='revision_uth')
+            postulacion = serializer.save(
+                egresado=egresado,
+                estado='revision_uth',
+                incluir_documentos=incluir_docs
+            )
+            if documentos_ids is not None:
+                docs_validos = egresado.documentos_precargados.filter(id__in=documentos_ids)
+                postulacion.documentos_adjuntos.set(docs_validos)
+            elif incluir_docs:
+                postulacion.documentos_adjuntos.set(egresado.documentos_precargados.all())
+
             try:
                 from .emails import send_postulacion_recibida_email
                 send_postulacion_recibida_email(postulacion)

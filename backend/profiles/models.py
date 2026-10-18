@@ -20,7 +20,7 @@ class Egresado(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='egresado')
     matricula = models.CharField(max_length=50, unique=True)
     curp = models.CharField(max_length=18, unique=True, validators=[MinLengthValidator(18)])
-    cv = models.FileField(upload_to='files/cvs', blank=True, null=True)
+    cv = models.FileField(upload_to='egresados/cvs/', blank=True, null=True)
     carrera = models.ForeignKey(Carrera, on_delete=models.PROTECT, related_name='egresados')
     telefono_celular = models.CharField(max_length=15, blank=True, null=True, validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="El número de teléfono debe tener entre 9 y 15 dígitos y puede incluir un prefijo internacional.")])
     telefono_casa = models.CharField(max_length=15, blank=True, null=True, validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="El número de teléfono debe tener entre 9 y 15 dígitos y puede incluir un prefijo internacional.")])
@@ -29,12 +29,27 @@ class Egresado(models.Model):
     genero = models.CharField(max_length=1, choices=GENERO_CHOICES)
     capacidades_especiales = models.TextField(blank=True, null=True, verbose_name="Capacidades Especiales o Discapacidad")
     habilidades = models.TextField(verbose_name="Habilidades Técnicas y Blandas")
-    documentos = models.FileField(upload_to='files/docs', blank=True, null=True)
+    documentos = models.FileField(upload_to='egresados/docs/', blank=True, null=True)
     colocado = models.BooleanField(default=False, verbose_name="¿Egresado Colocado?")
     es_verificado_padron = models.BooleanField(default=False, verbose_name="Verificado contra padrón UTH")
 
     def __str__(self):
         return f"{self.user.nombres} {self.user.apellido_paterno} {self.user.apellido_materno} - {self.matricula}"
+
+
+class DocumentoEgresado(models.Model):
+    egresado = models.ForeignKey(Egresado, on_delete=models.CASCADE, related_name='documentos_precargados')
+    nombre = models.CharField(max_length=150, verbose_name="Nombre o Tipo de Documento")
+    archivo = models.FileField(upload_to='egresados/docs/')
+    fecha_subida = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Documento Pre-cargado de Egresado"
+        verbose_name_plural = "Documentos Pre-cargados de Egresados"
+        ordering = ['-fecha_subida', '-id']
+
+    def __str__(self):
+        return f"{self.nombre} - {self.egresado.matricula}"
     
 class Empresa(models.Model):
     STATUS_CHOICES = (

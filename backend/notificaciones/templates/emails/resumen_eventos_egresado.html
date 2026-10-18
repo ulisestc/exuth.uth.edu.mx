@@ -16,7 +16,7 @@
         {% for evento in eventos %}
         <li style="margin-bottom: 12px;">
             <strong>{{ evento.nombre }}</strong> ({{ evento.get_tipo_evento_display }})<br>
-            <small>📅 Fecha: {{ evento.fecha_inicio|date:"d/m/Y H:i" }} hrs | 📍 Lugar: {{ evento.lugar }}</small>
+            <small>Fecha: {{ evento.fecha_inicio|date:"d/m/Y H:i" }} hrs | Lugar: {{ evento.lugar }}</small>
         </li>
         {% endfor %}
     </ul>

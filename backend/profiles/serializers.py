@@ -1,16 +1,35 @@
+import os
 from rest_framework import serializers
-from .models import Egresado, Empresa, PadronEgresado
+from .models import Egresado, DocumentoEgresado, Empresa, PadronEgresado
+
+
+class DocumentoEgresadoSerializer(serializers.ModelSerializer):
+    archivo_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DocumentoEgresado
+        fields = ['id', 'nombre', 'archivo', 'archivo_nombre', 'fecha_subida']
+        read_only_fields = ['id', 'fecha_subida']
+
+    def get_archivo_nombre(self, obj):
+        if obj.archivo:
+            return os.path.basename(obj.archivo.name)
+        return ''
+
 
 class EgresadoSerializer(serializers.ModelSerializer):
+    documentos_precargados = DocumentoEgresadoSerializer(many=True, read_only=True)
+
     class Meta:
         model = Egresado
         fields = [
             'id', 'user', 'matricula', 'curp', 'cv', 'carrera',
             'telefono_celular', 'telefono_casa', 'domicilio',
             'nivel_estudios', 'genero', 'capacidades_especiales',
-            'habilidades', 'documentos', 'colocado', 'es_verificado_padron'
+            'habilidades', 'documentos', 'documentos_precargados',
+            'colocado', 'es_verificado_padron'
         ]
-        read_only_fields = ['id', 'user', 'colocado', 'es_verificado_padron']  # El 'id' es de solo lectura, y 'user' se asignará automáticamente al usuario autenticado.
+        read_only_fields = ['id', 'user', 'colocado', 'es_verificado_padron', 'documentos_precargados']
 
     def to_representation(self, instance):
         # 1. Obtiene el diccionario original (donde 'carrera' es un número)

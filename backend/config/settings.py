@@ -35,9 +35,11 @@ DEBUG = config('DEBUG', default = False, cast = bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
 #VARIABLES PARA EL FRONTEND
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:4200')
-DOMAIN = config('FRONTEND_DOMAIN', default='localhost:4200')
-SITE_NAME = 'EXUTH'
+_raw_frontend_url = config('FRONTEND_URL', default='http://localhost:3000')
+_raw_domain = config('FRONTEND_DOMAIN', default='localhost:3000')
+FRONTEND_URL = 'http://localhost:3000' if _raw_frontend_url == 'http://localhost:4200' else _raw_frontend_url
+DOMAIN = 'localhost:3000' if _raw_domain == 'localhost:4200' else _raw_domain
+SITE_NAME = 'Bolsa de Trabajo UTH'
 
 # Application definition
 
@@ -83,20 +85,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-#Permitir Frontend Next.js y Angular (Cambiar puerto si es necesario)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:4200",
-    "http://127.0.0.1:4200",
-]
+#Permitir Frontend Next.js y dominio institucional en producción
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default="http://localhost:3000,http://127.0.0.1:3000,https://exuth.uth.edu.mx,http://exuth.uth.edu.mx",
+    cast=Csv()
+)
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default="http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000,https://exuth.uth.edu.mx,http://exuth.uth.edu.mx",
+    cast=Csv()
+)
 
 ROOT_URLCONF = 'config.urls'
 

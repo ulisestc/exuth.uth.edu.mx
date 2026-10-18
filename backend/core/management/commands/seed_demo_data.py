@@ -6,7 +6,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from core.models import Giro, Sector, AreaEstudio, Carrera, Idioma
-from profiles.models import Egresado, Empresa, PadronEgresado
+from profiles.models import Egresado, DocumentoEgresado, Empresa, PadronEgresado
 from vacantes.models import Vacante, RequisitoIdioma, Postulacion, Colocacion
 from events.models import Evento
 
@@ -256,6 +256,23 @@ class Command(BaseCommand):
             }
         ]
 
+        import os
+        import shutil
+        from django.conf import settings
+
+        # Preparar plantilla PDF válida para los egresados de demostración
+        cvs_dir = os.path.join(settings.MEDIA_ROOT, 'egresados', 'cvs')
+        docs_dir = os.path.join(settings.MEDIA_ROOT, 'egresados', 'docs')
+        os.makedirs(cvs_dir, exist_ok=True)
+        os.makedirs(docs_dir, exist_ok=True)
+
+        template_pdf_candidates = [
+            os.path.join(settings.MEDIA_ROOT, 'egresados', 'cvs', 'Aaron_Ulises_Torres_Corte_CV.pdf'),
+            os.path.join(settings.MEDIA_ROOT, 'files', 'cvs', 'Aaron_Ulises_Torres_Corte_CV.pdf'),
+            os.path.join(settings.BASE_DIR.parent, 'docs', 'Historias_De_Usuario.pdf'),
+        ]
+        template_pdf_path = next((p for p in template_pdf_candidates if os.path.exists(p) and os.path.getsize(p) > 1000), None)
+
         egresados_dict = {}
         for egd in egresados_data:
             PadronEgresado.objects.update_or_create(
@@ -295,21 +312,63 @@ class Command(BaseCommand):
             u_eg.set_password(password_comun)
             u_eg.save()
 
+            cv_rel_path = None
+            doc_rel_path = None
+            if template_pdf_path:
+                cv_filename = f"CV_{egd['matricula']}.pdf"
+                cv_dest = os.path.join(cvs_dir, cv_filename)
+                if os.path.abspath(template_pdf_path) != os.path.abspath(cv_dest):
+                    shutil.copyfile(template_pdf_path, cv_dest)
+                cv_rel_path = f"egresados/cvs/{cv_filename}"
+
+                # Asignar expediente de documentos a los primeros 2 egresados
+                if egd['matricula'] in ('20260001', '20260002'):
+                    doc_filename = f"Expediente_{egd['matricula']}.pdf"
+                    doc_dest = os.path.join(docs_dir, doc_filename)
+                    shutil.copyfile(template_pdf_path, doc_dest)
+                    doc_rel_path = f"egresados/docs/{doc_filename}"
+
+            eg_defaults = {
+                'matricula': egd['matricula'],
+                'curp': egd['curp'],
+                'carrera': egd['carrera'],
+                'telefono_celular': egd['celular'],
+                'domicilio': 'Av. Principal #45, Huejotzingo, Puebla',
+                'nivel_estudios': egd['nivel'],
+                'genero': egd['genero'],
+                'habilidades': 'Python, Django REST Framework, React, PostgreSQL, Docker, Git',
+                'colocado': egd['colocado'],
+                'es_verificado_padron': egd['verificado'],
+            }
+            if cv_rel_path:
+                eg_defaults['cv'] = cv_rel_path
+            if doc_rel_path:
+                eg_defaults['documentos'] = doc_rel_path
+
             eg_profile, _ = Egresado.objects.update_or_create(
                 user=u_eg,
-                defaults={
-                    'matricula': egd['matricula'],
-                    'curp': egd['curp'],
-                    'carrera': egd['carrera'],
-                    'telefono_celular': egd['celular'],
-                    'domicilio': 'Av. Principal #45, Huejotzingo, Puebla',
-                    'nivel_estudios': egd['nivel'],
-                    'genero': egd['genero'],
-                    'habilidades': 'Python, Django REST Framework, React, PostgreSQL, Docker, Git',
-                    'colocado': egd['colocado'],
-                    'es_verificado_padron': egd['verificado']
-                }
+                defaults=eg_defaults
             )
+            if template_pdf_path and egd['matricula'] in ('20260001', '20260002', '20260003'):
+                eg_profile.documentos_precargados.all().delete()
+                doc1_filename = f"Titulo_Cedula_{egd['matricula']}.pdf"
+                doc1_dest = os.path.join(docs_dir, doc1_filename)
+                shutil.copyfile(template_pdf_path, doc1_dest)
+                DocumentoEgresado.objects.create(
+                    egresado=eg_profile,
+                    nombre='Título Profesional y Cédula',
+                    archivo=f"egresados/docs/{doc1_filename}"
+                )
+
+                doc2_filename = f"Identificacion_INE_CURP_{egd['matricula']}.pdf"
+                doc2_dest = os.path.join(docs_dir, doc2_filename)
+                shutil.copyfile(template_pdf_path, doc2_dest)
+                DocumentoEgresado.objects.create(
+                    egresado=eg_profile,
+                    nombre='INE, CURP y Constancia Fiscal (RFC)',
+                    archivo=f"egresados/docs/{doc2_filename}"
+                )
+
             egresados_dict[egd['matricula']] = eg_profile
             self.stdout.write(self.style.SUCCESS(f"-> Egresado creado: {egd['nombres']} {egd['paterno']} [{egd['matricula']}]"))
 

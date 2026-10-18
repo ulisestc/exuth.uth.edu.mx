@@ -6,16 +6,26 @@ from core.models import Idioma
 class RequisitoIdiomaSerializer(serializers.ModelSerializer):
     #definir como se recibe el id del idioma
     idioma = serializers.PrimaryKeyRelatedField(queryset=Idioma.objects.all())
+    idioma_nombre = serializers.ReadOnlyField(source='idioma.nombre')
 
     class Meta:
         model = RequisitoIdioma
-        fields = ['idioma', 'nivel', 'obligatorio']
+        fields = ['idioma', 'idioma_nombre', 'nivel', 'obligatorio']
 
 class VacanteSerializer(serializers.ModelSerializer):
     #anidar serializer de RequisitoIdioma
     idiomas = RequisitoIdiomaSerializer(many=True, source='requisitos_idioma', required=False)
     empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
     empresa_logo = serializers.ImageField(source='empresa.logo', read_only=True)
+    empresa_correo = serializers.ReadOnlyField(source='empresa.correo_contacto')
+    empresa_telefono = serializers.ReadOnlyField(source='empresa.telefono_oficina')
+    empresa_celular = serializers.ReadOnlyField(source='empresa.telefono_celular')
+    empresa_domicilio = serializers.ReadOnlyField(source='empresa.domicilio')
+    empresa_giro = serializers.ReadOnlyField(source='empresa.giro.nombre')
+    empresa_sector = serializers.ReadOnlyField(source='empresa.sector.nombre')
+    empresa_actividad = serializers.ReadOnlyField(source='empresa.actividad_de_la_empresa')
+    empresa_contacto_nombre = serializers.ReadOnlyField(source='empresa.nombre_contacto')
+    empresa_contacto_cargo = serializers.ReadOnlyField(source='empresa.cargo_contacto')
     area_estudio_nombre = serializers.ReadOnlyField(source='area_estudio.nombre')
     num_postulaciones = serializers.SerializerMethodField()
 
@@ -85,8 +95,15 @@ class PostulacionSerializer(serializers.ModelSerializer):
     candidato_nivel_estudios = serializers.ReadOnlyField(source='egresado.nivel_estudios')
     candidato_matricula = serializers.ReadOnlyField(source='egresado.matricula')
     candidato_cv = serializers.SerializerMethodField()
+    candidato_documentos = serializers.SerializerMethodField()
+    candidato_lista_documentos = serializers.SerializerMethodField()
     candidato_habilidades = serializers.ReadOnlyField(source='egresado.habilidades')
     candidato_domicilio = serializers.ReadOnlyField(source='egresado.domicilio')
+    documentos_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False
+    )
 
     def get_candidato_nombre(self, obj):
         if obj.egresado and obj.egresado.user:
@@ -102,10 +119,40 @@ class PostulacionSerializer(serializers.ModelSerializer):
             return obj.egresado.cv.url
         return None
 
+    def get_candidato_documentos(self, obj):
+        if not getattr(obj, 'incluir_documentos', True):
+            return None
+        if obj.egresado and obj.egresado.documentos:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.egresado.documentos.url)
+            return obj.egresado.documentos.url
+        return None
+
+    def get_candidato_lista_documentos(self, obj):
+        if not getattr(obj, 'incluir_documentos', True):
+            return []
+        import os
+        request = self.context.get('request')
+        adjuntos = list(obj.documentos_adjuntos.all()) if obj.pk else []
+        if not adjuntos and obj.egresado:
+            adjuntos = list(obj.egresado.documentos_precargados.all())
+        result = []
+        for d in adjuntos:
+            if d.archivo:
+                url = request.build_absolute_uri(d.archivo.url) if request else d.archivo.url
+                result.append({
+                    'id': d.id,
+                    'nombre': d.nombre,
+                    'archivo_nombre': os.path.basename(d.archivo.name),
+                    'url': url,
+                })
+        return result
+
     class Meta:
         model = Postulacion
         fields = '__all__'
-        read_only_fields = ['id', 'egresado', 'fecha_postulacion', 'estado'] # campos blindados (seguridad) 
+        read_only_fields = ['id', 'egresado', 'fecha_postulacion', 'estado', 'documentos_adjuntos'] # campos blindados (seguridad) 
 
 class PostulacionEstadoSerializer(serializers.ModelSerializer):
     class Meta:

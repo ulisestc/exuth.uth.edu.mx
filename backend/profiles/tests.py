@@ -1,3 +1,6 @@
+import shutil
+import tempfile
+from django.test import override_settings
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -9,15 +12,23 @@ from core.models import AreaEstudio, Carrera, Giro, Sector
 
 User = get_user_model()
 
+TEMP_MEDIA_ROOT = tempfile.mkdtemp()
 
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class ProfilesE2ETests(APITestCase):
     """
     Suite de Pruebas Unitarias completas para la App 'profiles':
     - Creación y edición de perfiles Egresado y Empresa con campos actualizados (Fases 1 y 2).
-    - Carga de archivos binarios (CV a 'files/cvs' y Documentos a 'files/docs').
+    - Carga de archivos binarios (CV a 'egresados/cvs' y Documentos a 'egresados/docs').
     - Filtros anti-fantasmas y Soft Delete en cascada.
     - Seguridad de autorización horizontal (IsOwnerOrReadOnly / RBAC).
     """
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
         self.area = AreaEstudio.objects.create(nombre="Ingeniería y Ciencias Exactas")
@@ -55,9 +66,9 @@ class ProfilesE2ETests(APITestCase):
         self.client_anon = APIClient()
 
     def test_crear_perfil_egresado_con_cv_y_documentos_multipart(self):
-        """HAPPY PATH: Subida binaria multipart de CV (a files/cvs) y documentos (a files/docs)."""
-        cv_falso = SimpleUploadedFile("curriculum.pdf", b"archivo_binario_cv", content_type="application/pdf")
-        doc_falso = SimpleUploadedFile("documentos.pdf", b"archivo_binario_doc", content_type="application/pdf")
+        """HAPPY PATH: Subida binaria multipart de CV (a egresados/cvs) y documentos (a egresados/docs)."""
+        cv_falso = SimpleUploadedFile("curriculum.pdf", b"%PDF-1.4 archivo_binario_cv", content_type="application/pdf")
+        doc_falso = SimpleUploadedFile("documentos.pdf", b"%PDF-1.4 archivo_binario_doc", content_type="application/pdf")
 
         payload = {
             "user": self.user_egresado_1.id,
@@ -78,8 +89,8 @@ class ProfilesE2ETests(APITestCase):
         self.assertEqual(Egresado.objects.count(), 1)
 
         egresado = Egresado.objects.first()
-        self.assertIn("files/cvs", egresado.cv.name)
-        self.assertIn("files/docs", egresado.documentos.name)
+        self.assertIn("egresados/cvs", egresado.cv.name)
+        self.assertIn("egresados/docs", egresado.documentos.name)
 
     def test_crear_perfil_empresa(self):
         """HAPPY PATH: Creación de perfil de Empresa con campos requeridos actualizados."""

@@ -2,9 +2,9 @@ import os
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.http import FileResponse
-from .models import Egresado, Empresa, PadronEgresado
+from .models import Egresado, DocumentoEgresado, Empresa, PadronEgresado
 from .serializers import (
-    EgresadoSerializer, EmpresaSerializer, EmpresaStatusSerializer,
+    EgresadoSerializer, DocumentoEgresadoSerializer, EmpresaSerializer, EmpresaStatusSerializer,
     PadronEgresadoSerializer
 )
 from .permissions import IsOwnerOrReadOnly
@@ -56,6 +56,16 @@ class EgresadoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Egresado.objects.filter(user__deactivated_at__isnull=True)
 
+    def _sync_legacy_documento_to_precargados(self, egresado):
+        """Asegura que si el egresado tiene un archivo en `documentos` pero aún no está en `documentos_precargados`, se registre automáticamente."""
+        if egresado.documentos and not egresado.documentos_precargados.exists():
+            nombre_base = os.path.basename(egresado.documentos.name)
+            DocumentoEgresado.objects.create(
+                egresado=egresado,
+                nombre="Expediente de Documentos Pre-cargado",
+                archivo=egresado.documentos.name
+            )
+
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
     def me(self, request):
         """Obtiene o actualiza el perfil del egresado autenticado."""
@@ -63,6 +73,8 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             raise NotFound("No cuentas con un perfil de egresado registrado.")
         
         egresado = request.user.egresado
+        self._sync_legacy_documento_to_precargados(egresado)
+
         if request.method == 'GET':
             serializer = self.get_serializer(egresado)
             return Response(serializer.data)
@@ -77,10 +89,24 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             if user_updated:
                 user.save()
 
+            uploaded_doc = request.FILES.get('documentos')
+            nombre_doc = request.data.get('nombre_documento', '').strip()
+
             serializer = self.get_serializer(egresado, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
+            egresado = serializer.save()
+
+            if uploaded_doc and egresado.documentos:
+                if not nombre_doc:
+                    raw_name = os.path.splitext(os.path.basename(uploaded_doc.name))[0]
+                    nombre_doc = raw_name.replace('_', ' ').strip() or "Documento Adicional"
+                DocumentoEgresado.objects.create(
+                    egresado=egresado,
+                    nombre=nombre_doc[:150],
+                    archivo=egresado.documentos.name
+                )
+
+            return Response(self.get_serializer(egresado).data)
 
     @action(detail=False, methods=['get', 'delete'], url_path='me/cv', permission_classes=[IsAuthenticated])
     def me_cv(self, request):
@@ -106,9 +132,78 @@ class EgresadoViewSet(viewsets.ModelViewSet):
                 egresado.cv.delete(save=True)
             return Response({"detail": "Currículum eliminado correctamente."}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['get', 'post', 'delete'], url_path='me/documentos', permission_classes=[IsAuthenticated])
+    def me_documentos(self, request):
+        """Sube, descarga o elimina documentos adicionales pre-cargados del egresado autenticado."""
+        if not hasattr(request.user, 'egresado'):
+            raise NotFound("No cuentas con un perfil de egresado registrado.")
+
+        egresado = request.user.egresado
+        self._sync_legacy_documento_to_precargados(egresado)
+        doc_id = request.query_params.get('doc_id')
+
+        if request.method == 'POST':
+            archivo_subido = request.FILES.get('archivo') or request.FILES.get('documentos')
+            if not archivo_subido:
+                raise ValidationError({"detail": "Debes adjuntar un archivo PDF válido."})
+            nombre_doc = request.data.get('nombre', '').strip() or request.data.get('nombre_documento', '').strip()
+            if not nombre_doc:
+                raw_name = os.path.splitext(os.path.basename(archivo_subido.name))[0]
+                nombre_doc = raw_name.replace('_', ' ').strip() or "Documento Adicional"
+
+            nuevo_doc = DocumentoEgresado.objects.create(
+                egresado=egresado,
+                nombre=nombre_doc[:150],
+                archivo=archivo_subido
+            )
+            egresado.documentos = nuevo_doc.archivo.name
+            egresado.save(update_fields=['documentos'])
+            return Response(self.get_serializer(egresado).data, status=status.HTTP_201_CREATED)
+
+        elif request.method == 'GET':
+            target_file = None
+            if doc_id:
+                doc_obj = egresado.documentos_precargados.filter(id=doc_id).first()
+                if not doc_obj or not doc_obj.archivo:
+                    raise NotFound("El documento solicitado no existe.")
+                target_file = doc_obj.archivo
+            else:
+                latest_doc = egresado.documentos_precargados.first()
+                if latest_doc and latest_doc.archivo:
+                    target_file = latest_doc.archivo
+                elif egresado.documentos:
+                    target_file = egresado.documentos
+
+            if not target_file:
+                raise NotFound("No cuentas con documentos adicionales cargados.")
+            try:
+                archivo = target_file.open('rb')
+                response = FileResponse(archivo, content_type='application/pdf')
+                nombre_archivo = os.path.basename(target_file.name)
+                response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
+                return response
+            except FileNotFoundError:
+                raise NotFound("El archivo físico de documentos no fue encontrado en el servidor.")
+
+        elif request.method == 'DELETE':
+            if doc_id:
+                doc_obj = egresado.documentos_precargados.filter(id=doc_id).first()
+                if not doc_obj:
+                    raise NotFound("El documento indicado no existe.")
+                doc_obj.delete()
+                restante = egresado.documentos_precargados.first()
+                egresado.documentos = restante.archivo.name if restante else None
+                egresado.save(update_fields=['documentos'])
+                return Response(self.get_serializer(egresado).data, status=status.HTTP_200_OK)
+            else:
+                egresado.documentos_precargados.all().delete()
+                if egresado.documentos:
+                    egresado.documentos.delete(save=True)
+                return Response({"detail": "Documentos adicionales eliminados correctamente."}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['get'])
     def cv(self, request, pk=None):
-        """Endpoint protegido para que el Frontend de Angular visualice o descargue el CV."""
+        """Endpoint protegido para que el Frontend visualice o descargue el CV."""
         egresado = self.get_object()
         if not egresado.cv:
             raise NotFound("El egresado no cuenta con currículum vitae registrado.")
@@ -139,22 +234,45 @@ class EgresadoViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def documentos(self, request, pk=None):
-        """Endpoint protegido para visualizar documentos anexos del egresado."""
+        """Endpoint protegido para visualizar documentos anexos para el empleo del egresado."""
         egresado = self.get_object()
-        if not egresado.documentos:
-            raise NotFound("El egresado no cuenta con documentos adicionales cargados.")
+        self._sync_legacy_documento_to_precargados(egresado)
+        doc_id = request.query_params.get('doc_id')
 
         user = request.user
         es_duenio = hasattr(user, 'egresado') and user.egresado == egresado
         es_admin = user.rol in ['admin_uth', 'soporte_ti'] or user.is_superuser
+        es_empresa_autorizada = (
+            hasattr(user, 'empresa') and 
+            egresado.postulaciones.filter(
+                vacante__empresa=user.empresa,
+                estado__in=['enviada_empresa', 'Aceptada', 'Rechazada']
+            ).exists()
+        )
 
-        if not (es_duenio or es_admin):
-            raise PermissionDenied("Solo el propietario o administradores de la UTH pueden consultar los documentos de identidad.")
+        if not (es_duenio or es_admin or es_empresa_autorizada):
+            raise PermissionDenied("No tienes autorización para consultar los documentos de este egresado.")
+
+        target_file = None
+        if doc_id:
+            doc_obj = egresado.documentos_precargados.filter(id=doc_id).first()
+            if not doc_obj or not doc_obj.archivo:
+                raise NotFound("El documento solicitado no existe.")
+            target_file = doc_obj.archivo
+        else:
+            latest_doc = egresado.documentos_precargados.first()
+            if latest_doc and latest_doc.archivo:
+                target_file = latest_doc.archivo
+            elif egresado.documentos:
+                target_file = egresado.documentos
+
+        if not target_file:
+            raise NotFound("El egresado no cuenta con documentos adicionales cargados.")
 
         try:
-            archivo = egresado.documentos.open('rb')
+            archivo = target_file.open('rb')
             response = FileResponse(archivo, content_type='application/pdf')
-            nombre_archivo = os.path.basename(egresado.documentos.name)
+            nombre_archivo = os.path.basename(target_file.name)
             response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
             return response
         except FileNotFoundError:

@@ -126,6 +126,13 @@ class Postulacion(models.Model):
     fecha_postulacion = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20, choices=ESTADOS_POSTULACION, default='revision_uth')
     notas_uth = models.TextField(blank=True, null=True, verbose_name="Observaciones de revisión UTH")
+    incluir_documentos = models.BooleanField(default=True, verbose_name="¿Incluir documentos adicionales?")
+    documentos_adjuntos = models.ManyToManyField(
+        'profiles.DocumentoEgresado',
+        blank=True,
+        related_name='postulaciones',
+        verbose_name="Documentos pre-cargados seleccionados"
+    )
 
     class Meta:
         constraints = [

@@ -1,3 +1,7 @@
+import shutil
+import tempfile
+from django.test import override_settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
@@ -9,16 +13,24 @@ from vacantes.models import Vacante, Postulacion, Colocacion, RequisitoIdioma
 
 User = get_user_model()
 
+TEMP_MEDIA_ROOT = tempfile.mkdtemp()
 
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class VacantesUnitTestSuite(APITestCase):
     """
     Suite de Pruebas Unitarias completas para la App 'vacantes':
     - CRUD de Vacantes e idiomas requeridos
     - Validaciones personalizadas de sueldo (sueldo_minimo <= sueldo_maximo)
-    - Postulaciones y prevención de candidaturas duplicadas (UniqueConstraint)
+    - Postulaciones con requisito obligatorio de CV y prevención de candidaturas duplicadas
     - Registro de Colocaciones y sincronización automática egresado.colocado = True
     - Control de Acceso por Roles (RBAC)
     """
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
         self.area = AreaEstudio.objects.create(nombre="Tecnologías de la Información y Comunicación")
@@ -51,11 +63,13 @@ class VacantesUnitTestSuite(APITestCase):
             nombre_contacto="Carlos",
             cargo_contacto="RH"
         )
+        cv_file = SimpleUploadedFile("cv_juan.pdf", b"%PDF-1.4 contenido cv", content_type="application/pdf")
         self.egresado = Egresado.objects.create(
             user=self.u_egresado,
             matricula="2026001",
             carrera=self.carrera,
-            telefono_celular="7711234567"
+            telefono_celular="7711234567",
+            cv=cv_file
         )
 
         # Clientes HTTP
@@ -153,6 +167,18 @@ class VacantesUnitTestSuite(APITestCase):
         )
         Postulacion.objects.create(vacante=vacante, egresado=self.egresado)
 
+        response = self.client_egresado.post('/api/v1/vacantes/postulaciones/', {"vacante": vacante.id})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_sad_path_postulacion_sin_cv(self):
+        """SAD PATH: Egresado sin CV cargado intenta postularse -> 400 Bad Request."""
+        self.egresado.cv = None
+        self.egresado.save()
+        vacante = Vacante.objects.create(
+            empresa=self.empresa, area_estudio=self.area, titulo="Dev Sin CV",
+            tipo_contratacion="tiempo_completo", modalidad="presencial",
+            sueldo_minimo=8000, sueldo_maximo=12000, persona_contacto="Carlos Ruiz"
+        )
         response = self.client_egresado.post('/api/v1/vacantes/postulaciones/', {"vacante": vacante.id})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
