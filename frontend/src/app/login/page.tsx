@@ -4,7 +4,8 @@ import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { getRoleRedirectPath, UserRole } from '@/lib/auth';
+import { getRoleRedirectPath } from '@/lib/auth';
+import { solicitarResetPassword } from '@/lib/api';
 import { UthLogo } from '@/components/brand/UthLogo';
 import { 
   Mail, 
@@ -13,17 +14,16 @@ import {
   EyeOff, 
   AlertCircle, 
   ArrowRight, 
-  GraduationCap, 
-  Building2, 
-  ShieldCheck,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  X,
+  KeyRound
 } from 'lucide-react';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('redirect');
-  const roleParam = searchParams.get('tipo');
 
   const { login, user, isAuthenticated } = useAuth();
 
@@ -33,9 +33,13 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'egresado' | 'empresa' | 'admin'>(
-    roleParam === 'empresa' ? 'empresa' : roleParam === 'admin' ? 'admin' : 'egresado'
-  );
+
+  // Modal de recuperación de contraseña
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   // If already authenticated, redirect
   React.useEffect(() => {
@@ -73,6 +77,24 @@ function LoginForm() {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError(null);
+    if (!resetEmail.trim()) {
+      setResetError('Ingresa tu correo electrónico registrado.');
+      return;
+    }
+    setIsResetting(true);
+    try {
+      await solicitarResetPassword(resetEmail.trim());
+      setResetSuccess(true);
+    } catch (err: any) {
+      setResetError(err.message || 'No fue posible procesar la solicitud.');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-6">
@@ -85,48 +107,8 @@ function LoginForm() {
             Iniciar Sesión
           </h1>
           <p className="text-sm text-[#636569]">
-            Bolsa de Trabajo Institucional · Acceso Unificado
+            Bolsa de Trabajo Institucional · Acceso Unificado (Egresados, Empresas y Personal UTH)
           </p>
-        </div>
-
-        {/* Selector de Pestaña Institucional */}
-        <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-100 rounded-lg border border-zinc-200 text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => setActiveTab('egresado')}
-            className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-md transition-all ${
-              activeTab === 'egresado'
-                ? 'bg-white text-[#00A887] shadow-sm font-bold'
-                : 'text-[#636569] hover:text-[#2D2926]'
-            }`}
-          >
-            <GraduationCap className="w-3.5 h-3.5" />
-            Egresados
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('empresa')}
-            className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-md transition-all ${
-              activeTab === 'empresa'
-                ? 'bg-white text-[#691C32] shadow-sm font-bold'
-                : 'text-[#636569] hover:text-[#2D2926]'
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            Empresas
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('admin')}
-            className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-md transition-all ${
-              activeTab === 'admin'
-                ? 'bg-white text-[#2D2926] shadow-sm font-bold'
-                : 'text-[#636569] hover:text-[#2D2926]'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Vinculación
-          </button>
         </div>
 
         {/* Tarjeta del Formulario */}
@@ -153,11 +135,7 @@ function LoginForm() {
                   htmlFor="email" 
                   className="block text-xs font-bold text-[#2D2926] uppercase tracking-wider mb-1.5"
                 >
-                  {activeTab === 'egresado' 
-                    ? 'Correo Institucional o Personal' 
-                    : activeTab === 'empresa'
-                    ? 'Correo de Contacto Empresarial'
-                    : 'Correo Administrativo UTH'}
+                  Correo Electrónico
                 </label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -171,13 +149,7 @@ function LoginForm() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder={
-                      activeTab === 'egresado' 
-                        ? 'ej. egresado@uth.edu.mx' 
-                        : activeTab === 'empresa' 
-                        ? 'ej. contacto@empresa.com' 
-                        : 'ej. vinculacion@uth.edu.mx'
-                    }
+                    placeholder="ej. usuario@uth.edu.mx o contacto@empresa.com"
                     className="block w-full pl-10 pr-3 py-2.5 sm:text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887] focus:border-[#00A887] transition-all bg-white"
                   />
                 </div>
@@ -192,16 +164,18 @@ function LoginForm() {
                   >
                     Contraseña
                   </label>
-                  <a
-                    href="#recuperar"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert('Para restablecer tu contraseña, contacta al Departamento de Vinculación UTH o usa el enlace enviado a tu correo institucional.');
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(email);
+                      setResetError(null);
+                      setResetSuccess(false);
+                      setShowResetModal(true);
                     }}
-                    className="text-xs text-[#00A887] hover:text-[#008F73] font-medium hover:underline"
+                    className="text-xs text-[#00A887] hover:text-[#008F73] font-medium hover:underline cursor-pointer"
                   >
                     ¿Olvidaste tu contraseña?
-                  </a>
+                  </button>
                 </div>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -286,6 +260,101 @@ function LoginForm() {
           Universidad Tecnológica de Huejotzingo · Organismo Público Descentralizado del Gobierno del Estado de Puebla
         </p>
       </div>
+
+      {/* Modal de Recuperación de Contraseña */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl border border-zinc-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-[#00A887]" />
+                <h3 className="text-sm font-bold text-[#2D2926]">Restablecer Contraseña</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="p-1 rounded-lg hover:bg-zinc-200 text-zinc-500 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {resetSuccess ? (
+                <div className="space-y-4 text-center py-2">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 text-[#00A887] flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-[#2D2926]">Enlace enviado</h4>
+                    <p className="text-xs text-[#636569] leading-relaxed">
+                      Si el correo <strong className="text-[#2D2926]">{resetEmail}</strong> está registrado en el sistema, recibirás un correo con el enlace seguro para restablecer tu contraseña.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowResetModal(false)}
+                    className="w-full py-2.5 bg-[#00A887] hover:bg-[#008F73] text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <p className="text-xs text-[#636569] leading-relaxed">
+                    Ingresa el correo electrónico asociado a tu cuenta (Egresado, Empresa o Personal UTH) y te enviaremos un enlace temporal para asignar una nueva contraseña.
+                  </p>
+
+                  {resetError && (
+                    <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 font-medium flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {resetError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#2D2926] uppercase tracking-wider mb-1.5">
+                      Correo Registrado
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                      className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowResetModal(false)}
+                      className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isResetting}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
+                    >
+                      {isResetting ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        'Enviar enlace de recuperación'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

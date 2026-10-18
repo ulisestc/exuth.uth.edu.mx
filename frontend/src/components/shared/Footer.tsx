@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { MapPin, Phone } from 'lucide-react';
 import { UthLogo } from '../brand/UthLogo';
 
 export const Footer = () => {
@@ -19,9 +20,15 @@ export const Footer = () => {
               Formando profesionistas competentes con sentido humano para la vinculación 
               de impacto social y productivo.
             </p>
-            <div className="text-xs text-[#A6A6A8] space-y-1">
-              <p>📍 Camino Real a San Mateo S/N, Santa Ana Xalmimilulco, Huejotzingo, Pue. C.P. 74169</p>
-              <p>📞 Tel: (227) 2 75 9300 | Correo: bolsa.trabajo@uth.edu.mx</p>
+            <div className="text-xs text-[#A6A6A8] space-y-1.5">
+              <p className="flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 text-[#00A887] shrink-0" />
+                <span>Camino Real a San Mateo S/N, Santa Ana Xalmimilulco, Huejotzingo, Pue. C.P. 74169</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <Phone className="w-3.5 h-3.5 text-[#00A887] shrink-0" />
+                <span>Tel: (227) 2 75 9300 | Correo: bolsa.trabajo@uth.edu.mx</span>
+              </p>
             </div>
           </div>
 
@@ -37,12 +44,12 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/login?tipo=egresado" className="hover:text-[#00A887] transition-colors">
+                <Link href="/registro?tipo=egresado" className="hover:text-[#00A887] transition-colors">
                   Registro de Egresados
                 </Link>
               </li>
               <li>
-                <Link href="/login?tipo=empresa" className="hover:text-[#00A887] transition-colors">
+                <Link href="/registro?tipo=empresa" className="hover:text-[#00A887] transition-colors">
                   Alta de Empresas
                 </Link>
               </li>

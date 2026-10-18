@@ -8,12 +8,26 @@ import {
   Building2, 
   ArrowRight, 
   CheckCircle2, 
-  CalendarDays,
   ShieldCheck
 } from 'lucide-react';
 import { UthLogo } from '@/components/brand/UthLogo';
+import { fetchVacantes } from '@/lib/api';
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const todasVacantes = await fetchVacantes();
+  const vacantesDestacadas = todasVacantes.slice(0, 4);
+
+  const getNivelLabel = (nivel: string) => {
+    switch (nivel) {
+      case 'TSU': return 'Técnico Superior Universitario';
+      case 'ING_LIC': return 'Ingeniería / Licenciatura';
+      case 'MTRIA': return 'Maestría';
+      default: return nivel;
+    }
+  };
+
   return (
     <div className="space-y-16 pb-20">
       {/* 1. HERO INSTITUCIONAL */}
@@ -53,7 +67,7 @@ export default function HomePage() {
                   <Search className="w-5 h-5 text-[#A6A6A8]" />
                   <input
                     type="text"
-                    name="q"
+                    name="search"
                     placeholder="Puesto, habilidad o carrera..."
                     className="w-full text-sm outline-none text-[#2D2926] placeholder:text-[#A6A6A8]"
                   />
@@ -76,7 +90,7 @@ export default function HomePage() {
 
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-6 py-3 bg-[#00A887] hover:bg-[#008F73] text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3 bg-[#00A887] hover:bg-[#008F73] text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Buscar</span>
                   <ArrowRight className="w-4 h-4" />
@@ -112,7 +126,7 @@ export default function HomePage() {
         <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
           <h2 className="text-2xl font-bold text-[#2D2926]">Portales del Ecosistema UTH</h2>
           <p className="text-sm text-[#636569]">
-            Accede al portal correspondiente según tu rol institucional.
+            Inicia sesión con tu cuenta institucional o regístrate según tu perfil.
           </p>
         </div>
 
@@ -140,17 +154,17 @@ export default function HomePage() {
             </div>
             <div className="mt-6 flex flex-col gap-2">
               <Link
-                href="/login?tipo=egresado"
+                href="/login"
                 className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-md transition-colors"
               >
-                Ingresar como Egresado
+                Iniciar Sesión
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
               <Link
                 href="/registro?tipo=egresado"
                 className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 text-xs font-semibold text-[#00A887] hover:underline"
               >
-                ¿No tienes cuenta? Regístrate aquí
+                ¿No tienes cuenta? Regístrate como Egresado
               </Link>
             </div>
           </div>
@@ -178,17 +192,17 @@ export default function HomePage() {
             </div>
             <div className="mt-6 flex flex-col gap-2">
               <Link
-                href="/login?tipo=empresa"
+                href="/login"
                 className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-white bg-[#2D2926] hover:bg-black rounded-md transition-colors"
               >
-                Portal de Empresas
+                Iniciar Sesión
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
               <Link
                 href="/registro?tipo=empresa"
                 className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 text-xs font-semibold text-[#691C32] hover:underline"
               >
-                ¿Nueva empresa? Registrarse
+                ¿Nueva empresa? Regístrate aquí
               </Link>
             </div>
           </div>
@@ -215,7 +229,7 @@ export default function HomePage() {
               </ul>
             </div>
             <Link
-              href="/login?tipo=admin"
+              href="/login"
               className="mt-6 inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-[#2D2926] bg-zinc-100 hover:bg-zinc-200 rounded-md border border-zinc-300 transition-colors"
             >
               Acceso Administrativo
@@ -225,7 +239,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. VACANTES DESTACADAS (PREVIEW) */}
+      {/* 3. VACANTES DESTACADAS (DINÁMICAS DESDE API) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
@@ -238,70 +252,63 @@ export default function HomePage() {
             href="/vacantes"
             className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00A887] hover:underline"
           >
-            Ver todas las vacantes
+            Ver todas las vacantes ({todasVacantes.length})
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Card Mock 1 */}
-          <div className="bg-white p-5 rounded-lg border border-zinc-200 hover:border-[#00A887] transition-all hover:shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold bg-[#00A887]/10 text-[#00A887] mb-2">
-                  Ingeniería / Licenciatura
-                </span>
-                <h3 className="text-base font-bold text-[#2D2926]">
-                  Ingeniero en Mantenimiento Industrial
-                </h3>
-                <p className="text-xs text-[#636569] mt-0.5">
-                  Parque Industrial Huejotzingo • Sector Automotriz
-                </p>
-              </div>
-              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded">
-                Presencial
-              </span>
-            </div>
-            <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-[#A6A6A8]">
-              <span>Publicado recientemente</span>
-              <Link 
-                href="/login?tipo=egresado"
-                className="font-semibold text-[#00A887] hover:underline"
-              >
-                Postularme →
-              </Link>
-            </div>
+        {vacantesDestacadas.length === 0 ? (
+          <div className="bg-white p-8 rounded-xl border border-zinc-200 text-center space-y-2">
+            <Briefcase className="w-8 h-8 text-zinc-400 mx-auto" />
+            <p className="text-sm font-semibold text-[#2D2926]">
+              No hay vacantes publicadas en este momento
+            </p>
+            <p className="text-xs text-[#636569]">
+              Pronto se publicarán nuevas convocatorias validadas por Vinculación UTH.
+            </p>
           </div>
-
-          {/* Card Mock 2 */}
-          <div className="bg-white p-5 rounded-lg border border-zinc-200 hover:border-[#00A887] transition-all hover:shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold bg-[#691C32]/10 text-[#691C32] mb-2">
-                  Técnico Superior Universitario
-                </span>
-                <h3 className="text-base font-bold text-[#2D2926]">
-                  Desarrollador Junior de Software / TI
-                </h3>
-                <p className="text-xs text-[#636569] mt-0.5">
-                  Empresa de Tecnología • San Martín Texmelucan
-                </p>
-              </div>
-              <span className="text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
-                Híbrido
-              </span>
-            </div>
-            <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-[#A6A6A8]">
-              <span>Publicado recientemente</span>
-              <Link 
-                href="/login?tipo=egresado"
-                className="font-semibold text-[#00A887] hover:underline"
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {vacantesDestacadas.map((vacante) => (
+              <div
+                key={vacante.id}
+                className="bg-white p-5 rounded-lg border border-zinc-200 hover:border-[#00A887] transition-all hover:shadow-sm flex flex-col justify-between"
               >
-                Postularme →
-              </Link>
-            </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold bg-[#00A887]/10 text-[#00A887] mb-2">
+                      {getNivelLabel(vacante.nivel_estudios)}
+                    </span>
+                    <h3 className="text-base font-bold text-[#2D2926]">
+                      {vacante.titulo}
+                    </h3>
+                    <p className="text-xs text-[#636569] mt-0.5">
+                      {vacante.empresa_nombre || 'Empresa Vinculada UTH'}
+                      {vacante.area_estudio_nombre ? ` · ${vacante.area_estudio_nombre}` : ''}
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded uppercase shrink-0">
+                    {vacante.modalidad.replace('_', ' ')}
+                  </span>
+                </div>
+                <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-[#A6A6A8]">
+                  <span>
+                    {vacante.fecha_registro
+                      ? `Publicado el ${new Date(vacante.fecha_registro).toLocaleDateString('es-MX')}`
+                      : 'Convocatoria activa'}
+                  </span>
+                  <Link
+                    href={`/vacantes/${vacante.id}`}
+                    className="inline-flex items-center gap-1 font-semibold text-[#00A887] hover:underline"
+                  >
+                    Ver detalles y postularme
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </section>
     </div>
   );
