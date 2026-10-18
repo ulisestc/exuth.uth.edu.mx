@@ -18,7 +18,8 @@ import {
   Filter, 
   Calendar,
   ExternalLink,
-  Award
+  Award,
+  Eye
 } from 'lucide-react';
 import { 
   Postulacion, 
@@ -26,6 +27,7 @@ import {
   downloadCvCandidato, 
   evaluarPostulacion 
 } from '@/lib/api';
+import CvViewerModal from '@/components/shared/CvViewerModal';
 
 interface CandidatosManagerProps {
   postulaciones: Postulacion[];
@@ -46,6 +48,14 @@ export function CandidatosManager({
   const [evaluandoId, setEvaluandoId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [viewingCv, setViewingCv] = useState<{
+    egresadoId: number;
+    candidatoNombre: string;
+    matricula?: string;
+    tipo: 'cv' | 'documentos';
+    docId?: number | null;
+    docNombre?: string;
+  } | null>(null);
 
   // Filtrado reactivo de postulaciones
   const postulacionesFiltradas = postulaciones.filter(p => {
@@ -103,7 +113,7 @@ export function CandidatosManager({
         onPostulacionActualizada({ ...p, estado: nuevoEstado });
         setSuccessMsg(
           nuevoEstado === 'Aceptada'
-            ? `¡Candidato aceptado exitosamente! Se ha generado el registro de colocación institucional.`
+            ? `Candidato aceptado exitosamente. Se ha generado el registro de colocación institucional.`
             : `El proceso con el candidato ha sido concluido.`
         );
         setTimeout(() => setSuccessMsg(null), 4000);
@@ -286,19 +296,68 @@ export function CandidatosManager({
                   </div>
                 </div>
 
-                {/* Acciones principales con el CV */}
-                <div className="flex items-center gap-2 shrink-0">
+                {/* Acciones principales con el CV y Documentos */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setViewingCv({
+                      egresadoId: p.egresado,
+                      candidatoNombre: p.candidato_nombre || 'Egresado',
+                      matricula: p.candidato_matricula,
+                      tipo: 'cv'
+                    })}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-[#691C32] hover:bg-[#521627] shadow-xs transition-all cursor-pointer"
+                    title="Abrir visor interactivo de CV"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-[#C2BA98]" />
+                    Ver CV en Línea
+                  </button>
+
+                  {p.candidato_lista_documentos && p.candidato_lista_documentos.length > 0 ? (
+                    p.candidato_lista_documentos.map((doc) => (
+                      <button
+                        key={doc.id || doc.nombre}
+                        onClick={() => setViewingCv({
+                          egresadoId: p.egresado,
+                          candidatoNombre: p.candidato_nombre || 'Egresado',
+                          matricula: p.candidato_matricula,
+                          tipo: 'documentos',
+                          docId: doc.id,
+                          docNombre: doc.nombre
+                        })}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
+                        title={`Ver documento: ${doc.nombre}`}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-[#691C32] shrink-0" />
+                        <span className="truncate max-w-[160px]">{doc.nombre}</span>
+                      </button>
+                    ))
+                  ) : p.candidato_documentos ? (
+                    <button
+                      onClick={() => setViewingCv({
+                        egresadoId: p.egresado,
+                        candidatoNombre: p.candidato_nombre || 'Egresado',
+                        matricula: p.candidato_matricula,
+                        tipo: 'documentos'
+                      })}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
+                      title="Ver documentos adicionales para el empleo"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-[#691C32]" />
+                      Ver Documentos Anexos
+                    </button>
+                  ) : null}
+
                   <button
                     onClick={() => handleDownloadCv(p)}
                     disabled={descargandoCvId === p.id}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     {descargandoCvId === p.id ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Download className="w-3.5 h-3.5" />
+                      <Download className="w-3.5 h-3.5 text-[#00A887]" />
                     )}
-                    Descargar CV (PDF)
+                    Descargar CV PDF
                   </button>
                 </div>
               </div>
@@ -404,6 +463,20 @@ export function CandidatosManager({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Modal Visor Interactivo de CV o Documentos */}
+      {viewingCv && (
+        <CvViewerModal
+          egresadoId={viewingCv.egresadoId}
+          candidatoNombre={viewingCv.candidatoNombre}
+          matricula={viewingCv.matricula}
+          tipo={viewingCv.tipo}
+          docId={viewingCv.docId}
+          docNombre={viewingCv.docNombre}
+          token={token}
+          onClose={() => setViewingCv(null)}
+        />
       )}
     </div>
   );

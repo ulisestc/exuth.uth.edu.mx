@@ -35,6 +35,7 @@ import {
   Wrench
 } from 'lucide-react';
 import EditarPerfilEgresadoModal from '@/components/egresados/EditarPerfilEgresadoModal';
+import PostulacionTimeline from '@/components/egresados/PostulacionTimeline';
 
 export default function PortalEgresadoPage() {
   const router = useRouter();
@@ -289,11 +290,11 @@ export default function PortalEgresadoPage() {
             </div>
             {profile?.cv ? (
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                ✓ Activo
+                Activo
               </span>
             ) : (
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                ⚠️ Pendiente
+                Pendiente
               </span>
             )}
           </div>
@@ -454,48 +455,48 @@ export default function PortalEgresadoPage() {
         ) : (
           <div className="divide-y divide-zinc-100">
             {postulaciones.map((p) => (
-              <div key={p.id} className="p-6 hover:bg-zinc-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
-                      {p.vacante_clave || `VAC-${p.vacante}`}
-                    </span>
-                    {p.vacante_modalidad && (
-                      <span className="text-[11px] font-semibold text-zinc-600 uppercase bg-zinc-100 px-2 py-0.5 rounded">
-                        {p.vacante_modalidad}
+              <div key={p.id} className="p-6 hover:bg-zinc-50/40 transition-colors space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+                        {p.vacante_clave || `VAC-${p.vacante}`}
                       </span>
-                    )}
+                      {p.vacante_modalidad && (
+                        <span className="text-[11px] font-semibold text-zinc-600 uppercase bg-zinc-100 px-2 py-0.5 rounded">
+                          {p.vacante_modalidad}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-base font-bold text-[#2D2926]">
+                      {p.vacante_titulo || `Vacante #${p.vacante}`}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
+                      <span className="flex items-center gap-1 font-medium text-zinc-700">
+                        <Building2 className="w-3.5 h-3.5 text-[#00A887]" />
+                        {p.vacante_empresa || 'Empresa Vinculada UTH'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                        Postulado el {formatDate(p.fecha_postulacion)}
+                      </span>
+                    </div>
                   </div>
-                  <h3 className="text-base font-bold text-[#2D2926]">
-                    {p.vacante_titulo || `Vacante #${p.vacante}`}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
-                    <span className="flex items-center gap-1 font-medium text-zinc-700">
-                      <Building2 className="w-3.5 h-3.5 text-[#00A887]" />
-                      {p.vacante_empresa || 'Empresa Vinculada UTH'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                      Postulado el {formatDate(p.fecha_postulacion)}
-                    </span>
+
+                  <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center gap-3 shrink-0">
+                    {getStatusBadge(p.estado)}
+                    <Link
+                      href={`/vacantes/${p.vacante}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00A887] hover:underline"
+                    >
+                      Ver vacante
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
                   </div>
-                  {p.notas_uth && (
-                    <p className="text-xs text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 mt-2">
-                      <strong className="font-semibold">Nota UTH:</strong> {p.notas_uth}
-                    </p>
-                  )}
                 </div>
 
-                <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center gap-3 shrink-0">
-                  {getStatusBadge(p.estado)}
-                  <Link
-                    href={`/vacantes/${p.vacante}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00A887] hover:underline"
-                  >
-                    Ver detalles
-                    <ExternalLink className="w-3 h-3" />
-                  </Link>
-                </div>
+                {/* Línea de Trazabilidad UTH (Stepper) */}
+                <PostulacionTimeline postulacion={p} />
               </div>
             ))}
           </div>

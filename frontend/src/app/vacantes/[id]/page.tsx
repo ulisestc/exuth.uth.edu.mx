@@ -17,7 +17,12 @@ import {
   FileText,
   UserCheck,
   Send,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  Phone,
+  Globe,
+  HeartHandshake,
+  ExternalLink
 } from 'lucide-react';
 import { ApplyButton } from '@/components/vacantes/ApplyButton';
 
@@ -92,6 +97,12 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
               <span className="px-2.5 py-0.5 rounded text-xs font-medium bg-zinc-100 text-[#2D2926] uppercase">
                 {vacante.modalidad}
               </span>
+              {vacante.es_inclusiva && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                  <HeartHandshake className="w-3.5 h-3.5" />
+                  Vacante Inclusiva
+                </span>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#2D2926]">
@@ -99,7 +110,10 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
             </h1>
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#636569]">
-              <span className="flex items-center gap-1.5 font-semibold text-[#2D2926]">
+              <Link
+                href={`/empresas/${vacante.empresa}`}
+                className="flex items-center gap-1.5 font-semibold text-[#2D2926] hover:text-[#00A887] transition-colors"
+              >
                 {vacante.empresa_logo ? (
                   <img 
                     src={vacante.empresa_logo} 
@@ -110,7 +124,7 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
                   <Building2 className="w-4 h-4 text-[#00A887]" />
                 )}
                 {vacante.empresa_nombre || 'Empresa Aliada UTH'}
-              </span>
+              </Link>
               {vacante.area_estudio_nombre && (
                 <span className="flex items-center gap-1.5">
                   <GraduationCap className="w-4 h-4 text-[#636569]" />
@@ -129,13 +143,14 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
             <ApplyButton 
               vacanteId={vacante.id} 
               vacanteTitulo={vacante.titulo} 
-              empresaNombre={vacante.empresa_nombre} 
+              empresaNombre={vacante.empresa_nombre}
+              documentosRequeridos={vacante.documentos_requeridos}
             />
           </div>
         </div>
 
         {/* Resumen de Condiciones Rápidas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-lg bg-[#F8FAFC] border border-zinc-200/80 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 p-4 rounded-lg bg-[#F8FAFC] border border-zinc-200/80 text-xs">
           <div>
             <span className="block text-[#A6A6A8] font-medium">Tipo de Contrato</span>
             <span className="font-semibold text-[#2D2926] capitalize">
@@ -151,9 +166,29 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
             <span className="font-semibold text-[#2D2926]">{vacante.num_candidatos} candidato(s)</span>
           </div>
           <div>
-            <span className="block text-[#A6A6A8] font-medium">Transporte Institucional</span>
-            <span className="font-semibold text-[#2D2926]">
-              {vacante.incluye_transporte ? '✅ Incluido' : 'No contemplado'}
+            <span className="block text-[#A6A6A8] font-medium">Transporte</span>
+            <span className="font-semibold text-[#2D2926] inline-flex items-center gap-1">
+              {vacante.incluye_transporte ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
+                  Incluido
+                </>
+              ) : (
+                'No contemplado'
+              )}
+            </span>
+          </div>
+          <div>
+            <span className="block text-[#A6A6A8] font-medium">Comedor</span>
+            <span className="font-semibold text-[#2D2926] inline-flex items-center gap-1">
+              {vacante.incluye_comedor ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
+                  Incluido
+                </>
+              ) : (
+                'No contemplado'
+              )}
             </span>
           </div>
         </div>
@@ -182,6 +217,33 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
               <GraduationCap className="w-4 h-4 text-[#00A887]" />
               Perfil y Competencias Requeridas
             </h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-zinc-50 border border-zinc-200/70 text-xs">
+              <div>
+                <span className="block text-zinc-400">Nivel Académico</span>
+                <span className="font-semibold text-[#2D2926]">
+                  {getNivelLabel(vacante.nivel_estudios)}
+                </span>
+              </div>
+              <div>
+                <span className="block text-zinc-400">Rango de Edad</span>
+                <span className="font-semibold text-[#2D2926]">
+                  {vacante.edad || 'Indistinto'}
+                </span>
+              </div>
+              <div>
+                <span className="block text-zinc-400">Género</span>
+                <span className="font-semibold text-[#2D2926] capitalize">
+                  {vacante.genero || 'Indistinto'}
+                </span>
+              </div>
+              <div>
+                <span className="block text-zinc-400">Estado Civil</span>
+                <span className="font-semibold text-[#2D2926] capitalize">
+                  {vacante.estado_civil || 'Indistinto'}
+                </span>
+              </div>
+            </div>
             
             {vacante.experiencia && (
               <div className="space-y-1">
@@ -203,6 +265,44 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
                 <p className="text-xs sm:text-sm text-[#636569] leading-relaxed">{vacante.habilidades}</p>
               </div>
             )}
+
+            {vacante.actitudes && (
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-[#2D2926]">Actitudes y valores:</h4>
+                <p className="text-xs sm:text-sm text-[#636569] leading-relaxed">{vacante.actitudes}</p>
+              </div>
+            )}
+
+            {vacante.idiomas && vacante.idiomas.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <h4 className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-[#00A887]" />
+                  Idiomas requeridos:
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {vacante.idiomas.map((req, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-[#00A887] border border-emerald-200 text-xs font-semibold"
+                    >
+                      {req.idioma_nombre || `Idioma #${req.idioma}`} · Nivel {req.nivel}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {vacante.es_inclusiva && vacante.capacidades_especiales && (
+              <div className="p-3 rounded-lg bg-blue-50/70 border border-blue-200 space-y-1">
+                <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                  <HeartHandshake className="w-3.5 h-3.5 text-blue-700" />
+                  Inclusión y Accesibilidad Laboral:
+                </h4>
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  {vacante.capacidades_especiales}
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Prestaciones */}
@@ -217,10 +317,92 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
               </p>
             </section>
           )}
+
+          {/* Observaciones adicionales */}
+          {vacante.observaciones && (
+            <section className="bg-white rounded-xl border border-zinc-200 p-6 space-y-2">
+              <h2 className="text-sm font-bold text-[#2D2926]">
+                Observaciones Adicionales
+              </h2>
+              <p className="text-xs sm:text-sm text-[#636569] leading-relaxed whitespace-pre-line">
+                {vacante.observaciones}
+              </p>
+            </section>
+          )}
         </div>
 
         {/* Columna Lateral: Requisitos Documentales y Validación UTH */}
         <div className="space-y-6">
+          {/* Contacto de Selección y Empresa */}
+          <div className="bg-white rounded-xl border border-zinc-200 p-5 space-y-3 text-xs">
+            <span className="text-[11px] font-bold text-[#691C32] uppercase tracking-wider block">
+              Contacto de Selección
+            </span>
+
+            <div className="space-y-1">
+              <p className="font-bold text-sm text-[#2D2926]">
+                {vacante.persona_contacto || vacante.empresa_contacto_nombre || 'Coordinación de Talento Humano'}
+              </p>
+              {vacante.empresa_contacto_cargo && (
+                <p className="text-[11px] text-[#636569]">{vacante.empresa_contacto_cargo}</p>
+              )}
+              {vacante.entrevistador && vacante.entrevistador !== vacante.persona_contacto && (
+                <p className="text-[11px] text-[#636569]">
+                  Entrevistador(a): <strong className="text-[#2D2926]">{vacante.entrevistador}</strong>
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-zinc-100">
+              {vacante.empresa_correo && (
+                <a
+                  href={`mailto:${vacante.empresa_correo}`}
+                  className="flex items-center gap-2 text-[#00A887] hover:underline font-medium break-all"
+                >
+                  <Mail className="w-3.5 h-3.5 shrink-0" />
+                  <span>{vacante.empresa_correo}</span>
+                </a>
+              )}
+
+              {vacante.empresa_telefono && (
+                <div className="flex items-center gap-2 text-[#636569]">
+                  <Phone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span>
+                    Tel. Oficina: <strong className="text-[#2D2926]">{vacante.empresa_telefono}</strong>
+                  </span>
+                </div>
+              )}
+
+              {vacante.empresa_celular && (
+                <div className="flex items-center gap-2 text-[#636569]">
+                  <Phone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span>
+                    Celular / Directo: <strong className="text-[#2D2926]">{vacante.empresa_celular}</strong>
+                  </span>
+                </div>
+              )}
+
+              {vacante.empresa_domicilio && (
+                <div className="flex items-start gap-2 text-[#636569]">
+                  <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
+                  <span>{vacante.empresa_domicilio}</span>
+                </div>
+              )}
+            </div>
+
+            {vacante.empresa && (
+              <div className="pt-2 border-t border-zinc-100">
+                <Link
+                  href={`/empresas/${vacante.empresa}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00A887] hover:underline"
+                >
+                  Ver perfil institucional de la empresa
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            )}
+          </div>
+
           {/* Documentación */}
           <div className="bg-white rounded-xl border border-zinc-200 p-5 space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-widest text-[#691C32] flex items-center gap-1.5">
@@ -242,17 +424,6 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
               Esta vacante fue validada por el Departamento de Vinculación de la Universidad Tecnológica de Huejotzingo. Tu postulación es enviada de forma directa y segura.
             </p>
           </div>
-
-          {/* Contacto institucional */}
-          {vacante.persona_contacto && (
-            <div className="bg-white rounded-xl border border-zinc-200 p-5 space-y-2 text-xs">
-              <span className="text-[11px] font-bold text-[#A6A6A8] uppercase tracking-wider">
-                Contacto de Selección
-              </span>
-              <p className="font-semibold text-[#2D2926]">{vacante.persona_contacto}</p>
-              <p className="text-[11px] text-[#636569]">Coordinación de Talento Humano</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

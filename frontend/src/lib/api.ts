@@ -12,6 +12,14 @@ export interface Carrera {
   area: number;
 }
 
+export interface RequisitoIdiomaItem {
+  id?: number;
+  idioma: number;
+  idioma_nombre?: string;
+  nivel: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  obligatorio: boolean;
+}
+
 export interface Vacante {
   id: number;
   clave_vacante: string;
@@ -19,6 +27,15 @@ export interface Vacante {
   empresa: number;
   empresa_nombre?: string;
   empresa_logo?: string | null;
+  empresa_correo?: string;
+  empresa_telefono?: string | null;
+  empresa_celular?: string | null;
+  empresa_domicilio?: string;
+  empresa_giro?: string;
+  empresa_sector?: string;
+  empresa_actividad?: string;
+  empresa_contacto_nombre?: string;
+  empresa_contacto_cargo?: string;
   area_estudio: number;
   area_estudio_nombre?: string;
   status: 'pendiente' | 'aprobada' | 'rechazada' | 'cerrada';
@@ -48,6 +65,8 @@ export interface Vacante {
   persona_contacto: string;
   entrevistador?: string | null;
   observaciones?: string | null;
+  idiomas?: RequisitoIdiomaItem[];
+  num_postulaciones?: number;
 }
 
 export interface VacantesResponse {
@@ -143,6 +162,13 @@ export async function fetchCarreras(): Promise<Carrera[]> {
   }
 }
 
+export interface DocumentoAdjuntoPostulacion {
+  id: number;
+  nombre: string;
+  archivo_nombre: string;
+  url: string;
+}
+
 export interface Postulacion {
   id: number;
   vacante: number;
@@ -154,6 +180,7 @@ export interface Postulacion {
   fecha_postulacion: string;
   estado: 'revision_uth' | 'rechazada_uth' | 'enviada_empresa' | 'Aceptada' | 'Rechazada';
   notas_uth?: string | null;
+  incluir_documentos?: boolean;
   candidato_nombre?: string;
   candidato_email?: string;
   candidato_telefono?: string | null;
@@ -161,6 +188,8 @@ export interface Postulacion {
   candidato_nivel_estudios?: string;
   candidato_matricula?: string;
   candidato_cv?: string | null;
+  candidato_documentos?: string | null;
+  candidato_lista_documentos?: DocumentoAdjuntoPostulacion[];
   candidato_habilidades?: string;
   candidato_domicilio?: string;
 }
@@ -197,16 +226,28 @@ export async function fetchMisPostulaciones(accessToken: string): Promise<Postul
 
 export async function crearPostulacion(
   vacanteId: number, 
-  accessToken: string
+  accessToken: string,
+  options?: {
+    incluir_documentos?: boolean;
+    documentos_ids?: number[];
+  }
 ): Promise<{ success: boolean; data?: Postulacion; error?: string }> {
   try {
+    const payload: Record<string, any> = { vacante: vacanteId };
+    if (options?.incluir_documentos !== undefined) {
+      payload.incluir_documentos = options.incluir_documentos;
+    }
+    if (options?.documentos_ids !== undefined) {
+      payload.documentos_ids = options.documentos_ids;
+    }
+
     const res = await fetch(`${API_BASE_URL}/vacantes/postulaciones/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ vacante: vacanteId }),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json();
@@ -299,6 +340,14 @@ export async function fetchSectores(): Promise<Sector[]> {
   }
 }
 
+export interface DocumentoPrecargadoItem {
+  id: number;
+  nombre: string;
+  archivo: string;
+  archivo_nombre: string;
+  fecha_subida: string;
+}
+
 export interface EgresadoProfile {
   id: number;
   user: number;
@@ -314,6 +363,7 @@ export interface EgresadoProfile {
   capacidades_especiales: string | null;
   habilidades: string;
   documentos: string | null;
+  documentos_precargados?: DocumentoPrecargadoItem[];
   colocado: boolean;
   es_verificado_padron: boolean;
 }
@@ -404,6 +454,91 @@ export async function downloadMiCv(token: string, filename = 'Curriculum_UTH.pdf
     return true;
   } catch (error) {
     console.error('Error downloading CV:', error);
+    return false;
+  }
+}
+
+export async function uploadMisDocumentos(
+  token: string,
+  file: File,
+  nombreDocumento?: string
+): Promise<{ success: boolean; profile?: EgresadoProfile; error?: string }> {
+  try {
+    const formData = new FormData();
+    formData.append('archivo', file);
+    if (nombreDocumento && nombreDocumento.trim()) {
+      formData.append('nombre', nombreDocumento.trim());
+    }
+
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/me/documentos/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      const errorMsg = data.archivo?.[0] || data.documentos?.[0] || data.detail || 'Error al subir los documentos adicionales.';
+      return { success: false, error: errorMsg };
+    }
+
+    return { success: true, profile: data };
+  } catch (error: any) {
+    console.error('Error uploading documentos:', error);
+    return { success: false, error: error.message || 'Error de conexión al subir el archivo.' };
+  }
+}
+
+export async function deleteMisDocumentos(
+  token: string,
+  docId?: number
+): Promise<{ success: boolean; profile?: EgresadoProfile; error?: string }> {
+  try {
+    const query = docId ? `?doc_id=${docId}` : '';
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/me/documentos/${query}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data.detail || 'Error al eliminar el documento.' };
+    }
+    return { success: true, profile: data.id ? data : undefined };
+  } catch (error: any) {
+    console.error('Error deleting documentos:', error);
+    return { success: false, error: error.message || 'Error de conexión al eliminar el documento.' };
+  }
+}
+
+export async function downloadMisDocumentos(
+  token: string,
+  filename = 'Documentos_Empleo_UTH.pdf',
+  docId?: number
+): Promise<boolean> {
+  try {
+    const query = docId ? `?doc_id=${docId}` : '';
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/me/documentos/${query}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    return true;
+  } catch (error) {
+    console.error('Error downloading documentos:', error);
     return false;
   }
 }
@@ -723,6 +858,39 @@ export async function downloadCvCandidato(
   }
 }
 
+export async function downloadDocumentosCandidato(
+  accessToken: string,
+  egresadoId: number,
+  nombreArchivo?: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/${egresadoId}/documentos/`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      console.error(`Error downloading candidate documentos: HTTP ${res.status}`);
+      return false;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo || `Documentos_Candidato_${egresadoId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    return true;
+  } catch (error) {
+    console.error('Error downloading candidate documentos:', error);
+    return false;
+  }
+}
+
 export async function evaluarPostulacion(
   accessToken: string,
   postulacionId: number,
@@ -975,6 +1143,22 @@ export interface PadronEgresadoItem {
   fecha_importacion: string;
 }
 
+export interface PaginatedPadronResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: PadronEgresadoItem[];
+}
+
+export interface PadronFilters {
+  page?: number;
+  search?: string;
+  carrera?: string;
+  nivel?: string;
+  estatus_titulacion?: string;
+  anio_egreso?: string;
+}
+
 export interface ImportarPadronResponse {
   mensaje: string;
   total_filas_procesadas: number;
@@ -985,11 +1169,22 @@ export interface ImportarPadronResponse {
 
 export async function fetchPadronEgresados(
   accessToken: string,
-  search?: string
-): Promise<PadronEgresadoItem[]> {
+  filtersOrSearch?: string | PadronFilters
+): Promise<PaginatedPadronResponse> {
   try {
     const params = new URLSearchParams();
-    if (search) params.append('search', search);
+    if (typeof filtersOrSearch === 'string') {
+      if (filtersOrSearch) params.append('search', filtersOrSearch);
+    } else if (filtersOrSearch) {
+      if (filtersOrSearch.page && filtersOrSearch.page > 1) {
+        params.append('page', String(filtersOrSearch.page));
+      }
+      if (filtersOrSearch.search) params.append('search', filtersOrSearch.search);
+      if (filtersOrSearch.carrera) params.append('carrera', filtersOrSearch.carrera);
+      if (filtersOrSearch.nivel) params.append('nivel', filtersOrSearch.nivel);
+      if (filtersOrSearch.estatus_titulacion) params.append('estatus_titulacion', filtersOrSearch.estatus_titulacion);
+      if (filtersOrSearch.anio_egreso) params.append('anio_egreso', filtersOrSearch.anio_egreso);
+    }
     const queryString = params.toString();
     const url = `${API_BASE_URL}/profiles/padron/${queryString ? `?${queryString}` : ''}`;
     const res = await fetch(url, {
@@ -999,12 +1194,20 @@ export async function fetchPadronEgresados(
         'Authorization': `Bearer ${accessToken}`,
       },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return { count: 0, next: null, previous: null, results: [] };
     const data = await res.json();
-    return Array.isArray(data) ? data : data.results || [];
+    if (Array.isArray(data)) {
+      return { count: data.length, next: null, previous: null, results: data };
+    }
+    return {
+      count: data.count ?? (data.results ? data.results.length : 0),
+      next: data.next ?? null,
+      previous: data.previous ?? null,
+      results: data.results || [],
+    };
   } catch (error) {
     console.error('Error fetching padron egresados:', error);
-    return [];
+    return { count: 0, next: null, previous: null, results: [] };
   }
 }
 
@@ -1103,7 +1306,7 @@ export async function fetchEventos(tipo?: string): Promise<EventoItem[]> {
       params.append('tipo_evento', tipo);
     }
     const queryString = params.toString();
-    const url = `${API_BASE_URL}/events/eventos/${queryString ? `?${queryString}` : ''}`;
+    const url = `${API_BASE_URL}/events/${queryString ? `?${queryString}` : ''}`;
 
     const res = await fetch(url, {
       cache: 'no-store',
@@ -1151,4 +1354,359 @@ export async function fetchPublicEmpresas(search?: string, giroId?: string, sect
   }
 }
 
+export async function fetchEmpresaById(id: number, token?: string): Promise<EmpresaListItem | null> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
+    const res = await fetch(`${API_BASE_URL}/profiles/empresas/${id}/`, {
+      cache: 'no-store',
+      headers,
+    });
+
+    if (!res.ok) {
+      console.error(`Error fetching empresa by ID: HTTP ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching empresa by ID:', error);
+    return null;
+  }
+}
+
+export async function fetchVacantesPorEmpresa(empresaId: number): Promise<Vacante[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/vacantes/?empresa=${empresaId}&status=aprobada`, {
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) {
+      console.error(`Error fetching vacantes by empresa: HTTP ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching vacantes by empresa:', error);
+    return [];
+  }
+}
+
+export async function fetchAdminEventos(token: string): Promise<EventoItem[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/events/`, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      console.error(`Error fetching admin eventos: HTTP ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching admin eventos:', error);
+    return [];
+  }
+}
+
+export async function crearEvento(
+  token: string,
+  eventoData: Omit<EventoItem, 'id'>
+): Promise<{ success: boolean; data?: EventoItem; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/events/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(eventoData),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      const err = typeof data === 'object' ? Object.values(data).flat().join(', ') : 'Error al registrar el evento.';
+      return { success: false, error: err };
+    }
+
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('Error creando evento:', error);
+    return { success: false, error: error.message || 'Error de conexión con el servidor.' };
+  }
+}
+
+export async function actualizarEvento(
+  token: string,
+  id: number,
+  eventoData: Partial<EventoItem>
+): Promise<{ success: boolean; data?: EventoItem; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/events/${id}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(eventoData),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      const err = typeof data === 'object' ? Object.values(data).flat().join(', ') : 'Error al actualizar el evento.';
+      return { success: false, error: err };
+    }
+
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('Error actualizando evento:', error);
+    return { success: false, error: error.message || 'Error de conexión con el servidor.' };
+  }
+}
+
+export async function eliminarEvento(
+  token: string,
+  id: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/events/${id}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok && res.status !== 204) {
+      return { success: false, error: 'No fue posible eliminar el evento institucional.' };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error eliminando evento:', error);
+    return { success: false, error: error.message || 'Error de conexión con el servidor.' };
+  }
+}
+
+export interface DashboardStats {
+  egresados: {
+    total: number;
+    verificados_padron: number;
+    colocados: number;
+    tasa_colocacion_porcentaje: number;
+  };
+  empresas: {
+    total: number;
+    con_vacantes_activas: number;
+  };
+  vacantes: {
+    total: number;
+    aprobadas: number;
+    pendientes: number;
+    cerradas: number;
+    inclusivas: number;
+  };
+  postulaciones: {
+    total: number;
+    en_revision_uth: number;
+    rechazadas_uth: number;
+    enviadas_empresa: number;
+    aceptadas: number;
+    rechazadas_empresa: number;
+  };
+  colocaciones_destacadas: {
+    por_carrera: Array<{ egresado__carrera__nombre: string; total: number }>;
+    por_nivel: Array<{ egresado__nivel_estudios: string; total: number }>;
+  };
+}
+
+export async function fetchReportsDashboard(token: string): Promise<DashboardStats | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reports/dashboard/`, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      console.error(`Error fetching reports dashboard: HTTP ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching reports dashboard:', error);
+    return null;
+  }
+}
+
+export async function descargarReporteInstitucional(
+  token: string,
+  tipo: 'egresados' | 'vacantes' | 'postulaciones' | 'colocaciones' | 'empresas',
+  formato: 'excel' | 'pdf'
+): Promise<{ success: boolean; filename?: string; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reports/${tipo}/?format=${formato}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errData.detail || `No se pudo descargar el reporte de ${tipo}.`,
+      };
+    }
+
+    const blob = await res.blob();
+    const contentDisposition = res.headers.get('content-disposition');
+    const ext = formato === 'excel' ? 'xlsx' : 'pdf';
+    let filename = `Reporte_${tipo}_UTH_${new Date().toISOString().slice(0, 10)}.${ext}`;
+    if (contentDisposition && contentDisposition.includes('filename=')) {
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) filename = match[1];
+    }
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+
+    return { success: true, filename };
+  } catch (error: any) {
+    console.error(`Error descargando reporte ${tipo}:`, error);
+    return {
+      success: false,
+      error: error.message || 'Error de conexión al descargar el reporte.',
+    };
+  }
+}
+
+export async function solicitarResetPassword(
+  email: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/users/reset_password/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!res.ok && res.status !== 204) {
+      const data = await res.json().catch(() => ({}));
+      const err =
+        data.email?.[0] ||
+        data.detail ||
+        (Array.isArray(data) && data[0]) ||
+        'No fue posible procesar la solicitud de restablecimiento.';
+      return { success: false, error: typeof err === 'string' ? err : JSON.stringify(err) };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error solicitando reset password:', error);
+    return {
+      success: false,
+      error: error.message || 'Error de conexión con el servidor.',
+    };
+  }
+}
+
+export async function confirmarResetPassword(payload: {
+  uid: string;
+  token: string;
+  new_password: string;
+  re_new_password: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/users/reset_password_confirm/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok && res.status !== 204) {
+      const data = await res.json().catch(() => ({}));
+      const err =
+        data.new_password?.[0] ||
+        data.re_new_password?.[0] ||
+        data.token?.[0] ||
+        data.uid?.[0] ||
+        data.non_field_errors?.[0] ||
+        data.detail ||
+        'El enlace de restablecimiento es inválido o ha expirado.';
+      return { success: false, error: typeof err === 'string' ? err : JSON.stringify(err) };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error confirmando reset password:', error);
+    return {
+      success: false,
+      error: error.message || 'Error de conexión con el servidor.',
+    };
+  }
+}
+
+export async function activarCuenta(payload: {
+  uid: string;
+  token: string;
+  acepta_aviso_privacidad?: boolean;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/users/activation/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        uid: payload.uid,
+        token: payload.token,
+        acepta_aviso_privacidad: payload.acepta_aviso_privacidad ?? true,
+      }),
+    });
+
+    if (!res.ok && res.status !== 204) {
+      const data = await res.json().catch(() => ({}));
+      const err =
+        data.token?.[0] ||
+        data.uid?.[0] ||
+        data.acepta_aviso_privacidad?.[0] ||
+        data.detail ||
+        data.non_field_errors?.[0] ||
+        'El enlace de activación es inválido o ya fue utilizado.';
+      return { success: false, error: typeof err === 'string' ? err : JSON.stringify(err) };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error activando cuenta:', error);
+    return {
+      success: false,
+      error: error.message || 'Error de conexión con el servidor al activar la cuenta.',
+    };
+  }
+}

@@ -420,7 +420,7 @@ export function NuevaVacanteModal({
                   onClick={() => setPasoActivo(2)}
                   className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer"
                 >
-                  Siguiente: Perfil y Actividades ➔
+                  Siguiente: Perfil y Actividades
                 </button>
               </div>
             </div>
@@ -545,14 +545,14 @@ export function NuevaVacanteModal({
                   onClick={() => setPasoActivo(1)}
                   className="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 transition-all cursor-pointer"
                 >
-                  ⬅ Anterior
+                  Anterior
                 </button>
                 <button
                   type="button"
                   onClick={() => setPasoActivo(3)}
                   className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer"
                 >
-                  Siguiente: Sueldo y Beneficios ➔
+                  Siguiente: Sueldo y Beneficios
                 </button>
               </div>
             </div>
@@ -669,14 +669,14 @@ export function NuevaVacanteModal({
                   onClick={() => setPasoActivo(2)}
                   className="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 transition-all cursor-pointer"
                 >
-                  ⬅ Anterior
+                  Anterior
                 </button>
                 <button
                   type="button"
                   onClick={() => setPasoActivo(4)}
                   className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer"
                 >
-                  Siguiente: Idioma y Contacto ➔
+                  Siguiente: Idioma y Contacto
                 </button>
               </div>
             </div>
@@ -811,7 +811,7 @@ export function NuevaVacanteModal({
                   onClick={() => setPasoActivo(3)}
                   className="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 transition-all cursor-pointer"
                 >
-                  ⬅ Anterior
+                  Anterior
                 </button>
 
                 <button

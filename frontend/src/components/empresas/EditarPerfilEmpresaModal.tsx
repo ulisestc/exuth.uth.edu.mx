@@ -241,7 +241,7 @@ export default function EditarPerfilEmpresaModal({
                 </p>
                 {logoFile && (
                   <span className="text-[11px] font-semibold text-[#00A887] block">
-                    ✓ Archivo listo: {logoFile.name}
+                    Archivo listo: {logoFile.name}
                   </span>
                 )}
               </div>

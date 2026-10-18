@@ -148,9 +148,12 @@ export default async function EmpresasPage({ searchParams }: EmpresasPageProps) 
                       {emp.nombre ? emp.nombre.charAt(0).toUpperCase() : 'E'}
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-[#2D2926] group-hover:text-[#00A887] transition-colors line-clamp-1">
+                      <Link 
+                        href={`/empresas/${emp.id}`}
+                        className="text-base font-bold text-[#2D2926] hover:text-[#00A887] transition-colors line-clamp-1"
+                      >
                         {emp.nombre}
-                      </h3>
+                      </Link>
                       <div className="flex items-center gap-1.5 text-[11px] text-[#00A887] font-semibold mt-0.5">
                         <CheckCircle2 className="w-3 h-3" />
                         <span>Convenio UTH Activo</span>
@@ -182,11 +185,11 @@ export default async function EmpresasPage({ searchParams }: EmpresasPageProps) 
 
               <div className="pt-5 mt-5 border-t border-zinc-100 flex items-center justify-between gap-2">
                 <Link
-                  href={`/vacantes?search=${encodeURIComponent(emp.nombre)}`}
+                  href={`/empresas/${emp.id}`}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00A887] hover:text-[#008F73] hover:underline"
                 >
                   <Briefcase className="w-3.5 h-3.5" />
-                  Ver vacantes
+                  Ver perfil y vacantes
                   <ArrowRight className="w-3 h-3" />
                 </Link>
 

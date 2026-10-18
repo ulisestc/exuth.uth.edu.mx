@@ -7,18 +7,17 @@ import {
   XCircle, 
   CheckCircle2, 
   Clock, 
-  FileText, 
   Download, 
   Phone, 
   Mail, 
   Building2, 
   Briefcase, 
   GraduationCap, 
-  AlertCircle,
   Loader2,
   RefreshCw,
   MessageSquare,
-  ExternalLink
+  Eye,
+  FolderOpen
 } from 'lucide-react';
 import { 
   Postulacion, 
@@ -27,6 +26,7 @@ import {
   rechazarPostulacionUth, 
   downloadCvCandidato 
 } from '@/lib/api';
+import CvViewerModal from '@/components/shared/CvViewerModal';
 
 interface PostulacionesFiltroProps {
   token: string;
@@ -40,6 +40,14 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [viewingCv, setViewingCv] = useState<{
+    egresadoId: number;
+    candidatoNombre: string;
+    matricula?: string;
+    tipo: 'cv' | 'documentos';
+    docId?: number | null;
+    docNombre?: string;
+  } | null>(null);
 
   // Modal para agregar notas UTH al turnar o descartar
   const [actionModal, setActionModal] = useState<{
@@ -301,6 +309,57 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
 
                   {/* Acciones de Vinculación */}
                   <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 pt-2 md:pt-0 w-full sm:w-auto">
+                    {/* Botón Ver CV en Línea */}
+                    <button
+                      onClick={() => setViewingCv({
+                        egresadoId: p.egresado,
+                        candidatoNombre: p.candidato_nombre || 'Egresado',
+                        matricula: p.candidato_matricula,
+                        tipo: 'cv'
+                      })}
+                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-[#691C32] hover:bg-[#521627] shadow-xs transition-all cursor-pointer"
+                      title="Abrir visor interactivo de CV"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-[#C2BA98]" />
+                      Ver CV en Línea
+                    </button>
+
+                    {/* Botones Ver Documentos Adicionales si existen */}
+                    {p.candidato_lista_documentos && p.candidato_lista_documentos.length > 0 ? (
+                      p.candidato_lista_documentos.map((doc) => (
+                        <button
+                          key={doc.id || doc.nombre}
+                          onClick={() => setViewingCv({
+                            egresadoId: p.egresado,
+                            candidatoNombre: p.candidato_nombre || 'Egresado',
+                            matricula: p.candidato_matricula,
+                            tipo: 'documentos',
+                            docId: doc.id,
+                            docNombre: doc.nombre
+                          })}
+                          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
+                          title={`Ver documento: ${doc.nombre}`}
+                        >
+                          <FolderOpen className="w-3.5 h-3.5 text-[#691C32] shrink-0" />
+                          <span className="truncate max-w-[160px]">{doc.nombre}</span>
+                        </button>
+                      ))
+                    ) : p.candidato_documentos ? (
+                      <button
+                        onClick={() => setViewingCv({
+                          egresadoId: p.egresado,
+                          candidatoNombre: p.candidato_nombre || 'Egresado',
+                          matricula: p.candidato_matricula,
+                          tipo: 'documentos'
+                        })}
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
+                        title="Ver expediente de documentos adicionales para el empleo"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5 text-[#691C32]" />
+                        Ver Documentos Anexos
+                      </button>
+                    ) : null}
+
                     {/* Botón Descargar CV */}
                     <button
                       onClick={() => handleDownloadCv(p)}
@@ -309,7 +368,7 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
                       title="Auditar Currículum Vitae en PDF"
                     >
                       {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-[#00A887]" />}
-                      Auditar CV (PDF)
+                      Descargar CV PDF
                     </button>
 
                     {/* Botón Turnar a Empresa */}
@@ -398,6 +457,20 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Visor Interactivo de CV o Documentos */}
+      {viewingCv && (
+        <CvViewerModal
+          egresadoId={viewingCv.egresadoId}
+          candidatoNombre={viewingCv.candidatoNombre}
+          matricula={viewingCv.matricula}
+          tipo={viewingCv.tipo}
+          docId={viewingCv.docId}
+          docNombre={viewingCv.docNombre}
+          token={token}
+          onClose={() => setViewingCv(null)}
+        />
       )}
     </div>
   );

@@ -10,13 +10,11 @@ import {
   Download, 
   Loader2, 
   GraduationCap, 
-  UserCheck, 
-  Calendar, 
   Phone, 
   Mail, 
   RefreshCw,
-  Clock,
-  Sparkles
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   PadronEgresadoItem, 
@@ -30,10 +28,18 @@ interface PadronManagerProps {
   onStatsChange?: () => void;
 }
 
+const PAGE_SIZE = 10;
+
 export default function PadronManager({ token, onStatsChange }: PadronManagerProps) {
   const [padronList, setPadronList] = useState<PadronEgresadoItem[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [hasNext, setHasNext] = useState<boolean>(false);
+  const [hasPrevious, setHasPrevious] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [nivelFilter, setNivelFilter] = useState<string>('');
+  const [estatusFilter, setEstatusFilter] = useState<string>('');
 
   // Estados de carga de archivo
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -43,11 +49,25 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadPadron = async (query = searchQuery) => {
+  const loadPadron = async (
+    page = currentPage,
+    query = searchQuery,
+    nivel = nivelFilter,
+    estatus = estatusFilter
+  ) => {
     setLoading(true);
     try {
-      const data = await fetchPadronEgresados(token, query);
-      setPadronList(data);
+      const data = await fetchPadronEgresados(token, {
+        page,
+        search: query || undefined,
+        nivel: nivel || undefined,
+        estatus_titulacion: estatus || undefined,
+      });
+      setPadronList(data.results);
+      setTotalCount(data.count);
+      setHasNext(Boolean(data.next));
+      setHasPrevious(Boolean(data.previous));
+      setCurrentPage(page);
     } catch (err) {
       console.error('Error cargando padrón:', err);
     } finally {
@@ -56,12 +76,17 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
   };
 
   useEffect(() => {
-    loadPadron();
-  }, []);
+    loadPadron(1, searchQuery, nivelFilter, estatusFilter);
+  }, [nivelFilter, estatusFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadPadron(searchQuery);
+    loadPadron(1, searchQuery, nivelFilter, estatusFilter);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1) return;
+    loadPadron(newPage, searchQuery, nivelFilter, estatusFilter);
   };
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -103,12 +128,19 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
       setImportResult(res.data);
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      loadPadron('');
+      setSearchQuery('');
+      setNivelFilter('');
+      setEstatusFilter('');
+      loadPadron(1, '', '', '');
       if (onStatsChange) onStatsChange();
     } else {
       setErrorMessage(res.error || 'Error al procesar el archivo Excel.');
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const startIndex = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const endIndex = Math.min(currentPage * PAGE_SIZE, totalCount);
 
   return (
     <div className="space-y-8">
@@ -247,30 +279,46 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
             </div>
 
             <p className="text-[11px] text-emerald-800 font-medium pt-1">
-              ✓ Se verificaron y sincronizaron automáticamente todas las cuentas de egresados que coinciden con las matrículas del padrón.
+              Se verificaron y sincronizaron automáticamente todas las cuentas de egresados que coinciden con las matrículas del padrón.
             </p>
           </div>
         )}
       </div>
 
-      {/* Buscador y Padrón Institucional */}
+      {/* Buscador, Filtros y Padrón Institucional Paginado */}
       <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 sm:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-bold text-[#2D2926]">
-              Consulta del Padrón Oficial UTH
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold text-[#2D2926]">
+                Consulta del Padrón Oficial UTH
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-[#00A887] border border-emerald-200">
+                {totalCount.toLocaleString('es-MX')} registros
+              </span>
+            </div>
             <p className="text-xs text-[#636569] mt-0.5">
-              Registro histórico de matrícula, carrera, periodo y estatus de titulación.
+              Registro histórico de matrícula, carrera, periodo y estatus de titulación con navegación paginada.
             </p>
           </div>
 
-          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
+          <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            <select
+              value={estatusFilter}
+              onChange={(e) => setEstatusFilter(e.target.value)}
+              className="text-xs px-3 py-2 rounded-lg border border-zinc-300 bg-white text-[#2D2926] focus:outline-none focus:ring-2 focus:ring-[#00A887]"
+            >
+              <option value="">Todos los estatus</option>
+              <option value="Titulado">Titulado</option>
+              <option value="En seguimiento">En seguimiento</option>
+              <option value="Egresado">Egresado</option>
+            </select>
+
+            <div className="relative flex-1 sm:w-64">
               <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Buscar por matrícula, nombre o CURP..."
+                placeholder="Buscar matrícula, nombre, carrera o CURP..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full text-xs pl-9 pr-3 py-2 rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
@@ -286,10 +334,12 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
               type="button"
               onClick={() => {
                 setSearchQuery('');
-                loadPadron('');
+                setNivelFilter('');
+                setEstatusFilter('');
+                loadPadron(1, '', '', '');
               }}
-              title="Restablecer"
-              className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 cursor-pointer"
+              title="Restablecer filtros"
+              className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 cursor-pointer border border-zinc-200"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -309,79 +359,116 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
             </div>
             <h4 className="text-sm font-bold text-[#2D2926]">No hay egresados en el padrón</h4>
             <p className="text-xs text-[#636569] max-w-sm mx-auto">
-              {searchQuery 
-                ? 'No se encontraron resultados para el término de búsqueda ingresado.'
+              {searchQuery || nivelFilter || estatusFilter
+                ? 'No se encontraron resultados para los criterios de búsqueda seleccionados.'
                 : 'Aún no se ha importado el archivo Excel de Servicios Escolares. Sube tu primer archivo en la sección superior.'}
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-zinc-50 border-b border-zinc-200 text-[#636569] font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Matrícula</th>
-                  <th className="py-3 px-4">Nombre Completo</th>
-                  <th className="py-3 px-4">Carrera / Nivel</th>
-                  <th className="py-3 px-4">Periodo / Egreso</th>
-                  <th className="py-3 px-4">Estatus Titulación</th>
-                  <th className="py-3 px-4">Contacto</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200">
-                {padronList.map((item) => (
-                  <tr key={item.id} className="hover:bg-zinc-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#2D2926]">
-                      <span className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[#00A887]">
-                        {item.matricula}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-[#2D2926]">
-                      {item.nombre}
-                      {item.curp && (
-                        <span className="block font-normal text-[10px] text-zinc-500 font-mono mt-0.5">
-                          CURP: {item.curp}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-[#636569]">
-                      <span className="font-medium text-[#2D2926] block">{item.carrera}</span>
-                      <span className="text-[10px] font-semibold uppercase text-zinc-400">
-                        {item.nivel || 'TSU / ING'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#636569]">
-                      <span className="block">{item.periodo || 'N/A'}</span>
-                      <span className="text-[11px] font-semibold text-[#691C32]">
-                        {item.anio_egreso ? `Año ${item.anio_egreso}` : ''}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        item.estatus_titulacion === 'Titulado'
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          : 'bg-amber-50 text-amber-800 border border-amber-200'
-                      }`}>
-                        {item.estatus_titulacion || 'En Trámite'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#636569]">
-                      {item.correo_personal && (
-                        <div className="flex items-center gap-1 text-[11px] truncate max-w-[180px]">
-                          <Mail className="w-3 h-3 text-zinc-400 shrink-0" />
-                          <span className="truncate">{item.correo_personal}</span>
-                        </div>
-                      )}
-                      {item.telefono_movil && (
-                        <div className="flex items-center gap-1 text-[11px] text-zinc-500 mt-0.5">
-                          <Phone className="w-3 h-3 text-zinc-400 shrink-0" />
-                          <span>{item.telefono_movil}</span>
-                        </div>
-                      )}
-                    </td>
+          <div className="space-y-4">
+            <div className="overflow-x-auto border border-zinc-200 rounded-xl">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-zinc-50 border-b border-zinc-200 text-[#636569] font-bold uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-4">Matrícula</th>
+                    <th className="py-3 px-4">Nombre Completo</th>
+                    <th className="py-3 px-4">Carrera / Nivel</th>
+                    <th className="py-3 px-4">Periodo / Egreso</th>
+                    <th className="py-3 px-4">Estatus Titulación</th>
+                    <th className="py-3 px-4">Contacto</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-zinc-200">
+                  {padronList.map((item) => (
+                    <tr key={item.id} className="hover:bg-zinc-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#2D2926]">
+                        <span className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[#00A887]">
+                          {item.matricula}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-[#2D2926]">
+                        {item.nombre}
+                        {item.curp && (
+                          <span className="block font-normal text-[10px] text-zinc-500 font-mono mt-0.5">
+                            CURP: {item.curp}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-[#636569]">
+                        <span className="font-medium text-[#2D2926] block">{item.carrera}</span>
+                        <span className="text-[10px] font-semibold uppercase text-zinc-400">
+                          {item.nivel || 'TSU / ING'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-[#636569]">
+                        <span className="block">{item.periodo || 'N/A'}</span>
+                        <span className="text-[11px] font-semibold text-[#691C32]">
+                          {item.anio_egreso ? `Año ${item.anio_egreso}` : ''}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          item.estatus_titulacion === 'Titulado'
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-800 border border-amber-200'
+                        }`}>
+                          {item.estatus_titulacion || 'En Trámite'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-[#636569]">
+                        {(item.correo_personal || item.correo_escolares) && (
+                          <div className="flex items-center gap-1 text-[11px] truncate max-w-[200px]">
+                            <Mail className="w-3 h-3 text-zinc-400 shrink-0" />
+                            <span className="truncate">{item.correo_personal || item.correo_escolares}</span>
+                          </div>
+                        )}
+                        {(item.telefono_movil || item.tel_escolares) && (
+                          <div className="flex items-center gap-1 text-[11px] text-zinc-500 mt-0.5">
+                            <Phone className="w-3 h-3 text-zinc-400 shrink-0" />
+                            <span>{item.telefono_movil || item.tel_escolares}</span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Controles de Paginación */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-[#636569]">
+              <div>
+                Mostrando <strong className="text-[#2D2926]">{startIndex}</strong> a{' '}
+                <strong className="text-[#2D2926]">{endIndex}</strong> de{' '}
+                <strong className="text-[#2D2926]">{totalCount.toLocaleString('es-MX')}</strong> egresados en el padrón
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={!hasPrevious || currentPage <= 1 || loading}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-[#2D2926] bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Anterior
+                </button>
+
+                <span className="px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 font-bold text-[#2D2926]">
+                  Página {currentPage} de {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={!hasNext || currentPage >= totalPages || loading}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-[#2D2926] bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
+                >
+                  Siguiente
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

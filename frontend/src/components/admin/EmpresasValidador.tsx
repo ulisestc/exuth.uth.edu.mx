@@ -96,7 +96,6 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
             { id: 'todas', label: 'Todas las Organizaciones' },
             { id: 'aprobada', label: 'Activas en Convenio' },
             { id: 'rechazada', label: 'Suspendidas' },
-            { id: 'pendiente', label: 'Por Auditar' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -152,9 +151,7 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
           </div>
           <h3 className="text-sm font-bold text-[#2D2926]">No hay empresas en este criterio</h3>
           <p className="text-xs text-[#636569] max-w-sm mx-auto">
-            {filterStatus === 'pendiente'
-              ? 'No hay empresas pendientes de auditoría en este momento.'
-              : filterStatus === 'rechazada'
+            {filterStatus === 'rechazada'
               ? 'No hay empresas suspendidas en el sistema.'
               : 'No se encontraron organizaciones registradas en este estatus.'}
           </p>
@@ -173,12 +170,6 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        {e.status === 'pendiente' && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                            <Clock className="w-3 h-3" />
-                            Por Auditar
-                          </span>
-                        )}
                         {e.status === 'aprobada' && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                             <CheckCircle2 className="w-3 h-3" />
@@ -254,10 +245,10 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
                       onClick={() => handleStatusChange(e.id, 'aprobada')}
                       disabled={isProcessing}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer shadow-xs disabled:opacity-50"
-                      title="Reactivar o aprobar convenio de colaboración"
+                      title="Reactivar convenio de colaboración"
                     >
                       {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-                      {e.status === 'rechazada' ? 'Reactivar Convenio' : 'Aprobar Convenio'}
+                      Reactivar Convenio
                     </button>
                   )}
                 </div>

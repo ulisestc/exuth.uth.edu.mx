@@ -25,24 +25,29 @@ import {
   Download,
   Loader2,
   AlertCircle,
-  Terminal
+  Terminal,
+  Calendar,
+  BarChart3
 } from 'lucide-react';
 import VacantesAuditor from '@/components/admin/VacantesAuditor';
 import PostulacionesFiltro from '@/components/admin/PostulacionesFiltro';
 import EmpresasValidador from '@/components/admin/EmpresasValidador';
 import PadronManager from '@/components/admin/PadronManager';
+import EventosManager from '@/components/admin/EventosManager';
+import ReportesDashboard from '@/components/admin/ReportesDashboard';
 import { 
   fetchAdminVacantes, 
   fetchAdminPostulaciones, 
   fetchAdminEmpresas,
   fetchPadronEgresados,
+  fetchReportsDashboard,
   descargarReporteColocacionExcel
 } from '@/lib/api';
 
 export default function AdminUthPage() {
   const router = useRouter();
   const { user, accessToken, isAuthenticated, isLoading, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'vacantes' | 'postulaciones' | 'empresas' | 'padron'>('vacantes');
+  const [activeTab, setActiveTab] = useState<'vacantes' | 'postulaciones' | 'empresas' | 'padron' | 'eventos' | 'reportes'>('vacantes');
 
   // Métricas en vivo
   const [stats, setStats] = useState({
@@ -50,7 +55,6 @@ export default function AdminUthPage() {
     vacantesActivas: 0,
     postulacionesPendientes: 0,
     postulacionesTurnadas: 0,
-    empresasPendientes: 0,
     empresasActivas: 0,
     colocados: 0,
     padronTotal: 0,
@@ -91,33 +95,37 @@ export default function AdminUthPage() {
     if (!accessToken) return;
     setLoadingStats(true);
     try {
-      const [vacs, posts, emps, padr] = await Promise.all([
-        fetchAdminVacantes(accessToken, 'todas'),
-        fetchAdminPostulaciones(accessToken, 'todas'),
-        fetchAdminEmpresas(accessToken, 'todas'),
+      const [dashboard, padr] = await Promise.all([
+        fetchReportsDashboard(accessToken),
         fetchPadronEgresados(accessToken),
       ]);
 
-      const vacPend = vacs.filter((v) => v.status === 'pendiente').length;
-      const vacAct = vacs.filter((v) => v.status === 'aprobada').length;
-
-      const postPend = posts.filter((p) => p.estado === 'revision_uth').length;
-      const postTurn = posts.filter((p) => p.estado === 'enviada_empresa').length;
-      const colocadosCount = posts.filter((p) => p.estado === 'Aceptada').length;
-
-      const empPend = emps.filter((e) => e.status === 'pendiente').length;
-      const empAct = emps.filter((e) => e.status === 'aprobada').length;
-
-      setStats({
-        vacantesPendientes: vacPend,
-        vacantesActivas: vacAct,
-        postulacionesPendientes: postPend,
-        postulacionesTurnadas: postTurn,
-        empresasPendientes: empPend,
-        empresasActivas: empAct,
-        colocados: colocadosCount,
-        padronTotal: padr.length,
-      });
+      if (dashboard) {
+        setStats({
+          vacantesPendientes: dashboard.vacantes.pendientes,
+          vacantesActivas: dashboard.vacantes.aprobadas,
+          postulacionesPendientes: dashboard.postulaciones.en_revision_uth,
+          postulacionesTurnadas: dashboard.postulaciones.enviadas_empresa,
+          empresasActivas: dashboard.empresas.total,
+          colocados: dashboard.egresados.colocados,
+          padronTotal: padr.count,
+        });
+      } else {
+        const [vacs, posts, emps] = await Promise.all([
+          fetchAdminVacantes(accessToken, 'todas'),
+          fetchAdminPostulaciones(accessToken, 'todas'),
+          fetchAdminEmpresas(accessToken, 'todas'),
+        ]);
+        setStats({
+          vacantesPendientes: vacs.filter((v) => v.status === 'pendiente').length,
+          vacantesActivas: vacs.filter((v) => v.status === 'aprobada').length,
+          postulacionesPendientes: posts.filter((p) => p.estado === 'revision_uth').length,
+          postulacionesTurnadas: posts.filter((p) => p.estado === 'enviada_empresa').length,
+          empresasActivas: emps.filter((e) => e.status === 'aprobada').length,
+          colocados: posts.filter((p) => p.estado === 'Aceptada').length,
+          padronTotal: padr.count,
+        });
+      }
     } catch (err) {
       console.error('Error cargando métricas UTH:', err);
     } finally {
@@ -128,7 +136,7 @@ export default function AdminUthPage() {
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
-        router.push('/login?tipo=admin&redirect=/admin-uth');
+        router.push('/login?redirect=/admin-uth');
       } else if (user && user.rol !== 'admin_uth' && user.rol !== 'soporte_ti') {
         router.replace(getRoleRedirectPath(user.rol));
       }
@@ -348,9 +356,7 @@ export default function AdminUthPage() {
           <div className="mt-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Empresas Vinculadas</h3>
             <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
-              {stats.empresasPendientes > 0 
-                ? `${stats.empresasPendientes} por verificar` 
-                : 'Organizaciones activas en convenio'}
+              Organizaciones activas en convenio
             </p>
           </div>
         </div>
@@ -446,19 +452,43 @@ export default function AdminUthPage() {
 
             <button
               onClick={() => setActiveTab('padron')}
-              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'padron'
                   ? 'border-[#00A887] text-[#00A887]'
                   : 'border-transparent text-[#636569] hover:text-[#2D2926]'
               }`}
             >
               <FileSpreadsheet className="w-4 h-4" />
-              4. Padrón Escolar e Importación Excel
+              4. Padrón Escolar
               {stats.padronTotal > 0 && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800">
                   {stats.padronTotal}
                 </span>
               )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('eventos')}
+              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'eventos'
+                  ? 'border-[#00A887] text-[#00A887]'
+                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              5. Gestión de Eventos
+            </button>
+
+            <button
+              onClick={() => setActiveTab('reportes')}
+              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'reportes'
+                  ? 'border-[#691C32] text-[#691C32]'
+                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              6. Indicadores CACEI / ISO
             </button>
           </div>
 
@@ -487,6 +517,14 @@ export default function AdminUthPage() {
 
           {activeTab === 'padron' && (
             <PadronManager token={accessToken} onStatsChange={loadStats} />
+          )}
+
+          {activeTab === 'eventos' && (
+            <EventosManager token={accessToken} />
+          )}
+
+          {activeTab === 'reportes' && (
+            <ReportesDashboard token={accessToken} />
           )}
         </div>
       </div>
