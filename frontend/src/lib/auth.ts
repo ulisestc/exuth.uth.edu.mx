@@ -150,8 +150,16 @@ export async function refreshAccessToken(refreshToken: string): Promise<string> 
 }
 
 export function getRoleRedirectPath(role: UserRole, returnUrl?: string | null): string {
+  // Validar si la URL de retorno solicitada es compatible con el rol del usuario
   if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
-    return returnUrl;
+    const isAllowedForAdmin = returnUrl.startsWith('/admin-uth') && (role === 'admin_uth' || role === 'soporte_ti');
+    const isAllowedForEmpresa = returnUrl.startsWith('/portal-empresa') && (role === 'empresa' || role === 'soporte_ti');
+    const isAllowedForEgresado = returnUrl.startsWith('/portal-egresado') && (role === 'egresado' || role === 'soporte_ti');
+    const isPublicPage = !returnUrl.startsWith('/admin-uth') && !returnUrl.startsWith('/portal-empresa') && !returnUrl.startsWith('/portal-egresado');
+
+    if (isAllowedForAdmin || isAllowedForEmpresa || isAllowedForEgresado || isPublicPage) {
+      return returnUrl;
+    }
   }
 
   switch (role) {

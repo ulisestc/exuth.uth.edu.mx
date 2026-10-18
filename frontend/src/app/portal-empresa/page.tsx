@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { getRoleRedirectPath } from '@/lib/auth';
 import { 
   fetchMiPerfilEmpresa, 
   fetchMisVacantes, 
@@ -52,12 +53,16 @@ export default function PortalEmpresaPage() {
   const [modalPerfilAbierto, setModalPerfilAbierto] = useState(false);
   const [accionEnProceso, setAccionEnProceso] = useState<number | null>(null);
 
-  // Redirigir a login si no está autenticado
+  // Redirigir a login si no está autenticado o a su portal correspondiente
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login?tipo=empresa&redirect=/portal-empresa');
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.push('/login?tipo=empresa&redirect=/portal-empresa');
+      } else if (user && user.rol !== 'empresa' && user.rol !== 'soporte_ti') {
+        router.replace(getRoleRedirectPath(user.rol));
+      }
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, user, router]);
 
   // Cargar datos de la empresa, vacantes y postulaciones
   useEffect(() => {
@@ -183,7 +188,7 @@ export default function PortalEmpresaPage() {
     );
   }
 
-  if (!user) return null;
+  if (!user || (user.rol !== 'empresa' && user.rol !== 'soporte_ti')) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">

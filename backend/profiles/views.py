@@ -1,6 +1,6 @@
 import os
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.http import FileResponse
 from .models import Egresado, Empresa, PadronEgresado
 from .serializers import (
@@ -184,7 +184,7 @@ class EgresadoViewSet(viewsets.ModelViewSet):
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     serializer_class = EmpresaSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     
@@ -209,7 +209,10 @@ class EmpresaViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
     def get_queryset(self):
-        return Empresa.objects.filter(user__deactivated_at__isnull=True)
+        user = self.request.user
+        if user.is_authenticated and (getattr(user, 'rol', None) in ['admin_uth', 'soporte_ti'] or user.is_superuser):
+            return Empresa.objects.filter(user__deactivated_at__isnull=True)
+        return Empresa.objects.filter(user__deactivated_at__isnull=True, status='aprobada')
 
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
     def me(self, request):

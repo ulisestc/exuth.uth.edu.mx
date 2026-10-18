@@ -16,7 +16,6 @@ import {
   GraduationCap, 
   Building2, 
   ShieldCheck,
-  CheckCircle2,
   Loader2
 } from 'lucide-react';
 
@@ -72,13 +71,6 @@ function LoginForm() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleQuickFill = (testEmail: string, testPass: string, tab: 'egresado' | 'empresa' | 'admin') => {
-    setEmail(testEmail);
-    setPassword(testPass);
-    setActiveTab(tab);
-    setErrorMsg(null);
   };
 
   return (
@@ -286,46 +278,6 @@ function LoginForm() {
                 Regístrate aquí
               </Link>
             </div>
-          </div>
-        </div>
-
-        {/* Acceso Rápido de Prueba (Development Helper) */}
-        <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200">
-          <p className="text-xs font-bold text-[#2D2926] uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
-            Cuentas de demostración (1 clic para llenar):
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('egresado@uth.edu.mx', 'Egresado2026!', 'egresado')}
-              className="text-left p-2 rounded-md bg-white border border-zinc-200 hover:border-[#00A887] hover:bg-emerald-50/40 transition-all cursor-pointer group"
-            >
-              <div className="text-[11px] font-bold text-[#00A887] group-hover:underline">
-                🎓 Egresado
-              </div>
-              <div className="text-[10px] text-zinc-500 truncate">egresado@uth.edu.mx</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('contacto@autoteam.com', 'Empresa2026!', 'empresa')}
-              className="text-left p-2 rounded-md bg-white border border-zinc-200 hover:border-[#691C32] hover:bg-rose-50/40 transition-all cursor-pointer group"
-            >
-              <div className="text-[11px] font-bold text-[#691C32] group-hover:underline">
-                🏢 Empresa
-              </div>
-              <div className="text-[10px] text-zinc-500 truncate">contacto@autoteam.com</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('johanyuri24@gmail.com', 'Admin2026!', 'admin')}
-              className="text-left p-2 rounded-md bg-white border border-zinc-200 hover:border-zinc-800 hover:bg-zinc-100 transition-all cursor-pointer group"
-            >
-              <div className="text-[11px] font-bold text-[#2D2926] group-hover:underline">
-                🏛️ Admin UTH
-              </div>
-              <div className="text-[10px] text-zinc-500 truncate">johanyuri24@gmail.com</div>
-            </button>
           </div>
         </div>
 

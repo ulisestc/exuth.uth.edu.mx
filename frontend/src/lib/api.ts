@@ -1084,4 +1084,71 @@ export async function descargarReporteColocacionExcel(
   }
 }
 
+export interface EventoItem {
+  id: number;
+  nombre: string;
+  tipo_evento: 'feria_empleo' | 'reclutamiento_masivo' | 'taller' | 'conferencia' | 'otro';
+  fecha_inicio: string;
+  fecha_fin: string;
+  lugar: string;
+  descripcion: string;
+  is_active: boolean;
+}
+
+export async function fetchEventos(tipo?: string): Promise<EventoItem[]> {
+  try {
+    const params = new URLSearchParams();
+    params.append('is_active', 'true');
+    if (tipo && tipo !== 'todos') {
+      params.append('tipo_evento', tipo);
+    }
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/events/eventos/${queryString ? `?${queryString}` : ''}`;
+
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) {
+      console.error(`Error fetching eventos: HTTP ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching eventos:', error);
+    return [];
+  }
+}
+
+export async function fetchPublicEmpresas(search?: string, giroId?: string, sectorId?: string): Promise<EmpresaListItem[]> {
+  try {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (giroId) params.append('giro', giroId);
+    if (sectorId) params.append('sector', sectorId);
+
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/profiles/empresas/${queryString ? `?${queryString}` : ''}`;
+
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) {
+      console.error(`Error fetching public empresas: HTTP ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    console.error('Error fetching public empresas:', error);
+    return [];
+  }
+}
+
 

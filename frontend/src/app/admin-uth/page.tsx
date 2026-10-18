@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { getRoleRedirectPath } from '@/lib/auth';
 import { 
   ShieldCheck, 
   ExternalLink, 
@@ -23,7 +24,8 @@ import {
   FileSpreadsheet,
   Download,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Terminal
 } from 'lucide-react';
 import VacantesAuditor from '@/components/admin/VacantesAuditor';
 import PostulacionesFiltro from '@/components/admin/PostulacionesFiltro';
@@ -124,16 +126,20 @@ export default function AdminUthPage() {
   };
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login?tipo=admin&redirect=/admin-uth');
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.push('/login?tipo=admin&redirect=/admin-uth');
+      } else if (user && user.rol !== 'admin_uth' && user.rol !== 'soporte_ti') {
+        router.replace(getRoleRedirectPath(user.rol));
+      }
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, user, router]);
 
   useEffect(() => {
-    if (accessToken) {
+    if (accessToken && user && (user.rol === 'admin_uth' || user.rol === 'soporte_ti')) {
       loadStats();
     }
-  }, [accessToken]);
+  }, [accessToken, user]);
 
   if (isLoading) {
     return (
@@ -146,7 +152,10 @@ export default function AdminUthPage() {
     );
   }
 
-  if (!user || !accessToken) return null;
+  // Prevenir renderizado a usuarios no autorizados antes de redirección
+  if (!user || !accessToken || (user.rol !== 'admin_uth' && user.rol !== 'soporte_ti')) {
+    return null;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -160,14 +169,25 @@ export default function AdminUthPage() {
         <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#00A887]/20 text-[#00A887] border border-[#00A887]/30">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Dirección de Vinculación y Extensión Universitaria
+              {user.rol === 'soporte_ti' ? (
+                <>
+                  <Terminal className="w-3.5 h-3.5" />
+                  Soporte TI & Administración de Infraestructura
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Dirección de Vinculación y Extensión Universitaria
+                </>
+              )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Panel Institucional · {user.nombres} {user.apellido_paterno}
+              {user.rol === 'soporte_ti' ? 'Consola de Sistemas y Soporte TI' : 'Panel Institucional'} · {user.nombres} {user.apellido_paterno}
             </h1>
             <p className="text-sm text-zinc-300 max-w-2xl">
-              Consola operativa para auditoría de ofertas de empleo, filtro de pertinencia de candidatos egresados y validación de empresas vinculadas.
+              {user.rol === 'soporte_ti'
+                ? 'Consola operativa con privilegios técnicos de auditoría de vacantes, filtro de pertinencia, directorio de empresas y herramientas de desarrollo.'
+                : 'Consola operativa para auditoría de ofertas de empleo, filtro de pertinencia de candidatos egresados y directorio de empresas vinculadas.'}
             </p>
           </div>
 
@@ -186,29 +206,34 @@ export default function AdminUthPage() {
               <span>{exportandoExcel ? 'Generando Excel...' : 'Exportar Reporte CACEI / ISO (.xlsx)'}</span>
             </button>
 
-            <a
-              href="http://localhost:8080/admin/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10"
-              title="Abrir Django Admin"
-            >
-              <Database className="w-3.5 h-3.5" />
-              Django Admin
-              <ExternalLink className="w-3 h-3 text-zinc-400" />
-            </a>
+            {/* Accesos a Django Admin y Swagger API Docs exclusivos para Soporte TI */}
+            {user.rol === 'soporte_ti' && (
+              <>
+                <a
+                  href="http://localhost:8080/admin/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10"
+                  title="Abrir Django Admin"
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  Django Admin
+                  <ExternalLink className="w-3 h-3 text-zinc-400" />
+                </a>
 
-            <a
-              href="http://localhost:8080/api/v1/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10"
-              title="Abrir Swagger OpenAPI"
-            >
-              <FileCode className="w-3.5 h-3.5" />
-              API Docs
-              <ExternalLink className="w-3 h-3 text-zinc-400" />
-            </a>
+                <a
+                  href="http://localhost:8080/api/v1/docs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10"
+                  title="Abrir Swagger OpenAPI"
+                >
+                  <FileCode className="w-3.5 h-3.5" />
+                  API Docs
+                  <ExternalLink className="w-3 h-3 text-zinc-400" />
+                </a>
+              </>
+            )}
 
             <button
               onClick={() => {
@@ -303,7 +328,7 @@ export default function AdminUthPage() {
           </div>
         </div>
 
-        {/* Empresas por Validar */}
+        {/* Empresas Vinculadas */}
         <div 
           onClick={() => setActiveTab('empresas')}
           className={`p-5 rounded-xl border transition-all cursor-pointer bg-white ${
@@ -317,13 +342,15 @@ export default function AdminUthPage() {
               <Building2 className="w-5 h-5" />
             </div>
             <span className="text-2xl font-black text-[#2D2926]">
-              {loadingStats ? '...' : stats.empresasPendientes}
+              {loadingStats ? '...' : stats.empresasActivas}
             </span>
           </div>
           <div className="mt-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Empresas en Convenio</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Empresas Vinculadas</h3>
             <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
-              {stats.empresasActivas} organizaciones autorizadas
+              {stats.empresasPendientes > 0 
+                ? `${stats.empresasPendientes} por verificar` 
+                : 'Organizaciones activas en convenio'}
             </p>
           </div>
         </div>
@@ -409,10 +436,10 @@ export default function AdminUthPage() {
               }`}
             >
               <Building2 className="w-4 h-4" />
-              3. Validación de Empresas
-              {stats.empresasPendientes > 0 && (
+              3. Directorio de Empresas
+              {stats.empresasActivas > 0 && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
-                  {stats.empresasPendientes}
+                  {stats.empresasActivas}
                 </span>
               )}
             </button>

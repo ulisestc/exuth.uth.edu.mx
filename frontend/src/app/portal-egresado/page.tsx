@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { getRoleRedirectPath } from '@/lib/auth';
 import { 
   fetchMisPostulaciones, 
   fetchMiPerfilEgresado, 
@@ -46,12 +47,16 @@ export default function PortalEgresadoPage() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [modalEditarPerfil, setModalEditarPerfil] = useState(false);
 
-  // Redirigir a login si no está autenticado
+  // Redirigir a login si no está autenticado o a su portal correspondiente
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login?tipo=egresado&redirect=/portal-egresado');
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.push('/login?tipo=egresado&redirect=/portal-egresado');
+      } else if (user && user.rol !== 'egresado' && user.rol !== 'soporte_ti') {
+        router.replace(getRoleRedirectPath(user.rol));
+      }
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, user, router]);
 
   // Cargar perfil y postulaciones del egresado
   useEffect(() => {
@@ -163,7 +168,7 @@ export default function PortalEgresadoPage() {
     );
   }
 
-  if (!user) return null;
+  if (!user || (user.rol !== 'egresado' && user.rol !== 'soporte_ti')) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">

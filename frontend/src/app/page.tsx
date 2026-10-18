@@ -215,7 +215,7 @@ export default function HomePage() {
               </ul>
             </div>
             <Link
-              href="/admin-login"
+              href="/login?tipo=admin"
               className="mt-6 inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-[#2D2926] bg-zinc-100 hover:bg-zinc-200 rounded-md border border-zinc-300 transition-colors"
             >
               Acceso Administrativo

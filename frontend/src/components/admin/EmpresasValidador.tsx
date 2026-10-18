@@ -24,7 +24,7 @@ interface EmpresasValidadorProps {
 
 export default function EmpresasValidador({ token, onStatsChange }: EmpresasValidadorProps) {
   const [empresas, setEmpresas] = useState<EmpresaListItem[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string>('pendiente');
+  const [filterStatus, setFilterStatus] = useState<string>('todas');
   const [loading, setLoading] = useState<boolean>(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -48,8 +48,8 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
 
   const handleStatusChange = async (empresaId: number, nuevoStatus: 'aprobada' | 'rechazada') => {
     const confirmMsg = nuevoStatus === 'aprobada'
-      ? '¿Confirmas la APROBACIÓN de esta empresa en convenio? Podrá publicar ofertas y recibir candidatos.'
-      : '¿Deseas RECHAZAR o suspender a esta empresa?';
+      ? '¿Confirmas la REACTIVACIÓN del convenio para esta organización? Podrá publicar ofertas y recibir candidatos.'
+      : '¿Confirmas la SUSPENSIÓN temporal del convenio para esta empresa? Su acceso y vacantes quedarán pausadas.';
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -62,7 +62,7 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
     if (res.success) {
       setFeedback({
         type: 'success',
-        message: `La empresa fue ${nuevoStatus === 'aprobada' ? 'APROBADA en convenio con éxito' : 'RECHAZADA'}.`
+        message: `El estatus de la empresa fue actualizado exitosamente a: ${nuevoStatus === 'aprobada' ? 'Activa en Convenio' : 'Suspendida'}.`
       });
       loadEmpresas();
       if (onStatsChange) onStatsChange();
@@ -76,15 +76,27 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
 
   return (
     <div className="space-y-6">
+      {/* Banner Informativo Normativo UTH */}
+      <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/80 flex items-start gap-3 text-xs text-[#2D2926]">
+        <CheckCircle2 className="w-4 h-4 text-[#00A887] shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <span className="font-bold text-[#00A887]">Convenio y Autonomía de Registro:</span>
+          <p className="text-zinc-600 leading-relaxed">
+            Las organizaciones registradas cuentan con alta automática en convenio para publicar ofertas laborales de inmediato.
+            La Dirección de Vinculación y Soporte TI auditan periódicamente la información institucional y pueden suspender temporalmente el acceso de organizaciones en caso de requerirse.
+          </p>
+        </div>
+      </div>
+
       {/* Barra de Filtros */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold text-[#636569] uppercase tracking-wider mr-2">Estatus:</span>
           {[
-            { id: 'pendiente', label: 'Pendientes de Validación' },
-            { id: 'aprobada', label: 'Aprobadas en Convenio' },
-            { id: 'rechazada', label: 'Rechazadas' },
-            { id: 'todas', label: 'Todas' },
+            { id: 'todas', label: 'Todas las Organizaciones' },
+            { id: 'aprobada', label: 'Activas en Convenio' },
+            { id: 'rechazada', label: 'Suspendidas' },
+            { id: 'pendiente', label: 'Por Auditar' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -141,8 +153,10 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
           <h3 className="text-sm font-bold text-[#2D2926]">No hay empresas en este criterio</h3>
           <p className="text-xs text-[#636569] max-w-sm mx-auto">
             {filterStatus === 'pendiente'
-              ? 'Excelente: No hay empresas pendientes de validación en este momento.'
-              : 'No se encontraron empresas registradas en este estatus.'}
+              ? 'No hay empresas pendientes de auditoría en este momento.'
+              : filterStatus === 'rechazada'
+              ? 'No hay empresas suspendidas en el sistema.'
+              : 'No se encontraron organizaciones registradas en este estatus.'}
           </p>
         </div>
       ) : (
@@ -162,19 +176,19 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
                         {e.status === 'pendiente' && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                             <Clock className="w-3 h-3" />
-                            Pendiente Validación
+                            Por Auditar
                           </span>
                         )}
                         {e.status === 'aprobada' && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                             <CheckCircle2 className="w-3 h-3" />
-                            Convenio Aprobado
+                            Convenio Activo
                           </span>
                         )}
                         {e.status === 'rechazada' && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
                             <XCircle className="w-3 h-3" />
-                            Rechazada
+                            Convenio Suspendido
                           </span>
                         )}
                       </div>
@@ -225,25 +239,25 @@ export default function EmpresasValidador({ token, onStatsChange }: EmpresasVali
 
                 {/* Botones de Acción */}
                 <div className="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2">
-                  {e.status !== 'aprobada' && (
+                  {e.status === 'aprobada' ? (
+                    <button
+                      onClick={() => handleStatusChange(e.id, 'rechazada')}
+                      disabled={isProcessing}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
+                      title="Suspender temporalmente acceso de la empresa"
+                    >
+                      {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+                      Suspender Convenio
+                    </button>
+                  ) : (
                     <button
                       onClick={() => handleStatusChange(e.id, 'aprobada')}
                       disabled={isProcessing}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      title="Reactivar o aprobar convenio de colaboración"
                     >
                       {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-                      Aprobar Convenio
-                    </button>
-                  )}
-
-                  {e.status !== 'rechazada' && (
-                    <button
-                      onClick={() => handleStatusChange(e.id, 'rechazada')}
-                      disabled={isProcessing}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-[#691C32] hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
-                      Rechazar
+                      {e.status === 'rechazada' ? 'Reactivar Convenio' : 'Aprobar Convenio'}
                     </button>
                   )}
                 </div>
