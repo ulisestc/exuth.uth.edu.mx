@@ -314,20 +314,12 @@ class Command(BaseCommand):
             u_eg.save()
 
             cv_rel_path = None
-            doc_rel_path = None
             if template_pdf_path:
                 cv_filename = f"CV_{egd['matricula']}.pdf"
                 cv_dest = os.path.join(cvs_dir, cv_filename)
                 if os.path.abspath(template_pdf_path) != os.path.abspath(cv_dest):
                     shutil.copyfile(template_pdf_path, cv_dest)
                 cv_rel_path = f"egresados/cvs/{cv_filename}"
-
-                # Asignar expediente de documentos a los primeros 2 egresados
-                if egd['matricula'] in ('20260001', '20260002'):
-                    doc_filename = f"Expediente_{egd['matricula']}.pdf"
-                    doc_dest = os.path.join(docs_dir, doc_filename)
-                    shutil.copyfile(template_pdf_path, doc_dest)
-                    doc_rel_path = f"egresados/docs/{doc_filename}"
 
             eg_defaults = {
                 'matricula': egd['matricula'],
@@ -343,8 +335,6 @@ class Command(BaseCommand):
             }
             if cv_rel_path:
                 eg_defaults['cv'] = cv_rel_path
-            if doc_rel_path:
-                eg_defaults['documentos'] = doc_rel_path
 
             eg_profile, _ = Egresado.objects.update_or_create(
                 user=u_eg,

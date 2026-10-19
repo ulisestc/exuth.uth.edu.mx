@@ -67,16 +67,6 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             .filter(user__deactivated_at__isnull=True)
         )
 
-    def _sync_legacy_documento_to_precargados(self, egresado):
-        """Asegura que si el egresado tiene un archivo en `documentos` pero aún no está en `documentos_precargados`, se registre automáticamente."""
-        if egresado.documentos and not egresado.documentos_precargados.exists():
-            nombre_base = os.path.basename(egresado.documentos.name)
-            DocumentoEgresado.objects.create(
-                egresado=egresado,
-                nombre="Expediente de Documentos Pre-cargado",
-                archivo=egresado.documentos.name
-            )
-
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
     def me(self, request):
         """Obtiene o actualiza el perfil del egresado autenticado."""
@@ -84,7 +74,6 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             raise NotFound("No cuentas con un perfil de egresado registrado.")
         
         egresado = request.user.egresado
-        self._sync_legacy_documento_to_precargados(egresado)
 
         if request.method == 'GET':
             serializer = self.get_serializer(egresado)
@@ -113,14 +102,14 @@ class EgresadoViewSet(viewsets.ModelViewSet):
                     egresado.es_verificado_padron = True
                     egresado.save(update_fields=['es_verificado_padron'])
 
-            if uploaded_doc and egresado.documentos:
+            if uploaded_doc:
                 if not nombre_doc:
                     raw_name = os.path.splitext(os.path.basename(uploaded_doc.name))[0]
                     nombre_doc = raw_name.replace('_', ' ').strip() or "Documento Adicional"
                 DocumentoEgresado.objects.create(
                     egresado=egresado,
                     nombre=nombre_doc[:150],
-                    archivo=egresado.documentos.name
+                    archivo=uploaded_doc
                 )
 
             return Response(self.get_serializer(egresado).data)
@@ -156,7 +145,6 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             raise NotFound("No cuentas con un perfil de egresado registrado.")
 
         egresado = request.user.egresado
-        self._sync_legacy_documento_to_precargados(egresado)
         doc_id = request.query_params.get('doc_id')
 
         if request.method == 'POST':
@@ -168,13 +156,11 @@ class EgresadoViewSet(viewsets.ModelViewSet):
                 raw_name = os.path.splitext(os.path.basename(archivo_subido.name))[0]
                 nombre_doc = raw_name.replace('_', ' ').strip() or "Documento Adicional"
 
-            nuevo_doc = DocumentoEgresado.objects.create(
+            DocumentoEgresado.objects.create(
                 egresado=egresado,
                 nombre=nombre_doc[:150],
                 archivo=archivo_subido
             )
-            egresado.documentos = nuevo_doc.archivo.name
-            egresado.save(update_fields=['documentos'])
             return Response(self.get_serializer(egresado).data, status=status.HTTP_201_CREATED)
 
         elif request.method == 'GET':
@@ -188,8 +174,6 @@ class EgresadoViewSet(viewsets.ModelViewSet):
                 latest_doc = egresado.documentos_precargados.first()
                 if latest_doc and latest_doc.archivo:
                     target_file = latest_doc.archivo
-                elif egresado.documentos:
-                    target_file = egresado.documentos
 
             if not target_file:
                 raise NotFound("No cuentas con documentos adicionales cargados.")
@@ -208,14 +192,9 @@ class EgresadoViewSet(viewsets.ModelViewSet):
                 if not doc_obj:
                     raise NotFound("El documento indicado no existe.")
                 doc_obj.delete()
-                restante = egresado.documentos_precargados.first()
-                egresado.documentos = restante.archivo.name if restante else None
-                egresado.save(update_fields=['documentos'])
                 return Response(self.get_serializer(egresado).data, status=status.HTTP_200_OK)
             else:
                 egresado.documentos_precargados.all().delete()
-                if egresado.documentos:
-                    egresado.documentos.delete(save=True)
                 return Response({"detail": "Documentos adicionales eliminados correctamente."}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'])
@@ -253,7 +232,6 @@ class EgresadoViewSet(viewsets.ModelViewSet):
     def documentos(self, request, pk=None):
         """Endpoint protegido para visualizar documentos anexos para el empleo del egresado."""
         egresado = self.get_object()
-        self._sync_legacy_documento_to_precargados(egresado)
         doc_id = request.query_params.get('doc_id')
 
         user = request.user
@@ -280,8 +258,6 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             latest_doc = egresado.documentos_precargados.first()
             if latest_doc and latest_doc.archivo:
                 target_file = latest_doc.archivo
-            elif egresado.documentos:
-                target_file = egresado.documentos
 
         if not target_file:
             raise NotFound("El egresado no cuenta con documentos adicionales cargados.")

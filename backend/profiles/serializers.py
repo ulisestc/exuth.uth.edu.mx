@@ -26,7 +26,7 @@ class EgresadoSerializer(serializers.ModelSerializer):
             'id', 'user', 'matricula', 'curp', 'cv', 'carrera',
             'telefono_celular', 'telefono_casa', 'domicilio',
             'nivel_estudios', 'genero', 'capacidades_especiales',
-            'habilidades', 'documentos', 'documentos_precargados',
+            'habilidades', 'documentos_precargados',
             'colocado', 'es_verificado_padron'
         ]
         read_only_fields = ['id', 'user', 'colocado', 'es_verificado_padron', 'documentos_precargados']

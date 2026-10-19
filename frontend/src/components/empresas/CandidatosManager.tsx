@@ -328,7 +328,7 @@ export function CandidatosManager({
                     Ver CV en Línea
                   </Button>
 
-                  {p.candidato_lista_documentos && p.candidato_lista_documentos.length > 0 ? (
+                  {p.candidato_lista_documentos && p.candidato_lista_documentos.length > 0 &&
                     p.candidato_lista_documentos.map((doc) => (
                       <Button
                         key={doc.id || doc.nombre}
@@ -348,24 +348,7 @@ export function CandidatosManager({
                       >
                         <span className="truncate max-w-[150px]">{doc.nombre}</span>
                       </Button>
-                    ))
-                  ) : p.candidato_documentos ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() =>
-                        setViewingCv({
-                          egresadoId: p.egresado,
-                          candidatoNombre: p.candidato_nombre || 'Egresado',
-                          matricula: p.candidato_matricula,
-                          tipo: 'documentos',
-                        })
-                      }
-                      leftIcon={<FileText className="w-3.5 h-3.5 text-wine" />}
-                    >
-                      Ver Documentos Anexos
-                    </Button>
-                  ) : null}
+                    ))}
 
                   <Button
                     variant="secondary"

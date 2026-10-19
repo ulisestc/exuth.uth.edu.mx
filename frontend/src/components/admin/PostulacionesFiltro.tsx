@@ -333,7 +333,7 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
                     </Button>
 
                     {/* Documentos Adicionales si existen */}
-                    {p.candidato_lista_documentos && p.candidato_lista_documentos.length > 0 ? (
+                    {p.candidato_lista_documentos && p.candidato_lista_documentos.length > 0 &&
                       p.candidato_lista_documentos.map((doc) => (
                         <Button
                           key={doc.id || doc.nombre}
@@ -355,25 +355,7 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
                         >
                           <span className="truncate max-w-[140px]">{doc.nombre}</span>
                         </Button>
-                      ))
-                    ) : p.candidato_documentos ? (
-                      <Button
-                        variant="pearl"
-                        size="sm"
-                        fullWidth
-                        icon={<FolderOpen className="size-3.5 text-wine" />}
-                        onClick={() =>
-                          setViewingCv({
-                            egresadoId: p.egresado,
-                            candidatoNombre: p.candidato_nombre || 'Egresado',
-                            matricula: p.candidato_matricula,
-                            tipo: 'documentos',
-                          })
-                        }
-                      >
-                        Ver Anexos
-                      </Button>
-                    ) : null}
+                      ))}
 
                     <Button
                       variant="pearl"

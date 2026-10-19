@@ -12,12 +12,6 @@ from profiles.models import Empresa, Egresado
 from vacantes.models import Vacante, Postulacion
 from core.models import Carrera, Giro, Sector
 from events.models import Evento
-from vacantes.emails import (
-    send_postulacion_recibida_email,
-    send_postulacion_turnada_email,
-    send_candidato_contratado_email,
-    send_nueva_vacante_email,
-)
 
 RECIPIENT = 'revision_estilos@uth.edu.mx'
 FROM_EMAIL = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Bolsa de Trabajo UTH <vinculacion@uth.edu.mx>')

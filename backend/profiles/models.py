@@ -29,7 +29,6 @@ class Egresado(models.Model):
     genero = models.CharField(max_length=1, choices=GENERO_CHOICES)
     capacidades_especiales = models.TextField(blank=True, null=True, verbose_name="Capacidades Especiales o Discapacidad")
     habilidades = models.TextField(verbose_name="Habilidades Técnicas y Blandas")
-    documentos = models.FileField(upload_to='egresados/docs/', blank=True, null=True)
     colocado = models.BooleanField(default=False, verbose_name="¿Egresado Colocado?")
     es_verificado_padron = models.BooleanField(default=False, verbose_name="Verificado contra padrón UTH")
 

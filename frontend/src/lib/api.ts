@@ -188,7 +188,6 @@ export interface Postulacion {
   candidato_nivel_estudios?: string;
   candidato_matricula?: string;
   candidato_cv?: string | null;
-  candidato_documentos?: string | null;
   candidato_lista_documentos?: DocumentoAdjuntoPostulacion[];
   candidato_habilidades?: string;
   candidato_domicilio?: string;
@@ -369,7 +368,6 @@ export interface EgresadoProfile {
   genero: 'M' | 'F' | 'O';
   capacidades_especiales: string | null;
   habilidades: string;
-  documentos: string | null;
   documentos_precargados?: DocumentoPrecargadoItem[];
   colocado: boolean;
   es_verificado_padron: boolean;

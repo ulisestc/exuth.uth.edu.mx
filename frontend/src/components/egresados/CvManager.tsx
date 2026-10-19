@@ -296,7 +296,6 @@ export function CvManager({ profile, token, onProfileUpdated, onOpenEditProfile 
             onProfileUpdated({
               ...profile,
               documentos_precargados: restantes,
-              documentos: restantes.length > 0 ? restantes[0].archivo : null,
             });
           }
           setSuccessMsg(`Documento "${nombreDoc}" eliminado de tu expediente pre-cargado.`);

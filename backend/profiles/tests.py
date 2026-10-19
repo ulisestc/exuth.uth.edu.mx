@@ -66,9 +66,9 @@ class ProfilesE2ETests(APITestCase):
         self.client_anon = APIClient()
 
     def test_crear_perfil_egresado_con_cv_y_documentos_multipart(self):
-        """HAPPY PATH: Subida binaria multipart de CV (a egresados/cvs) y documentos (a egresados/docs)."""
+        """HAPPY PATH: Subida binaria multipart de CV (a egresados/cvs) y documentos adicionales pre-cargados."""
         cv_falso = SimpleUploadedFile("curriculum.pdf", b"%PDF-1.4 archivo_binario_cv", content_type="application/pdf")
-        doc_falso = SimpleUploadedFile("documentos.pdf", b"%PDF-1.4 archivo_binario_doc", content_type="application/pdf")
+        doc_falso = SimpleUploadedFile("titulo.pdf", b"%PDF-1.4 archivo_binario_doc", content_type="application/pdf")
 
         payload = {
             "user": self.user_egresado_1.id,
@@ -80,8 +80,7 @@ class ProfilesE2ETests(APITestCase):
             "carrera": self.carrera.id,
             "nivel_estudios": "ING_LIC",
             "habilidades": "Django, Git, REST APIs",
-            "cv": cv_falso,
-            "documentos": doc_falso
+            "cv": cv_falso
         }
 
         response = self.client_e1.post('/api/v1/profiles/egresados/', payload, format='multipart')
@@ -90,7 +89,16 @@ class ProfilesE2ETests(APITestCase):
 
         egresado = Egresado.objects.first()
         self.assertIn("egresados/cvs", egresado.cv.name)
-        self.assertIn("egresados/docs", egresado.documentos.name)
+
+        # Cargar documento adicional pre-cargado
+        doc_payload = {
+            "nombre": "Título y Cédula Profesional",
+            "archivo": doc_falso
+        }
+        res_doc = self.client_e1.post('/api/v1/profiles/egresados/me/documentos/', doc_payload, format='multipart')
+        self.assertEqual(res_doc.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(egresado.documentos_precargados.count(), 1)
+        self.assertIn("egresados/docs", egresado.documentos_precargados.first().archivo.name)
 
     def test_crear_perfil_empresa(self):
         """HAPPY PATH: Creación de perfil de Empresa con campos requeridos actualizados."""

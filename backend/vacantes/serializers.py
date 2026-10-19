@@ -95,7 +95,6 @@ class PostulacionSerializer(serializers.ModelSerializer):
     candidato_nivel_estudios = serializers.ReadOnlyField(source='egresado.nivel_estudios')
     candidato_matricula = serializers.ReadOnlyField(source='egresado.matricula')
     candidato_cv = serializers.SerializerMethodField()
-    candidato_documentos = serializers.SerializerMethodField()
     candidato_lista_documentos = serializers.SerializerMethodField()
     candidato_habilidades = serializers.ReadOnlyField(source='egresado.habilidades')
     candidato_domicilio = serializers.ReadOnlyField(source='egresado.domicilio')
@@ -117,16 +116,6 @@ class PostulacionSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.egresado.cv.url)
             return obj.egresado.cv.url
-        return None
-
-    def get_candidato_documentos(self, obj):
-        if not getattr(obj, 'incluir_documentos', True):
-            return None
-        if obj.egresado and obj.egresado.documentos:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.egresado.documentos.url)
-            return obj.egresado.documentos.url
         return None
 
     def get_candidato_lista_documentos(self, obj):
