@@ -46,10 +46,33 @@ def send_test(subject, template_name, context):
     msg.send(fail_silently=False)
     print(f" [OK] Enviado: {subject}")
 
+from djoser.email import (
+    ActivationEmail,
+    ConfirmationEmail,
+    PasswordResetEmail,
+    PasswordChangedConfirmationEmail,
+)
+
+def send_djoser_test(email_cls, context):
+    ctx = dict(context or {})
+    ctx.setdefault('frontend_url', getattr(settings, 'FRONTEND_URL', 'http://localhost:3000'))
+    email_obj = email_cls(context=ctx)
+    email_obj.render()
+    msg = EmailMultiAlternatives(
+        subject=email_obj.subject,
+        body=email_obj.body,
+        from_email=FROM_EMAIL,
+        to=[RECIPIENT]
+    )
+    if email_obj.html:
+        msg.attach_alternative(email_obj.html, "text/html")
+    _attach_uth_logo(msg)
+    msg.send(fail_silently=False)
+    print(f" [OK] Enviado: {email_obj.subject}")
+
 # 1. Activación de cuenta (Djoser)
-send_test(
-    "1. Activación de tu Cuenta Institucional · EXUTH UTH",
-    "email/activation.html",
+send_djoser_test(
+    ActivationEmail,
     {
         "user": demo_user,
         "protocol": "http",
@@ -59,9 +82,8 @@ send_test(
 )
 
 # 2. Confirmación de cuenta activada (Djoser)
-send_test(
-    "2. Cuenta Activada Exitosamente · EXUTH UTH",
-    "email/confirmation.html",
+send_djoser_test(
+    ConfirmationEmail,
     {
         "user": demo_user,
         "protocol": "http",
@@ -70,9 +92,8 @@ send_test(
 )
 
 # 3. Restablecimiento de contraseña (Djoser)
-send_test(
-    "3. Restablecimiento de Contraseña · EXUTH UTH",
-    "email/password_reset.html",
+send_djoser_test(
+    PasswordResetEmail,
     {
         "user": demo_user,
         "protocol": "http",
@@ -82,9 +103,8 @@ send_test(
 )
 
 # 4. Confirmación de cambio de contraseña (Djoser)
-send_test(
-    "4. Contraseña Modificada Exitosamente · EXUTH UTH",
-    "email/password_changed_confirmation.html",
+send_djoser_test(
+    PasswordChangedConfirmationEmail,
     {
         "user": demo_user,
         "protocol": "http",
