@@ -2,21 +2,27 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { activarCuenta } from '@/lib/api';
 import { UthLogo } from '@/components/brand/UthLogo';
 import {
   CheckCircle2,
-  AlertCircle,
-  Loader2,
   ArrowRight,
   ShieldCheck,
-  MailCheck
+  MailCheck,
 } from 'lucide-react';
+import {
+  Container,
+  Card,
+  Checkbox,
+  Button,
+  ButtonLink,
+  Alert,
+  Pleca,
+} from '@/components/ui';
 
 export default function ActivateAccountPage() {
   const params = useParams<{ uid: string; token: string }>();
-  const router = useRouter();
   const uid = params?.uid || '';
   const token = params?.token || '';
 
@@ -55,119 +61,110 @@ export default function ActivateAccountPage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-3">
-          <div className="flex justify-center mb-2">
-            <UthLogo variant="cuadrado" />
-          </div>
-          <h1 className="text-2xl font-black text-[#2D2926] tracking-tight">
-            Activación de Cuenta
-          </h1>
-          <p className="text-sm text-[#636569]">
-            Validación de Correo Electrónico · Bolsa de Trabajo UTH
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
-          <div className="w-full h-1.5 flex">
-            <div className="h-full w-2/3 bg-[#691C32]" />
-            <div className="h-full w-1/3 bg-[#C2BA98]" />
+    <div className="py-16 sm:py-24">
+      <Container size="reading">
+        <div className="mx-auto max-w-md space-y-6">
+          <div className="text-center space-y-3">
+            <div className="flex justify-center mb-2">
+              <UthLogo variant="cuadrado" />
+            </div>
+            <h1 className="text-display-md text-ink font-semibold tracking-tight">
+              Activación de Cuenta
+            </h1>
+            <p className="text-caption text-ink-64">
+              Validación de Correo Electrónico · Bolsa de Trabajo UTH
+            </p>
           </div>
 
-          <div className="p-6 sm:p-8 space-y-6">
-            {success ? (
-              <div className="text-center space-y-4 py-4 animate-in fade-in">
-                <div className="w-12 h-12 rounded-full bg-emerald-100 text-[#00A887] flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h2 className="text-base font-bold text-[#2D2926]">
-                    Cuenta Activada Exitosamente
-                  </h2>
-                  <p className="text-xs text-[#636569] leading-relaxed">
-                    Tu correo ha sido verificado formalmente. Ya puedes iniciar sesión con tus credenciales institucionales para acceder a la plataforma.
-                  </p>
-                </div>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg transition-colors cursor-pointer"
-                >
-                  Ir a Iniciar Sesión
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            ) : (
-              <form onSubmit={handleActivate} className="space-y-5">
-                <div className="text-center space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-teal-50 border border-teal-100 text-[#00A887] flex items-center justify-center mx-auto">
-                    <MailCheck className="w-6 h-6" />
-                  </div>
-                  <p className="text-xs text-[#636569] leading-relaxed">
-                    Para completar tu registro y activar tu cuenta en la Bolsa de Trabajo UTH, confirma la solicitud a continuación.
-                  </p>
-                </div>
+          <Card className="p-0 overflow-hidden bg-canvas">
+            <Pleca />
 
-                {errorMsg && (
-                  <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2.5 text-xs text-red-800 font-medium">
-                    <AlertCircle className="w-4 h-4 text-[#A8123E] shrink-0 mt-0.5" />
-                    <span>{errorMsg}</span>
+            <div className="p-6 sm:p-8 space-y-6">
+              {success ? (
+                <div className="text-center space-y-5 py-4">
+                  <div className="size-12 rounded-full bg-primary-tint text-primary flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="size-6" />
                   </div>
-                )}
+                  <div className="space-y-1">
+                    <h2 className="text-tagline text-ink font-semibold">
+                      Cuenta Activada Exitosamente
+                    </h2>
+                    <p className="text-caption text-ink-64 leading-relaxed max-w-xs mx-auto">
+                      Tu correo ha sido verificado formalmente. Ya puedes iniciar sesión con tus credenciales institucionales.
+                    </p>
+                  </div>
+                  <ButtonLink
+                    href="/login"
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                  >
+                    Ir a Iniciar Sesión
+                    <ArrowRight className="size-4" />
+                  </ButtonLink>
+                </div>
+              ) : (
+                <form onSubmit={handleActivate} className="space-y-5">
+                  <div className="text-center space-y-2">
+                    <div className="size-12 rounded-full bg-parchment text-primary flex items-center justify-center mx-auto">
+                      <MailCheck className="size-6" />
+                    </div>
+                    <p className="text-caption text-ink-64 leading-relaxed">
+                      Para completar tu registro y activar tu cuenta en la Bolsa de Trabajo UTH, confirma la solicitud a continuación.
+                    </p>
+                  </div>
 
-                <div className="bg-zinc-50 p-3.5 rounded-lg border border-zinc-200/80 space-y-2">
-                  <label className="flex items-start gap-2.5 text-xs text-[#2D2926] cursor-pointer">
-                    <input
-                      type="checkbox"
+                  {errorMsg && (
+                    <Alert tone="danger">
+                      {errorMsg}
+                    </Alert>
+                  )}
+
+                  <div className="rounded-card bg-parchment p-4">
+                    <Checkbox
                       checked={aceptaAviso}
                       onChange={(e) => setAceptaAviso(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#00A887] focus:ring-[#00A887]"
+                      label={
+                        <span>
+                          He leído y acepto el{' '}
+                          <Link
+                            href="/aviso-privacidad"
+                            target="_blank"
+                            className="font-semibold text-primary hover:underline"
+                          >
+                            Aviso de Privacidad Institucional
+                          </Link>{' '}
+                          de la Universidad Tecnológica de Huejotzingo.
+                        </span>
+                      }
                     />
-                    <span className="leading-tight text-zinc-600">
-                      He leído y acepto el{' '}
-                      <Link 
-                        href="/aviso-privacidad" 
-                        target="_blank" 
-                        className="font-bold text-[#00A887] hover:underline"
-                      >
-                        Aviso de Privacidad Institucional
-                      </Link>{' '}
-                      de la Universidad Tecnológica de Huejotzingo.
-                    </span>
-                  </label>
-                </div>
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold text-white bg-[#00A887] hover:bg-[#008F73] disabled:opacity-60 transition-all cursor-pointer shadow-sm"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Activando cuenta...
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-4 h-4 text-[#C2BA98]" />
-                      Activar Mi Cuenta
-                    </>
-                  )}
-                </button>
-
-                <div className="text-center pt-2">
-                  <Link
-                    href="/login"
-                    className="text-xs font-semibold text-zinc-500 hover:text-[#2D2926]"
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    loading={isSubmitting}
                   >
-                    ¿Ya habías activado tu cuenta? Iniciar Sesión
-                  </Link>
-                </div>
-              </form>
-            )}
-          </div>
+                    <ShieldCheck className="size-4" />
+                    Activar Mi Cuenta
+                  </Button>
+
+                  <div className="text-center pt-2">
+                    <Link
+                      href="/login"
+                      className="text-caption text-ink-64 hover:text-ink font-medium"
+                    >
+                      ¿Ya habías activado tu cuenta? Iniciar Sesión
+                    </Link>
+                  </div>
+                </form>
+              )}
+            </div>
+          </Card>
         </div>
-      </div>
+      </Container>
     </div>
   );
 }

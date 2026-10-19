@@ -355,6 +355,13 @@ export interface EgresadoProfile {
   curp: string;
   cv: string | null;
   carrera: string;
+  carrera_id?: number;
+  nombres?: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
+  nombre_completo?: string;
+  email?: string;
+  fecha_registro?: string | null;
   telefono_celular: string | null;
   telefono_casa: string | null;
   domicilio: string;
@@ -381,6 +388,51 @@ export async function fetchMiPerfilEgresado(token: string): Promise<EgresadoProf
   } catch (error) {
     console.error('Error fetching perfil egresado:', error);
     return null;
+  }
+}
+
+export async function crearMiPerfilEgresado(
+  token: string,
+  data: {
+    matricula: string;
+    curp: string;
+    carrera: number;
+    nivel_estudios: 'TSU' | 'ING_LIC' | 'MTRIA';
+    genero: 'M' | 'F' | 'O';
+    telefono_celular: string;
+    telefono_casa?: string;
+    domicilio: string;
+    habilidades: string;
+    capacidades_especiales?: string;
+  }
+): Promise<{ success: boolean; profile?: EgresadoProfile; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    const resData = await res.json();
+    if (!res.ok) {
+      const errorMsg =
+        resData.matricula?.[0] ||
+        resData.curp?.[0] ||
+        resData.telefono_celular?.[0] ||
+        resData.detail ||
+        (Array.isArray(resData) && resData[0]) ||
+        Object.values(resData)[0] ||
+        'Error al registrar tu ficha académica.';
+      return { success: false, error: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg) };
+    }
+
+    return { success: true, profile: resData };
+  } catch (error: any) {
+    console.error('Error creando perfil egresado:', error);
+    return { success: false, error: error.message || 'Error de conexión al guardar la ficha académica.' };
   }
 }
 
@@ -546,6 +598,10 @@ export async function downloadMisDocumentos(
 export async function updateMiPerfilEgresado(
   token: string,
   data: Partial<{
+    matricula: string;
+    curp: string;
+    carrera: number;
+    genero: 'M' | 'F' | 'O';
     telefono_celular: string;
     telefono_casa: string;
     domicilio: string;
@@ -569,7 +625,14 @@ export async function updateMiPerfilEgresado(
 
     const resData = await res.json();
     if (!res.ok) {
-      const errorMsg = resData.detail || (Array.isArray(resData) && resData[0]) || Object.values(resData)[0] || 'Error al actualizar el perfil.';
+      const errorMsg =
+        resData.matricula?.[0] ||
+        resData.curp?.[0] ||
+        resData.telefono_celular?.[0] ||
+        resData.detail ||
+        (Array.isArray(resData) && resData[0]) ||
+        Object.values(resData)[0] ||
+        'Error al actualizar el perfil.';
       return { success: false, error: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg) };
     }
 
@@ -577,6 +640,116 @@ export async function updateMiPerfilEgresado(
   } catch (error: any) {
     console.error('Error updating perfil egresado:', error);
     return { success: false, error: error.message || 'Error de conexión al actualizar el perfil.' };
+  }
+}
+
+export async function fetchAdminEgresados(
+  accessToken: string,
+  filters?: { es_verificado_padron?: boolean; search?: string }
+): Promise<EgresadoProfile[]> {
+  try {
+    const params = new URLSearchParams();
+    if (filters?.es_verificado_padron !== undefined) {
+      params.append('es_verificado_padron', String(filters.es_verificado_padron));
+    }
+    if (filters?.search) {
+      params.append('search', filters.search);
+    }
+
+    const allResults: EgresadoProfile[] = [];
+    let nextUrl: string | null = `${API_BASE_URL}/profiles/egresados/${params.toString() ? `?${params.toString()}` : ''}`;
+
+    while (nextUrl) {
+      const res: Response = await fetch(nextUrl, {
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      if (!res.ok) break;
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        allResults.push(...data);
+        break;
+      } else if (data.results) {
+        allResults.push(...data.results);
+        nextUrl = data.next || null;
+      } else {
+        break;
+      }
+    }
+
+    return allResults;
+  } catch (error) {
+    console.error('Error fetching admin egresados:', error);
+    return [];
+  }
+}
+
+export async function verificarEgresadoPadron(
+  accessToken: string,
+  egresadoId: number,
+  verificado: boolean
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/${egresadoId}/verificar-padron/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ es_verificado_padron: verificado }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.detail || 'No se pudo actualizar el estatus de verificación del egresado.',
+      };
+    }
+
+    return {
+      success: true,
+      message: data.detail || (verificado ? 'Egresado validado en el padrón.' : 'Verificación revocada.'),
+    };
+  } catch (error: any) {
+    console.error('Error verificando egresado en padron:', error);
+    return {
+      success: false,
+      error: error.message || 'Error de conexión con el servidor.',
+    };
+  }
+}
+
+export async function denegarAccesoEgresado(
+  accessToken: string,
+  egresadoId: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/${egresadoId}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok && res.status !== 204) {
+      const data = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: data.detail || 'No se pudo desactivar la cuenta del egresado.',
+      };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error denegando acceso a egresado:', error);
+    return {
+      success: false,
+      error: error.message || 'Error de conexión con el servidor.',
+    };
   }
 }
 

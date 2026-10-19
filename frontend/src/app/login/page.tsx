@@ -7,20 +7,29 @@ import { useAuth } from '@/context/AuthContext';
 import { getRoleRedirectPath } from '@/lib/auth';
 import { solicitarResetPassword } from '@/lib/api';
 import { UthLogo } from '@/components/brand/UthLogo';
-import { 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  AlertCircle, 
-  ArrowRight, 
-  Loader2,
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  KeyRound,
   CheckCircle2,
-  X,
-  KeyRound
 } from 'lucide-react';
+import {
+  Container,
+  Card,
+  Field,
+  Input,
+  Checkbox,
+  Button,
+  ButtonLink,
+  Modal,
+  Alert,
+  PageLoader,
+} from '@/components/ui';
 
-function LoginForm() {
+function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('redirect');
@@ -41,7 +50,6 @@ function LoginForm() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  // If already authenticated, redirect
   React.useEffect(() => {
     if (isAuthenticated && user) {
       const destination = getRoleRedirectPath(user.rol, returnUrl);
@@ -64,13 +72,12 @@ function LoginForm() {
       const result = await login({ email: email.trim(), password });
 
       if (result.success && result.user) {
-        // Redirección inteligente según el rol
         const dest = getRoleRedirectPath(result.user.rol, returnUrl);
         router.push(dest);
       } else {
         setErrorMsg(result.error || 'Credenciales incorrectas o cuenta inactiva.');
       }
-    } catch (err: any) {
+    } catch {
       setErrorMsg('Error de conexión con el servidor de autenticación.');
     } finally {
       setIsSubmitting(false);
@@ -96,277 +103,171 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6">
-        {/* Cabecera con imagotipo oficial */}
-        <div className="text-center space-y-3">
-          <div className="flex justify-center mb-2">
-            <UthLogo variant="cuadrado" />
-          </div>
-          <h1 className="text-2xl font-black text-[#2D2926] tracking-tight">
-            Iniciar Sesión
-          </h1>
-          <p className="text-sm text-[#636569]">
-            Bolsa de Trabajo Institucional · Acceso Unificado (Egresados, Empresas y Personal UTH)
-          </p>
-        </div>
-
-        {/* Tarjeta del Formulario */}
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
-          {/* Pleca Bicolor Superior */}
-          <div className="w-full h-1.5 flex">
-            <div className="h-full w-2/3 bg-[#691C32]" />
-            <div className="h-full w-1/3 bg-[#C2BA98]" />
+    <div className="min-h-[80vh] flex items-center justify-center py-12">
+      <Container size="reading">
+        <div className="max-w-md mx-auto space-y-6">
+          {/* Cabecera con Logotipo UTH */}
+          <div className="text-center space-y-3">
+            <div className="flex justify-center mb-1">
+              <UthLogo variant="cuadrado" imgClassName="h-20 w-auto" />
+            </div>
+            <h1 className="text-display-md text-ink font-semibold">Iniciar Sesión</h1>
+            <p className="text-caption text-ink-64">
+              Acceso unificado para Egresados, Empresas y Personal UTH.
+            </p>
           </div>
 
-          <div className="p-6 sm:p-8 space-y-6">
-            {/* Mensaje de Error */}
+          {/* Tarjeta del Formulario */}
+          <Card padded className="space-y-6 bg-canvas">
             {errorMsg && (
-              <div className="p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3 text-sm text-red-800 animate-in fade-in duration-200">
-                <AlertCircle className="w-5 h-5 text-[#A8123E] shrink-0 mt-0.5" />
-                <div className="flex-1 font-medium">{errorMsg}</div>
-              </div>
+              <Alert tone="danger" title="Error de autenticación">
+                {errorMsg}
+              </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Campo: Correo Electrónico */}
-              <div>
-                <label 
-                  htmlFor="email" 
-                  className="block text-xs font-bold text-[#2D2926] uppercase tracking-wider mb-1.5"
-                >
-                  Correo Electrónico
-                </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                    <Mail className="h-4 w-4" />
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="ej. usuario@uth.edu.mx o contacto@empresa.com"
-                    className="block w-full pl-10 pr-3 py-2.5 sm:text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887] focus:border-[#00A887] transition-all bg-white"
-                  />
-                </div>
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Field label="Correo Electrónico" required>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ej. usuario@uth.edu.mx o contacto@empresa.com"
+                  leading={<Mail className="size-4" />}
+                />
+              </Field>
 
-              {/* Campo: Contraseña */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label 
-                    htmlFor="password" 
-                    className="block text-xs font-bold text-[#2D2926] uppercase tracking-wider"
-                  >
-                    Contraseña
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResetEmail(email);
-                      setResetError(null);
-                      setResetSuccess(false);
-                      setShowResetModal(true);
-                    }}
-                    className="text-xs text-[#00A887] hover:text-[#008F73] font-medium hover:underline cursor-pointer"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </button>
-                </div>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                    <Lock className="h-4 w-4" />
+              <Field
+                label={
+                  <div className="flex items-center justify-between w-full">
+                    <span>Contraseña</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetEmail(email);
+                        setResetError(null);
+                        setResetSuccess(false);
+                        setShowResetModal(true);
+                      }}
+                      className="text-fine text-primary hover:underline font-normal cursor-pointer"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
                   </div>
-                  <input
+                }
+                required
+              >
+                <div className="relative">
+                  <Input
                     id="password"
-                    name="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="block w-full pl-10 pr-10 py-2.5 sm:text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887] focus:border-[#00A887] transition-all bg-white"
+                    leading={<Lock className="size-4" />}
+                    className="pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-400 hover:text-zinc-600 focus:outline-none"
+                    className="press absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-64 hover:text-ink focus:outline-none"
                     title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
-              </div>
+              </Field>
 
-              {/* Checkbox Recordarme */}
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
+              <div className="pt-1">
+                <Checkbox
+                  label="Recordar mi sesión en este dispositivo"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-[#00A887] focus:ring-[#00A887] border-zinc-300 rounded cursor-pointer"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-xs text-[#636569] cursor-pointer">
-                  Mantener sesión iniciada en este dispositivo
-                </label>
               </div>
 
-              {/* Botón de Enviar */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#00A887] hover:bg-[#008F73] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00A887] disabled:opacity-60 transition-all cursor-pointer"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Autenticando en servidor UTH...
-                  </>
-                ) : (
-                  <>
-                    Acceder al Portal
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  loading={isSubmitting}
+                  iconRight={<ArrowRight className="size-4" />}
+                >
+                  Acceder al Portal
+                </Button>
+              </div>
             </form>
 
-            {/* Enlace al Registro */}
-            <div className="pt-2 text-center text-xs text-[#636569] border-t border-zinc-100">
-              ¿Aún no tienes cuenta institucional?{' '}
-              <Link 
-                href="/registro" 
-                className="font-bold text-[#00A887] hover:text-[#008F73] hover:underline"
-              >
-                Regístrate aquí
+            <div className="pt-4 border-t border-divider text-center text-caption text-ink-64">
+              <span>¿No tienes una cuenta? </span>
+              <Link href="/registro" className="text-primary font-semibold hover:underline">
+                Crear una cuenta
               </Link>
             </div>
-          </div>
+          </Card>
         </div>
-
-        {/* Nota legal al pie */}
-        <p className="text-center text-[11px] text-zinc-400">
-          Universidad Tecnológica de Huejotzingo · Organismo Público Descentralizado del Gobierno del Estado de Puebla
-        </p>
-      </div>
+      </Container>
 
       {/* Modal de Recuperación de Contraseña */}
-      {showResetModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl border border-zinc-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
-              <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-[#00A887]" />
-                <h3 className="text-sm font-bold text-[#2D2926]">Restablecer Contraseña</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowResetModal(false)}
-                className="p-1 rounded-lg hover:bg-zinc-200 text-zinc-500 transition-colors cursor-pointer"
+      <Modal
+        open={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        title="Recuperar Contraseña"
+        description="Ingresa tu correo electrónico registrado y te enviaremos las instrucciones de restablecimiento."
+        footer={
+          resetSuccess ? (
+            <Button variant="primary" size="sm" onClick={() => setShowResetModal(false)}>
+              Entendido
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowResetModal(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                loading={isResetting}
+                onClick={handleResetPassword}
               >
-                <X className="w-4 h-4" />
-              </button>
+                Enviar Instrucciones
+              </Button>
             </div>
-
-            <div className="p-6 space-y-4">
-              {resetSuccess ? (
-                <div className="space-y-4 text-center py-2">
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 text-[#00A887] flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-[#2D2926]">Enlace enviado</h4>
-                    <p className="text-xs text-[#636569] leading-relaxed">
-                      Si el correo <strong className="text-[#2D2926]">{resetEmail}</strong> está registrado en el sistema, recibirás un correo con el enlace seguro para restablecer tu contraseña.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowResetModal(false)}
-                    className="w-full py-2.5 bg-[#00A887] hover:bg-[#008F73] text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                  >
-                    Entendido
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleResetPassword} className="space-y-4">
-                  <p className="text-xs text-[#636569] leading-relaxed">
-                    Ingresa el correo electrónico asociado a tu cuenta (Egresado, Empresa o Personal UTH) y te enviaremos un enlace temporal para asignar una nueva contraseña.
-                  </p>
-
-                  {resetError && (
-                    <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 font-medium flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      {resetError}
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#2D2926] uppercase tracking-wider mb-1.5">
-                      Correo Registrado
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      placeholder="correo@ejemplo.com"
-                      className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowResetModal(false)}
-                      className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isResetting}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
-                    >
-                      {isResetting ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          Enviando...
-                        </>
-                      ) : (
-                        'Enviar enlace de recuperación'
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
+          )
+        }
+      >
+        {resetSuccess ? (
+          <Alert tone="success" title="Correo enviado">
+            Revisa tu bandeja de entrada en <strong>{resetEmail}</strong> para completar el cambio de contraseña.
+          </Alert>
+        ) : (
+          <div className="space-y-4">
+            {resetError && <Alert tone="danger">{resetError}</Alert>}
+            <Field label="Correo Electrónico Registrado" required>
+              <Input
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="tu.correo@uth.edu.mx"
+                leading={<Mail className="size-4" />}
+              />
+            </Field>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#00A887] animate-spin" />
-      </div>
-    }>
-      <LoginForm />
+    <Suspense fallback={<PageLoader label="Cargando acceso…" />}>
+      <LoginFormContent />
     </Suspense>
   );
 }

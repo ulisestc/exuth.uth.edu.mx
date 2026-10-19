@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  FileText, 
-  X, 
-  Download, 
-  Loader2, 
-  AlertCircle
+import { createPortal } from 'react-dom';
+import {
+  FileText,
+  X,
+  Download,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
+import { Button, StatusPill, Code } from '@/components/ui';
 
 interface CvViewerModalProps {
   isOpen?: boolean;
@@ -42,10 +44,19 @@ export default function CvViewerModal({
 
   const esDocumentos = tipo === 'documentos';
   const etiquetaDocumento = docNombre
-    ? `Documento: ${docNombre}`
+    ? docNombre
     : esDocumentos
-    ? 'Expediente de Documentos para el Empleo'
-    : 'Expediente Curricular UTH';
+    ? 'Expediente de Documentos'
+    : 'Currículum Vitae UTH';
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     let currentUrl: string | null = null;
@@ -66,7 +77,7 @@ export default function CvViewerModal({
         const res = await fetch(endpoint, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -89,7 +100,7 @@ export default function CvViewerModal({
         const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
         currentUrl = URL.createObjectURL(pdfBlob);
         setBlobUrl(currentUrl);
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error visualizando PDF:', err);
         setErrorMsg('Error de conexión al cargar el documento.');
       } finally {
@@ -106,7 +117,7 @@ export default function CvViewerModal({
     };
   }, [isOpen, egresadoId, token, tipo, isOwnProfile, esDocumentos, docId]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const handleDescargar = () => {
     if (!blobUrl) return;
@@ -119,84 +130,85 @@ export default function CvViewerModal({
     document.body.removeChild(link);
   };
 
-  return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-6 bg-void/60 backdrop-blur-[8px] animate-fade-in"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${etiquetaDocumento} — ${candidatoNombre}`}
     >
-      <div 
-        className="bg-white rounded-2xl shadow-2xl border border-zinc-200 w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden"
+      <div
+        className="bg-canvas rounded-card shadow-sheet ring-1 ring-hairline w-full max-w-5xl h-[92dvh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Barra Superior */}
-        <div className="p-4 sm:p-5 border-b border-zinc-200 flex items-center justify-between bg-zinc-50 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#00A887]/10 border border-[#00A887]/20 flex items-center justify-center text-[#00A887] shrink-0">
-              <FileText className="w-5 h-5" />
+        {/* Cabecera */}
+        <div className="px-5 py-4 border-b border-divider flex items-center justify-between gap-4 bg-canvas shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="size-10 rounded-field bg-primary-tint flex items-center justify-center text-primary shrink-0">
+              <FileText className="size-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusPill tone="success" dot={false}>
                   {etiquetaDocumento}
-                </span>
-                {matricula && (
-                  <span className="text-[11px] font-semibold text-zinc-500">
-                    Matrícula: {matricula}
-                  </span>
-                )}
+                </StatusPill>
+                {matricula && <Code>Matrícula {matricula}</Code>}
               </div>
-              <h2 className="text-base font-bold text-[#2D2926] mt-0.5">
+              <h2 className="text-tagline text-ink font-semibold truncate mt-0.5">
                 {candidatoNombre}
               </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {blobUrl && (
-              <button
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Download className="size-4" />}
                 onClick={handleDescargar}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-xs cursor-pointer"
-                title="Descargar copia del PDF"
               >
-                <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Descargar PDF</span>
-              </button>
+              </Button>
             )}
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 transition-all cursor-pointer"
-              title="Cerrar visor"
+              aria-label="Cerrar visor"
+              className="press inline-flex size-10 items-center justify-center rounded-full bg-parchment text-ink-64 hover:bg-divider hover:text-ink"
             >
-              <X className="w-5 h-5" />
+              <X className="size-4" />
             </button>
           </div>
         </div>
 
-        {/* Contenedor del Visor con altura completa */}
-        <div className="flex-1 w-full h-full bg-zinc-100 relative overflow-hidden flex flex-col">
+        {/* Visor */}
+        <div className="flex-1 w-full h-full bg-parchment relative overflow-hidden flex flex-col">
           {loading ? (
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="text-center space-y-3">
-                <Loader2 className="w-8 h-8 text-[#00A887] animate-spin mx-auto" />
-                <p className="text-xs font-medium text-zinc-600">
-                  Obteniendo documento PDF desde el servidor seguro...
+                <Loader2 className="size-7 text-brand animate-spin mx-auto" />
+                <p className="text-caption text-ink-64">
+                  Cargando documento PDF desde el servidor seguro…
                 </p>
               </div>
             </div>
           ) : errorMsg ? (
             <div className="flex-1 flex items-center justify-center p-8">
-              <div className="text-center space-y-3 p-8 max-w-md bg-white rounded-xl border border-zinc-200 shadow-xs">
-                <AlertCircle className="w-10 h-10 text-amber-600 mx-auto" />
-                <h3 className="text-sm font-bold text-[#2D2926]">Documento no disponible</h3>
-                <p className="text-xs text-zinc-500 leading-relaxed">
-                  {errorMsg}
-                </p>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-all cursor-pointer"
-                >
+              <div className="text-center space-y-4 p-8 max-w-md bg-canvas rounded-card ring-1 ring-hairline">
+                <div className="size-12 rounded-full bg-warning-tint text-warning-ink flex items-center justify-center mx-auto">
+                  <AlertCircle className="size-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-body font-semibold text-ink">Documento no disponible</h3>
+                  <p className="text-caption text-ink-64 leading-relaxed">
+                    {errorMsg}
+                  </p>
+                </div>
+                <Button variant="pearl" size="sm" onClick={onClose}>
                   Cerrar ventana
-                </button>
+                </Button>
               </div>
             </div>
           ) : blobUrl ? (
@@ -208,7 +220,8 @@ export default function CvViewerModal({
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -1,23 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  X, 
-  Building2, 
-  User, 
-  Briefcase, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  UploadCloud, 
-  Image as ImageIcon, 
-  Loader2, 
-  CheckCircle2, 
-  AlertCircle,
+import {
+  Building2,
+  UploadCloud,
+  CheckCircle2,
   ShieldCheck,
-  Tag
 } from 'lucide-react';
 import { EmpresaProfile, updateMiPerfilEmpresa } from '@/lib/api';
+import {
+  Modal,
+  Button,
+  Alert,
+  Field,
+  Input,
+  Textarea,
+  StatusPill,
+} from '@/components/ui';
 
 interface EditarPerfilEmpresaModalProps {
   isOpen: boolean;
@@ -88,8 +87,8 @@ export default function EditarPerfilEmpresaModal({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -137,84 +136,96 @@ export default function EditarPerfilEmpresaModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-zinc-200 max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        
-        {/* Cabecera del Modal */}
-        <div className="p-6 bg-[#2D2926] text-white flex items-center justify-between relative border-b border-zinc-800">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#691C32]/30 text-rose-300 border border-[#691C32]/40">
-              <Building2 className="w-3.5 h-3.5" />
-              Perfil Empresarial UTH
-            </div>
-            <h2 className="text-lg font-black tracking-tight text-white">
-              Editar Datos Corporativos y Logotipo
-            </h2>
-          </div>
-          <button
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      size="lg"
+      eyebrow="Perfil Empresarial UTH"
+      title="Editar Datos Corporativos y Logotipo"
+      description="Actualiza tu imagen institucional y los datos de contacto del reclutador."
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            title="Cerrar ventana"
+            disabled={isSubmitting}
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            loading={isSubmitting}
+            onClick={() => handleSubmit()}
+            leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+          >
+            Guardar Información
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
         {/* Ficha institucional de solo lectura */}
-        <div className="px-6 py-3.5 bg-[#F8FAFC] border-b border-zinc-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="p-4 rounded-xl bg-parchment border border-hairline flex flex-wrap items-center justify-between gap-4">
           <div>
-            <span className="text-[10px] uppercase font-bold text-[#636569] block">Razón Social</span>
-            <span className="font-bold text-[#2D2926]">{empresa.nombre}</span>
+            <span className="text-micro uppercase font-semibold text-ink-muted block">
+              Razón Social
+            </span>
+            <span className="text-body-sm font-semibold text-ink">{empresa.nombre}</span>
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold text-[#636569] block">Giro y Sector</span>
-            <span className="font-semibold text-[#00A887]">{empresa.giro} · {empresa.sector}</span>
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-[#636569] block">Convenio UTH</span>
-            <span className="inline-flex items-center gap-1 text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              <ShieldCheck className="w-3 h-3 text-[#00A887]" />
-              {empresa.status.toUpperCase()}
+            <span className="text-micro uppercase font-semibold text-ink-muted block">
+              Giro y Sector
+            </span>
+            <span className="text-caption font-medium text-primary">
+              {empresa.giro} · {empresa.sector}
             </span>
           </div>
+          <div>
+            <span className="text-micro uppercase font-semibold text-ink-muted block mb-0.5">
+              Convenio UTH
+            </span>
+            <StatusPill tone="success" icon={<ShieldCheck className="w-3 h-3" />}>
+              {empresa.status.toUpperCase()}
+            </StatusPill>
+          </div>
         </div>
 
-        {/* Formulario editable */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 flex-1">
-          {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
+        {errorMessage && (
+          <Alert tone="danger" onDismiss={() => setErrorMessage(null)}>
+            {errorMessage}
+          </Alert>
+        )}
 
-          {successMessage && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#00A887] shrink-0" />
-              <span>{successMessage}</span>
-            </div>
-          )}
+        {successMessage && (
+          <Alert tone="success" onDismiss={() => setSuccessMessage(null)}>
+            {successMessage}
+          </Alert>
+        )}
 
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Sección Logotipo Corporativo */}
-          <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/50 space-y-3">
-            <label className="text-xs font-bold text-[#2D2926] flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-[#00A887]" />
+          <div className="p-4 rounded-xl border border-hairline bg-parchment/50 space-y-3">
+            <span className="text-caption font-semibold text-ink block">
               Logotipo Oficial de la Organización
-            </label>
+            </span>
 
             <div className="flex flex-col sm:flex-row items-center gap-4">
               {/* Vista Previa */}
-              <div className="w-24 h-24 rounded-xl border border-zinc-200 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-xs relative">
+              <div className="w-20 h-20 rounded-xl border border-hairline bg-canvas flex items-center justify-center overflow-hidden shrink-0">
                 {logoPreview ? (
-                  <img 
-                    src={logoPreview} 
-                    alt="Logo Empresa" 
-                    className="w-full h-full object-contain p-1"
+                  <img
+                    src={logoPreview}
+                    alt="Logo Empresa"
+                    className="w-full h-full object-contain p-1.5"
                   />
                 ) : (
-                  <div className="text-center p-2 text-zinc-400">
-                    <Building2 className="w-8 h-8 mx-auto mb-1 text-zinc-300" />
-                    <span className="text-[9px] block">Sin logo</span>
+                  <div className="text-center p-2 text-ink-muted">
+                    <Building2 className="w-6 h-6 mx-auto mb-1" />
+                    <span className="text-micro block">Sin logo</span>
                   </div>
                 )}
               </div>
@@ -228,19 +239,20 @@ export default function EditarPerfilEmpresaModal({
                   onChange={handleLogoChange}
                   className="hidden"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-white hover:bg-zinc-100 border border-zinc-300 transition-all cursor-pointer shadow-xs"
+                  leftIcon={<UploadCloud className="w-4 h-4 text-primary" />}
                 >
-                  <UploadCloud className="w-4 h-4 text-[#00A887]" />
                   {logoFile ? 'Cambiar archivo seleccionado' : 'Subir Logotipo Corporativo'}
-                </button>
-                <p className="text-[10px] text-[#636569]">
+                </Button>
+                <p className="text-micro text-ink-muted">
                   Formatos recomendados: PNG o JPG con fondo transparente o blanco. Máx 5 MB. Se mostrará en tus vacantes públicas.
                 </p>
                 {logoFile && (
-                  <span className="text-[11px] font-semibold text-[#00A887] block">
+                  <span className="text-caption font-medium text-primary block">
                     Archivo listo: {logoFile.name}
                   </span>
                 )}
@@ -250,145 +262,81 @@ export default function EditarPerfilEmpresaModal({
 
           {/* Contacto Responsable */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-[#00A887]" />
-                Nombre del Contacto / Reclutador *
-              </label>
-              <input
+            <Field label="Nombre del Contacto / Reclutador" required>
+              <Input
                 type="text"
                 required
                 value={nombreContacto}
                 onChange={(e) => setNombreContacto(e.target.value)}
                 placeholder="Ej. Lic. Brenda Morales Sánchez"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
               />
-            </div>
+            </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                <Briefcase className="w-3.5 h-3.5 text-[#00A887]" />
-                Cargo o Puesto del Contacto *
-              </label>
-              <input
+            <Field label="Cargo o Puesto del Contacto" required>
+              <Input
                 type="text"
                 required
                 value={cargoContacto}
                 onChange={(e) => setCargoContacto(e.target.value)}
                 placeholder="Ej. Jefa de Atracción de Talento"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
               />
-            </div>
+            </Field>
           </div>
 
           {/* Correo y Teléfonos */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-[#00A887]" />
-                Correo de Contacto *
-              </label>
-              <input
+            <Field label="Correo de Contacto" required>
+              <Input
                 type="email"
                 required
                 value={correoContacto}
                 onChange={(e) => setCorreoContacto(e.target.value)}
                 placeholder="rrhh@empresa.com"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
               />
-            </div>
+            </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#00A887]" />
-                Teléfono de Oficina
-              </label>
-              <input
+            <Field label="Teléfono de Oficina">
+              <Input
                 type="tel"
                 value={telefonoOficina}
                 onChange={(e) => setTelefonoOficina(e.target.value)}
                 placeholder="2222000000"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
               />
-            </div>
+            </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#691C32]" />
-                Teléfono Celular
-              </label>
-              <input
+            <Field label="Teléfono Celular">
+              <Input
                 type="tel"
                 value={telefonoCelular}
                 onChange={(e) => setTelefonoCelular(e.target.value)}
                 placeholder="2221234567"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
               />
-            </div>
+            </Field>
           </div>
 
           {/* Domicilio */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#00A887]" />
-              Domicilio Corporativo / Ubicación *
-            </label>
-            <input
+          <Field label="Domicilio Corporativo / Ubicación" required>
+            <Input
               type="text"
               required
               value={domicilio}
               onChange={(e) => setDomicilio(e.target.value)}
               placeholder="Parque Industrial FINSA, Nave 12, Cuautlancingo, Puebla"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
             />
-          </div>
+          </Field>
 
           {/* Actividad Empresarial */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-[#00A887]" />
-              Actividad Principal de la Organización
-            </label>
-            <textarea
+          <Field label="Actividad Principal de la Organización">
+            <Textarea
               rows={2}
               value={actividad}
               onChange={(e) => setActividad(e.target.value)}
               placeholder="Ej. Fabricación y ensamble de autopartes para la industria automotriz y robótica..."
-              className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none resize-none"
             />
-          </div>
-
-          {/* Botones de acción */}
-          <div className="pt-4 border-t border-zinc-200 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-4 py-2.5 rounded-lg text-xs font-semibold text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-sm cursor-pointer disabled:opacity-60"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Guardando Cambios...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Guardar Información</span>
-                </>
-              )}
-            </button>
-          </div>
+          </Field>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }
+export { EditarPerfilEmpresaModal };

@@ -1,45 +1,73 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Send, 
-  XCircle, 
-  CheckCircle2, 
-  Clock, 
-  Download, 
-  Phone, 
-  Mail, 
-  Building2, 
-  Briefcase, 
-  GraduationCap, 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Users,
+  Send,
+  XCircle,
+  Download,
+  Phone,
+  Mail,
+  Building2,
+  Briefcase,
+  GraduationCap,
   Loader2,
   RefreshCw,
-  MessageSquare,
   Eye,
-  FolderOpen
+  FolderOpen,
 } from 'lucide-react';
-import { 
-  Postulacion, 
-  fetchAdminPostulaciones, 
-  turnarPostulacionEmpresa, 
-  rechazarPostulacionUth, 
-  downloadCvCandidato 
+import {
+  Postulacion,
+  fetchAdminPostulaciones,
+  turnarPostulacionEmpresa,
+  rechazarPostulacionUth,
+  downloadCvCandidato,
 } from '@/lib/api';
 import CvViewerModal from '@/components/shared/CvViewerModal';
+import {
+  Card,
+  SegmentedTabs,
+  SearchInput,
+  Button,
+  StatusPill,
+  Code,
+  Tag,
+  Alert,
+  EmptyState,
+  Modal,
+  Field,
+  Textarea,
+  Chip,
+} from '@/components/ui';
+import { postulacionStatus } from '@/lib/status';
 
 interface PostulacionesFiltroProps {
   token: string;
   onStatsChange?: () => void;
 }
 
+type FilterEstado = 'revision_uth' | 'enviada_empresa' | 'Aceptada' | 'rechazada_uth' | 'todas';
+
+const NOTAS_SUGERIDAS_TURNAR = [
+  'Candidato validado por Dirección de Vinculación UTH — Perfil afín a la vacante.',
+  'Egresado titulado con competencias técnicas y expediente verificado.',
+  'Candidato recomendado para entrevista técnica por perfil académico.',
+];
+
+const NOTAS_SUGERIDAS_RECHAZAR = [
+  'Perfil académico no compatible con el área requerida por la vacante.',
+  'Currículum Vitae incompleto o requiere actualización de datos de contacto.',
+  'No adjuntó la documentación solicitada por la organización.',
+];
+
 export default function PostulacionesFiltro({ token, onStatsChange }: PostulacionesFiltroProps) {
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
-  const [filterEstado, setFilterEstado] = useState<string>('revision_uth');
+  const [filterEstado, setFilterEstado] = useState<FilterEstado>('revision_uth');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'danger'; message: string } | null>(null);
   const [viewingCv, setViewingCv] = useState<{
     egresadoId: number;
     candidatoNombre: string;
@@ -71,7 +99,21 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
 
   useEffect(() => {
     loadPostulaciones();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterEstado]);
+
+  const filteredPostulaciones = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return postulaciones;
+    return postulaciones.filter(
+      (p) =>
+        (p.candidato_nombre || '').toLowerCase().includes(q) ||
+        (p.candidato_matricula || '').toLowerCase().includes(q) ||
+        (p.candidato_carrera || '').toLowerCase().includes(q) ||
+        (p.vacante_titulo || '').toLowerCase().includes(q) ||
+        (p.vacante_empresa || '').toLowerCase().includes(q)
+    );
+  }, [postulaciones, searchQuery]);
 
   const handleDownloadCv = async (postulacion: Postulacion) => {
     setDownloadingId(postulacion.id);
@@ -79,16 +121,17 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
     const ok = await downloadCvCandidato(token, postulacion.egresado, nombreArchivo);
     setDownloadingId(null);
     if (!ok) {
-      alert('El egresado no cuenta con un archivo PDF de currículum cargado o no se pudo descargar.');
+      setFeedback({
+        type: 'danger',
+        message: 'El egresado no cuenta con un archivo PDF de currículum cargado o no se pudo descargar.',
+      });
     }
   };
 
   const openActionModal = (p: Postulacion, tipo: 'turnar' | 'rechazar') => {
     setActionModal({ postulacion: p, tipo });
     setNotasUthInput(
-      tipo === 'turnar' 
-        ? 'Candidato validado por Dirección de Vinculación UTH - Perfil afín a la vacante.' 
-        : 'Perfil no compatible con los requisitos de la vacante.'
+      tipo === 'turnar' ? NOTAS_SUGERIDAS_TURNAR[0] : NOTAS_SUGERIDAS_RECHAZAR[0]
     );
   };
 
@@ -99,12 +142,10 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
     setProcessingId(postulacion.id);
     setFeedback(null);
 
-    let res;
-    if (tipo === 'turnar') {
-      res = await turnarPostulacionEmpresa(token, postulacion.id, notasUthInput);
-    } else {
-      res = await rechazarPostulacionUth(token, postulacion.id, notasUthInput);
-    }
+    const res =
+      tipo === 'turnar'
+        ? await turnarPostulacionEmpresa(token, postulacion.id, notasUthInput)
+        : await rechazarPostulacionUth(token, postulacion.id, notasUthInput);
 
     setProcessingId(null);
     setActionModal(null);
@@ -112,178 +153,147 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
     if (res.success) {
       setFeedback({
         type: 'success',
-        message: tipo === 'turnar'
-          ? `Postulación turnada con éxito a la empresa. El empleador ya puede contactar al egresado.`
-          : `Postulación descartada en filtro institucional.`
+        message:
+          tipo === 'turnar'
+            ? `Postulación de ${postulacion.candidato_nombre || 'egresado'} turnada con éxito a la empresa.`
+            : 'Postulación descartada en filtro institucional.',
       });
       loadPostulaciones();
       if (onStatsChange) onStatsChange();
     } else {
       setFeedback({
-        type: 'error',
-        message: res.error || 'Ocurrió un error al procesar el dictamen de la postulación.'
+        type: 'danger',
+        message: res.error || 'Ocurrió un error al procesar el dictamen de la postulación.',
       });
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Barra de Filtros */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-[#636569] uppercase tracking-wider mr-2">Filtro UTH:</span>
-          {[
-            { id: 'revision_uth', label: 'Por Turnar (En Revisión UTH)' },
-            { id: 'enviada_empresa', label: 'Turnadas a Empresa' },
-            { id: 'Aceptada', label: 'Colocados / Contratados' },
-            { id: 'rechazada_uth', label: 'Descartadas UTH' },
-            { id: 'todas', label: 'Todas' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setFilterEstado(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                filterEstado === tab.id
-                  ? 'bg-[#691C32] text-white shadow-sm'
-                  : 'bg-zinc-100 text-[#2D2926] hover:bg-zinc-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* Barra de Filtros y Buscador */}
+      <Card className="p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <SegmentedTabs<FilterEstado>
+            items={[
+              { id: 'revision_uth', label: 'Por Turnar (Revisión UTH)' },
+              { id: 'enviada_empresa', label: 'Turnadas a Empresa' },
+              { id: 'Aceptada', label: 'Contratados' },
+              { id: 'rechazada_uth', label: 'Descartadas UTH' },
+              { id: 'todas', label: 'Todas' },
+            ]}
+            value={filterEstado}
+            onChange={setFilterEstado}
+          />
 
-        <button
-          onClick={loadPostulaciones}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#636569] hover:text-[#2D2926] hover:bg-zinc-100 transition-all cursor-pointer self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refrescar
-        </button>
-      </div>
+          <div className="flex items-center gap-2.5 w-full xl:w-auto">
+            <div className="flex-1 xl:w-72">
+              <SearchInput
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar alumno, matrícula o vacante…"
+              />
+            </div>
+            <Button
+              variant="pearl"
+              size="sm"
+              onClick={loadPostulaciones}
+              disabled={loading}
+              icon={<RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />}
+            >
+              <span className="hidden sm:inline">Refrescar</span>
+            </Button>
+          </div>
+        </div>
+      </Card>
 
       {/* Alerta de Feedback */}
       {feedback && (
-        <div className={`p-4 rounded-xl border text-xs font-medium flex items-center justify-between ${
-          feedback.type === 'success' 
-            ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-            : 'bg-rose-50 text-rose-800 border-rose-200'
-        }`}>
-          <span>{feedback.message}</span>
-          <button 
-            onClick={() => setFeedback(null)}
-            className="text-xs font-bold ml-4 hover:underline"
-          >
-            Cerrar
-          </button>
-        </div>
+        <Alert
+          tone={feedback.type}
+          action={
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              className="text-caption font-semibold hover:underline cursor-pointer"
+            >
+              Cerrar
+            </button>
+          }
+        >
+          {feedback.message}
+        </Alert>
       )}
 
       {/* Listado de Postulaciones */}
       {loading ? (
-        <div className="py-16 text-center space-y-3 bg-white rounded-xl border border-zinc-200">
-          <Loader2 className="w-8 h-8 text-[#691C32] animate-spin mx-auto" />
-          <p className="text-xs text-[#636569] font-medium">Consultando candidatos y solicitudes registradas...</p>
-        </div>
-      ) : postulaciones.length === 0 ? (
-        <div className="py-16 text-center space-y-3 bg-white rounded-xl border border-zinc-200 p-8">
-          <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mx-auto text-zinc-400">
-            <Users className="w-6 h-6" />
-          </div>
-          <h3 className="text-sm font-bold text-[#2D2926]">No hay postulaciones en este estatus</h3>
-          <p className="text-xs text-[#636569] max-w-sm mx-auto">
-            {filterEstado === 'revision_uth'
-              ? 'Excelente: No hay candidatos pendientes de filtro institucional por turnar a las empresas.'
-              : 'No se encontraron postulaciones registradas en este criterio.'}
-          </p>
-        </div>
+        <Card className="py-16 text-center space-y-3">
+          <Loader2 className="size-7 text-brand animate-spin mx-auto" />
+          <p className="text-caption text-ink-64">Consultando candidatos y solicitudes registradas…</p>
+        </Card>
+      ) : filteredPostulaciones.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={Users}
+            title="No hay postulaciones en este estatus"
+            description={
+              searchQuery
+                ? `No se encontraron candidatos que coincidan con "${searchQuery}".`
+                : filterEstado === 'revision_uth'
+                ? 'No hay candidatos pendientes de filtro institucional por turnar a las empresas.'
+                : 'No se encontraron postulaciones registradas en este criterio.'
+            }
+          />
+        </Card>
       ) : (
         <div className="space-y-4">
-          {postulaciones.map((p) => {
+          {filteredPostulaciones.map((p) => {
             const isProcessing = processingId === p.id;
             const isDownloading = downloadingId === p.id;
+            const stInfo = postulacionStatus(p.estado);
 
             return (
-              <div 
-                key={p.id}
-                className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5 sm:p-6 space-y-4 hover:border-zinc-300 transition-all"
-              >
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <Card key={p.id} className="p-5 sm:p-6">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
                   {/* Datos del Candidato */}
-                  <div className="space-y-2 max-w-2xl">
+                  <div className="space-y-3 min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-zinc-100 text-[#2D2926] border border-zinc-200">
-                        Matrícula: {p.candidato_matricula || 'No asignada'}
-                      </span>
-
-                      {p.estado === 'revision_uth' && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                          <Clock className="w-3 h-3" />
-                          Pendiente de Filtro UTH (Por Turnar)
-                        </span>
-                      )}
-                      {p.estado === 'enviada_empresa' && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
-                          <Send className="w-3 h-3" />
-                          Turnado a Empresa · Visible para Empleador
-                        </span>
-                      )}
-                      {p.estado === 'Aceptada' && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Contratado · Colocación Universitaria Registrada
-                        </span>
-                      )}
-                      {p.estado === 'rechazada_uth' && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
-                          <XCircle className="w-3 h-3" />
-                          Descartado por UTH
-                        </span>
-                      )}
-                      {p.estado === 'Rechazada' && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">
-                          Proceso Concluido por Empresa
-                        </span>
-                      )}
+                      <Code>Matrícula: {p.candidato_matricula || 'No asignada'}</Code>
+                      <StatusPill status={stInfo} />
                     </div>
 
-                    <h3 className="text-lg font-bold text-[#2D2926]">
+                    <h3 className="text-tagline text-ink font-semibold">
                       {p.candidato_nombre || 'Egresado Registrado'}
                     </h3>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
-                      <span className="inline-flex items-center gap-1 font-semibold text-[#00A887]">
-                        <GraduationCap className="w-3.5 h-3.5" />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Tag icon={GraduationCap}>
                         {p.candidato_carrera || 'Carrera UTH'} ({p.candidato_nivel_estudios || 'TSU/ING'})
-                      </span>
-                      <span className="inline-flex items-center gap-1 font-semibold text-[#2D2926]">
-                        <Briefcase className="w-3.5 h-3.5 text-[#691C32]" />
+                      </Tag>
+                      <Tag icon={Briefcase}>
                         Vacante: {p.vacante_titulo || `#${p.vacante}`}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-[#C2BA98]" />
+                      </Tag>
+                      <Tag icon={Building2}>
                         {p.vacante_empresa || 'Empresa Empleadora'}
-                      </span>
+                      </Tag>
                     </div>
 
                     {/* Contacto Directo */}
-                    <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
+                    <div className="flex flex-wrap items-center gap-4 pt-1 text-caption">
                       {p.candidato_telefono && (
-                        <a 
+                        <a
                           href={`tel:${p.candidato_telefono}`}
-                          className="inline-flex items-center gap-1 text-zinc-600 hover:text-[#00A887] font-medium"
+                          className="inline-flex items-center gap-1.5 text-ink-64 hover:text-primary font-medium transition-colors"
                         >
-                          <Phone className="w-3.5 h-3.5" />
+                          <Phone className="size-3.5" />
                           {p.candidato_telefono}
                         </a>
                       )}
                       {p.candidato_email && (
-                        <a 
+                        <a
                           href={`mailto:${p.candidato_email}`}
-                          className="inline-flex items-center gap-1 text-zinc-600 hover:text-[#00A887] font-medium"
+                          className="inline-flex items-center gap-1.5 text-ink-64 hover:text-primary font-medium transition-colors"
                         >
-                          <Mail className="w-3.5 h-3.5" />
+                          <Mail className="size-3.5" />
                           {p.candidato_email}
                         </a>
                       )}
@@ -291,173 +301,205 @@ export default function PostulacionesFiltro({ token, onStatsChange }: Postulacio
 
                     {/* Habilidades y Observaciones */}
                     {p.candidato_habilidades && (
-                      <p className="text-xs text-zinc-600 bg-zinc-50 p-2.5 rounded-lg border border-zinc-100">
-                        <strong className="text-[#2D2926]">Competencias:</strong> {p.candidato_habilidades}
-                      </p>
+                      <div className="text-caption text-ink-80 bg-parchment p-3.5 rounded-field">
+                        <strong className="text-ink font-semibold">Competencias:</strong> {p.candidato_habilidades}
+                      </div>
                     )}
 
                     {p.notas_uth && (
-                      <div className="text-xs p-2.5 rounded-lg bg-amber-50/70 text-amber-900 border border-amber-200">
-                        <strong className="font-bold flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3 text-amber-700" />
-                          Notas Institucionales de Vinculación:
-                        </strong>
-                        <p className="mt-0.5">{p.notas_uth}</p>
-                      </div>
+                      <Alert tone="warning" title="Notas Institucionales de Vinculación">
+                        {p.notas_uth}
+                      </Alert>
                     )}
                   </div>
 
                   {/* Acciones de Vinculación */}
-                  <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 pt-2 md:pt-0 w-full sm:w-auto">
-                    {/* Botón Ver CV en Línea */}
-                    <button
-                      onClick={() => setViewingCv({
-                        egresadoId: p.egresado,
-                        candidatoNombre: p.candidato_nombre || 'Egresado',
-                        matricula: p.candidato_matricula,
-                        tipo: 'cv'
-                      })}
-                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-[#691C32] hover:bg-[#521627] shadow-xs transition-all cursor-pointer"
-                      title="Abrir visor interactivo de CV"
+                  <div className="flex flex-wrap sm:flex-row lg:flex-col gap-2 shrink-0 w-full lg:w-52">
+                    <Button
+                      variant="utility"
+                      size="sm"
+                      fullWidth
+                      icon={<Eye className="size-4" />}
+                      onClick={() =>
+                        setViewingCv({
+                          egresadoId: p.egresado,
+                          candidatoNombre: p.candidato_nombre || 'Egresado',
+                          matricula: p.candidato_matricula,
+                          tipo: 'cv',
+                        })
+                      }
                     >
-                      <Eye className="w-3.5 h-3.5 text-[#C2BA98]" />
                       Ver CV en Línea
-                    </button>
+                    </Button>
 
-                    {/* Botones Ver Documentos Adicionales si existen */}
+                    {/* Documentos Adicionales si existen */}
                     {p.candidato_lista_documentos && p.candidato_lista_documentos.length > 0 ? (
                       p.candidato_lista_documentos.map((doc) => (
-                        <button
+                        <Button
                           key={doc.id || doc.nombre}
-                          onClick={() => setViewingCv({
+                          variant="pearl"
+                          size="sm"
+                          fullWidth
+                          icon={<FolderOpen className="size-3.5 text-wine shrink-0" />}
+                          onClick={() =>
+                            setViewingCv({
+                              egresadoId: p.egresado,
+                              candidatoNombre: p.candidato_nombre || 'Egresado',
+                              matricula: p.candidato_matricula,
+                              tipo: 'documentos',
+                              docId: doc.id,
+                              docNombre: doc.nombre,
+                            })
+                          }
+                          title={`Ver documento: ${doc.nombre}`}
+                        >
+                          <span className="truncate max-w-[140px]">{doc.nombre}</span>
+                        </Button>
+                      ))
+                    ) : p.candidato_documentos ? (
+                      <Button
+                        variant="pearl"
+                        size="sm"
+                        fullWidth
+                        icon={<FolderOpen className="size-3.5 text-wine" />}
+                        onClick={() =>
+                          setViewingCv({
                             egresadoId: p.egresado,
                             candidatoNombre: p.candidato_nombre || 'Egresado',
                             matricula: p.candidato_matricula,
                             tipo: 'documentos',
-                            docId: doc.id,
-                            docNombre: doc.nombre
-                          })}
-                          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
-                          title={`Ver documento: ${doc.nombre}`}
-                        >
-                          <FolderOpen className="w-3.5 h-3.5 text-[#691C32] shrink-0" />
-                          <span className="truncate max-w-[160px]">{doc.nombre}</span>
-                        </button>
-                      ))
-                    ) : p.candidato_documentos ? (
-                      <button
-                        onClick={() => setViewingCv({
-                          egresadoId: p.egresado,
-                          candidatoNombre: p.candidato_nombre || 'Egresado',
-                          matricula: p.candidato_matricula,
-                          tipo: 'documentos'
-                        })}
-                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
-                        title="Ver expediente de documentos adicionales para el empleo"
+                          })
+                        }
                       >
-                        <FolderOpen className="w-3.5 h-3.5 text-[#691C32]" />
-                        Ver Documentos Anexos
-                      </button>
+                        Ver Anexos
+                      </Button>
                     ) : null}
 
-                    {/* Botón Descargar CV */}
-                    <button
+                    <Button
+                      variant="pearl"
+                      size="sm"
+                      fullWidth
+                      loading={isDownloading}
+                      icon={<Download className="size-3.5 text-primary" />}
                       onClick={() => handleDownloadCv(p)}
-                      disabled={isDownloading}
-                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-[#2D2926] bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 transition-all cursor-pointer disabled:opacity-50"
-                      title="Auditar Currículum Vitae en PDF"
                     >
-                      {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-[#00A887]" />}
                       Descargar CV PDF
-                    </button>
+                    </Button>
 
-                    {/* Botón Turnar a Empresa */}
                     {p.estado === 'revision_uth' && (
-                      <button
-                        onClick={() => openActionModal(p, 'turnar')}
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        fullWidth
                         disabled={isProcessing}
-                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                        title="Aprobar pertinencia y enviar a la empresa"
+                        icon={<Send className="size-3.5" />}
+                        onClick={() => openActionModal(p, 'turnar')}
                       >
-                        <Send className="w-3.5 h-3.5" />
                         Turnar a Empresa
-                      </button>
+                      </Button>
                     )}
 
-                    {/* Botón Descartar */}
                     {(p.estado === 'revision_uth' || p.estado === 'enviada_empresa') && (
-                      <button
-                        onClick={() => openActionModal(p, 'rechazar')}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        fullWidth
                         disabled={isProcessing}
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-[#691C32] hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
-                        title="Descartar postulación en filtro"
+                        icon={<XCircle className="size-3.5" />}
+                        onClick={() => openActionModal(p, 'rechazar')}
                       >
-                        <XCircle className="w-3.5 h-3.5" />
                         Descartar
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
       )}
 
-      {/* Modal de Dictamen (Notas UTH) */}
-      {actionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-zinc-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="space-y-1">
-              <h3 className="text-lg font-black text-[#2D2926]">
-                {actionModal.tipo === 'turnar' ? 'Turnar Candidato a Empresa' : 'Descartar Postulación de Egresado'}
-              </h3>
-              <p className="text-xs text-[#636569]">
-                Candidato: <strong className="text-[#2D2926]">{actionModal.postulacion.candidato_nombre}</strong> para la vacante <strong className="text-[#2D2926]">{actionModal.postulacion.vacante_titulo}</strong>.
-              </p>
+      {/* Modal de Dictamen Institucional (Notas UTH) */}
+      <Modal
+        open={Boolean(actionModal)}
+        onClose={() => processingId === null && setActionModal(null)}
+        dismissible={processingId === null}
+        size="md"
+        title={
+          actionModal?.tipo === 'turnar'
+            ? 'Turnar candidato a la empresa'
+            : 'Descartar postulación en filtro UTH'
+        }
+        description={
+          actionModal && (
+            <>
+              Candidato: <strong className="text-ink">{actionModal.postulacion.candidato_nombre}</strong> · Vacante:{' '}
+              <strong className="text-ink">{actionModal.postulacion.vacante_titulo}</strong>
+            </>
+          )
+        }
+        footer={
+          <>
+            <Button
+              variant="pearl"
+              size="md"
+              disabled={processingId !== null}
+              onClick={() => setActionModal(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant={actionModal?.tipo === 'turnar' ? 'primary' : 'destructive'}
+              size="md"
+              loading={processingId !== null}
+              onClick={confirmAction}
+            >
+              {actionModal?.tipo === 'turnar' ? 'Confirmar y turnar' : 'Confirmar descarte'}
+            </Button>
+          </>
+        }
+      >
+        {actionModal && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <span className="text-fine font-semibold uppercase tracking-wider text-ink-64 block">
+                Plantillas rápidas de dictamen:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(actionModal.tipo === 'turnar' ? NOTAS_SUGERIDAS_TURNAR : NOTAS_SUGERIDAS_RECHAZAR).map(
+                  (sugerencia, idx) => (
+                    <Chip
+                      key={idx}
+                      selected={notasUthInput === sugerencia}
+                      onClick={() => setNotasUthInput(sugerencia)}
+                      className="h-auto py-1.5 text-left whitespace-normal"
+                    >
+                      {sugerencia}
+                    </Chip>
+                  )
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[#2D2926]">
-                Observaciones Institucionales UTH (Opcional):
-              </label>
-              <textarea
+            <Field
+              label="Observaciones Institucionales UTH"
+              optional
+              hint={
+                actionModal.tipo === 'turnar'
+                  ? 'Estas notas serán visibles para la empresa empleadora cuando revise el perfil del egresado.'
+                  : 'Estas notas quedarán registradas en el expediente de trazabilidad del egresado.'
+              }
+            >
+              <Textarea
                 value={notasUthInput}
                 onChange={(e) => setNotasUthInput(e.target.value)}
                 rows={3}
-                placeholder="Escribe comentarios de pertinencia o motivo de descarte..."
-                className="w-full text-xs p-3 rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
+                placeholder="Escribe comentarios de pertinencia académica o motivo de descarte…"
               />
-              <p className="text-[11px] text-[#636569]">
-                {actionModal.tipo === 'turnar'
-                  ? 'Estas notas serán visibles para la empresa empleadora cuando revise el perfil del egresado.'
-                  : 'Estas notas quedarán registradas en la bitácora interna de vinculación.'}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setActionModal(null)}
-                className="px-4 py-2 rounded-lg text-xs font-semibold text-[#636569] hover:bg-zinc-100 transition-all cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmAction}
-                disabled={processingId !== null}
-                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm transition-all cursor-pointer disabled:opacity-50 ${
-                  actionModal.tipo === 'turnar'
-                    ? 'bg-[#00A887] hover:bg-[#008F73]'
-                    : 'bg-[#691C32] hover:bg-[#521627]'
-                }`}
-              >
-                {processingId !== null && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {actionModal.tipo === 'turnar' ? 'Confirmar y Turnar' : 'Confirmar Descarte'}
-              </button>
-            </div>
+            </Field>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Modal Visor Interactivo de CV o Documentos */}
       {viewingCv && (

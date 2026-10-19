@@ -190,8 +190,9 @@ export function getRoleDisplayName(role: UserRole): string {
   }
 }
 
-export async function registerEgresado(data: RegistroEgresadoData): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+export async function registerEgresado(data: RegistroEgresadoData): Promise<{ success: boolean; user?: AuthUser; requiresActivation?: boolean; error?: string }> {
   try {
+    const telLimpio = data.telefono_celular.trim().replace(/\D/g, '');
     const userRes = await fetch(`${API_BASE_URL}/auth/users/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -203,53 +204,79 @@ export async function registerEgresado(data: RegistroEgresadoData): Promise<{ su
         apellido_materno: data.apellido_materno.trim(),
         rol: 'egresado',
         acepta_aviso_privacidad: data.acepta_aviso_privacidad,
-      }),
-    });
-
-    const userData = await userRes.json();
-    if (!userRes.ok) {
-      const errorMsg = userData.email?.[0] || userData.password?.[0] || (userData.non_field_errors && userData.non_field_errors[0]) || 'Error al crear la cuenta de usuario.';
-      return { success: false, error: errorMsg };
-    }
-
-    const tokens = await loginRequest({ email: data.email.trim(), password: data.password });
-    saveAuthTokens(tokens);
-
-    const profileRes = await fetch(`${API_BASE_URL}/profiles/egresados/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokens.access}`,
-      },
-      body: JSON.stringify({
         matricula: data.matricula.trim(),
         curp: data.curp.trim().toUpperCase(),
         carrera: data.carrera,
         nivel_estudios: data.nivel_estudios,
         genero: data.genero,
-        telefono_celular: data.telefono_celular.trim(),
+        telefono_celular: telLimpio || data.telefono_celular.trim(),
         domicilio: data.domicilio.trim(),
         habilidades: data.habilidades.trim(),
       }),
     });
 
-    const profileData = await profileRes.json();
-    if (!profileRes.ok) {
-      const errorMsg = profileData.matricula?.[0] || profileData.curp?.[0] || profileData.detail || 'Error al vincular los datos académicos del egresado.';
+    const userData = await userRes.json();
+    if (!userRes.ok) {
+      const errorMsg =
+        userData.matricula?.[0] ||
+        userData.curp?.[0] ||
+        userData.email?.[0] ||
+        userData.password?.[0] ||
+        (userData.non_field_errors && userData.non_field_errors[0]) ||
+        'Error al crear la cuenta de usuario.';
       return { success: false, error: errorMsg };
     }
 
-    const fullUser = await fetchCurrentUser(tokens.access);
-    saveUserData(fullUser);
+    // Si SEND_ACTIVATION_EMAIL está activo, el usuario nace inactivo
+    if (userData.is_active === false) {
+      return { success: true, requiresActivation: true, user: userData };
+    }
 
-    return { success: true, user: fullUser };
+    try {
+      const tokens = await loginRequest({ email: data.email.trim(), password: data.password });
+      saveAuthTokens(tokens);
+
+      // Si por alguna razón histórica el perfil no se creó atómicamente, lo aseguramos aquí de forma idempotente
+      await fetch(`${API_BASE_URL}/profiles/egresados/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokens.access}`,
+        },
+        body: JSON.stringify({
+          matricula: data.matricula.trim(),
+          curp: data.curp.trim().toUpperCase(),
+          carrera: data.carrera,
+          nivel_estudios: data.nivel_estudios,
+          genero: data.genero,
+          telefono_celular: telLimpio || data.telefono_celular.trim(),
+          domicilio: data.domicilio.trim(),
+          habilidades: data.habilidades.trim(),
+        }),
+      }).catch(() => null);
+
+      const fullUser = await fetchCurrentUser(tokens.access);
+      saveUserData(fullUser);
+
+      return { success: true, requiresActivation: false, user: fullUser };
+    } catch (loginErr: any) {
+      const msg = (loginErr?.message || '').toLowerCase();
+      if (
+        msg.includes('activa') ||
+        msg.includes('inactiv') ||
+        msg.includes('no active account')
+      ) {
+        return { success: true, requiresActivation: true, user: userData };
+      }
+      throw loginErr;
+    }
   } catch (error: any) {
     console.error('Registration error:', error);
     return { success: false, error: error.message || 'Error de conexión durante el registro institucional.' };
   }
 }
 
-export async function registerEmpresa(data: RegistroEmpresaData): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+export async function registerEmpresa(data: RegistroEmpresaData): Promise<{ success: boolean; user?: AuthUser; requiresActivation?: boolean; error?: string }> {
   try {
     const userRes = await fetch(`${API_BASE_URL}/auth/users/`, {
       method: 'POST',
@@ -262,25 +289,6 @@ export async function registerEmpresa(data: RegistroEmpresaData): Promise<{ succ
         apellido_materno: data.apellido_materno.trim(),
         rol: 'empresa',
         acepta_aviso_privacidad: data.acepta_aviso_privacidad,
-      }),
-    });
-
-    const userData = await userRes.json();
-    if (!userRes.ok) {
-      const errorMsg = userData.email?.[0] || userData.password?.[0] || (userData.non_field_errors && userData.non_field_errors[0]) || 'Error al crear la cuenta empresarial.';
-      return { success: false, error: errorMsg };
-    }
-
-    const tokens = await loginRequest({ email: data.email.trim(), password: data.password });
-    saveAuthTokens(tokens);
-
-    const profileRes = await fetch(`${API_BASE_URL}/profiles/empresas/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokens.access}`,
-      },
-      body: JSON.stringify({
         nombre: data.nombre.trim(),
         domicilio: data.domicilio.trim(),
         correo_contacto: data.correo_contacto.trim(),
@@ -294,16 +302,63 @@ export async function registerEmpresa(data: RegistroEmpresaData): Promise<{ succ
       }),
     });
 
-    const profileData = await profileRes.json();
-    if (!profileRes.ok) {
-      const errorMsg = profileData.nombre?.[0] || profileData.correo_contacto?.[0] || profileData.detail || 'Error al vincular el perfil de empresa.';
+    const userData = await userRes.json();
+    if (!userRes.ok) {
+      const errorMsg =
+        userData.nombre?.[0] ||
+        userData.correo_contacto?.[0] ||
+        userData.email?.[0] ||
+        userData.password?.[0] ||
+        (userData.non_field_errors && userData.non_field_errors[0]) ||
+        'Error al crear la cuenta empresarial.';
       return { success: false, error: errorMsg };
     }
 
-    const fullUser = await fetchCurrentUser(tokens.access);
-    saveUserData(fullUser);
+    // Si SEND_ACTIVATION_EMAIL está activo, el usuario nace inactivo
+    if (userData.is_active === false) {
+      return { success: true, requiresActivation: true, user: userData };
+    }
 
-    return { success: true, user: fullUser };
+    try {
+      const tokens = await loginRequest({ email: data.email.trim(), password: data.password });
+      saveAuthTokens(tokens);
+
+      // Si por alguna razón histórica el perfil no se creó atómicamente, lo aseguramos aquí de forma idempotente
+      await fetch(`${API_BASE_URL}/profiles/empresas/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokens.access}`,
+        },
+        body: JSON.stringify({
+          nombre: data.nombre.trim(),
+          domicilio: data.domicilio.trim(),
+          correo_contacto: data.correo_contacto.trim(),
+          actividad_de_la_empresa: data.actividad_de_la_empresa.trim(),
+          giro: data.giro,
+          sector: data.sector,
+          nombre_contacto: data.nombre_contacto.trim(),
+          cargo_contacto: data.cargo_contacto.trim(),
+          telefono_oficina: data.telefono_oficina?.trim(),
+          telefono_celular: data.telefono_celular?.trim(),
+        }),
+      }).catch(() => null);
+
+      const fullUser = await fetchCurrentUser(tokens.access);
+      saveUserData(fullUser);
+
+      return { success: true, requiresActivation: false, user: fullUser };
+    } catch (loginErr: any) {
+      const msg = (loginErr?.message || '').toLowerCase();
+      if (
+        msg.includes('activa') ||
+        msg.includes('inactiv') ||
+        msg.includes('no active account')
+      ) {
+        return { success: true, requiresActivation: true, user: userData };
+      }
+      throw loginErr;
+    }
   } catch (error: any) {
     console.error('Registration error:', error);
     return { success: false, error: error.message || 'Error de conexión durante el registro empresarial.' };

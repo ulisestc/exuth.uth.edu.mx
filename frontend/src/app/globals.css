@@ -1,27 +1,60 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f8fafc;
-  --foreground: #2d2926;
+/*
+ * Sistema de diseño Bolsa de Trabajo UTH — ver frontend/DESIGN.md
+ * Identidad: Manual de Identidad Gráfica UTH (2021) · Gramática: principios Apple.
+ */
 
-  /* UTH Official Color Tokens (Manual de Identidad 2021) */
-  --uth-green: #00a887;
-  --uth-green-hover: #008f73;
-  --uth-black: #2d2926;
-  --uth-wine: #691c32;
-  --uth-red: #a8123e;
-  --uth-gold: #c2ba98;
-  --uth-cream: #d6d1c4;
-  --uth-cool-gray: #a6a6a8;
-  --uth-gray: #636569;
+:root {
+  --background: #ffffff;
+  --foreground: #2d2926;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --font-sans: var(--font-arimo), Arial, Helvetica, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
 
+@theme {
+  /* ── Acento único: Verde UTH ─────────────────────────────── */
+  --color-primary: #007f66;        /* Verde Acción (AA con blanco) */
+  --color-primary-hover: #006b56;
+  --color-brand: #00a887;          /* Pantone Green C exacto */
+  --color-primary-tint: #e6f5f1;
+
+  /* ── Tinta ───────────────────────────────────────────────── */
+  --color-ink: #2d2926;            /* Pantone Black C */
+  --color-ink-80: #4a4542;
+  --color-ink-64: #636569;         /* Pantone Gray 80% */
+  --color-ink-48: #a6a6a8;         /* Pantone Cool Gray */
+  --color-cream: #d6d1c4;          /* Pantone 7527 */
+
+  /* ── Superficies ─────────────────────────────────────────── */
+  --color-canvas: #ffffff;
+  --color-parchment: #f5f4f1;
+  --color-pearl: #fafaf8;
+  --color-tile: #2d2926;
+  --color-tile-2: #332f2b;
+  --color-tile-3: #24211f;
+  --color-void: #1a1816;
+
+  /* ── Líneas ──────────────────────────────────────────────── */
+  --color-hairline: #e4e2dd;
+  --color-divider: #efede9;
+
+  /* ── Institucionales (no interactivos) ───────────────────── */
+  --color-wine: #691c32;           /* Pantone 7421 */
+  --color-gold: #c2ba98;           /* Pantone 453 */
+
+  /* ── Semánticos ──────────────────────────────────────────── */
+  --color-danger: #a8123e;         /* Pantone 7426 */
+  --color-danger-tint: #fbecef;
+  --color-warning-ink: #6b5e2e;
+  --color-warning-tint: #f4f0e2;
+
+  /* ── Legado (compatibilidad temporal; no usar en código nuevo) ── */
   --color-uth-green: #00a887;
-  --color-uth-green-hover: #008f73;
+  --color-uth-green-hover: #007f66;
   --color-uth-black: #2d2926;
   --color-uth-wine: #691c32;
   --color-uth-red: #a8123e;
@@ -30,12 +63,141 @@
   --color-uth-cool-gray: #a6a6a8;
   --color-uth-gray: #636569;
 
-  --font-sans: Arial, Helvetica, sans-serif;
+  /* ── Tipografía (escala Apple adaptada) ──────────────────── */
+  --text-hero: 56px;
+  --text-hero--line-height: 1.07;
+  --text-hero--letter-spacing: -0.02em;
+  --text-hero--font-weight: 600;
+
+  --text-display-lg: 40px;
+  --text-display-lg--line-height: 1.1;
+  --text-display-lg--letter-spacing: -0.015em;
+  --text-display-lg--font-weight: 600;
+
+  --text-display-md: 32px;
+  --text-display-md--line-height: 1.15;
+  --text-display-md--letter-spacing: -0.012em;
+  --text-display-md--font-weight: 600;
+
+  --text-lead: 24px;
+  --text-lead--line-height: 1.25;
+  --text-lead--letter-spacing: -0.005em;
+
+  --text-lead-airy: 21px;
+  --text-lead-airy--line-height: 1.45;
+
+  --text-tagline: 21px;
+  --text-tagline--line-height: 1.19;
+  --text-tagline--letter-spacing: -0.005em;
+  --text-tagline--font-weight: 600;
+
+  --text-body: 17px;
+  --text-body--line-height: 1.47;
+  --text-body--letter-spacing: -0.01em;
+
+  --text-caption: 14px;
+  --text-caption--line-height: 1.43;
+  --text-caption--letter-spacing: -0.005em;
+
+  --text-fine: 12px;
+  --text-fine--line-height: 1.33;
+
+  /* ── Formas ──────────────────────────────────────────────── */
+  --radius-card: 18px;
+  --radius-field: 12px;
+  --radius-utility: 8px;
+
+  /* ── Elevación ───────────────────────────────────────────── */
+  --shadow-photo: 3px 5px 30px 0 rgba(45, 41, 38, 0.22);
+  --shadow-sheet: 0 24px 60px -12px rgba(45, 41, 38, 0.18);
+
+  /* ── Movimiento ──────────────────────────────────────────── */
+  --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-fade-up: fade-up 0.6s var(--ease-apple) both;
+  --animate-sheet-in: sheet-in 0.32s var(--ease-apple) both;
+  --animate-fade-in: fade-in 0.2s ease-out both;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes sheet-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 8rem;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.47;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-brand) 24%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-ink-64);
+    opacity: 0.8;
+  }
+}
+
+/* Superficie esmerilada (nav global, sub-nav, barra flotante) */
+@utility frosted {
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+@utility press {
+  transition-property: transform, background-color, color, border-color, opacity;
+  transition-duration: 150ms;
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .frosted {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }

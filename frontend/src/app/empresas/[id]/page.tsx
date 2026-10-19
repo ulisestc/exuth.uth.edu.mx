@@ -2,23 +2,32 @@ import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fetchEmpresaById, fetchVacantesPorEmpresa } from '@/lib/api';
-import { 
-  Building2, 
-  MapPin, 
-  Mail, 
-  Phone, 
-  User, 
-  Briefcase, 
-  ArrowLeft, 
-  CheckCircle2, 
-  DollarSign, 
-  GraduationCap, 
-  Clock, 
+import {
+  Building2,
+  MapPin,
+  Mail,
+  Phone,
+  User,
+  Briefcase,
+  ArrowLeft,
+  CheckCircle2,
+  DollarSign,
+  GraduationCap,
+  Clock,
   ArrowRight,
   ShieldCheck,
-  Calendar,
-  Sparkles
 } from 'lucide-react';
+import {
+  Container,
+  Card,
+  StatusPill,
+  Tag,
+  Code,
+  DataList,
+  ButtonLink,
+  EmptyState,
+} from '@/components/ui';
+import { formatMXN, getNivelLabel, getModalidadLabel } from '@/lib/status';
 
 interface EmpresaDetailPageProps {
   params: Promise<{ id: string }>;
@@ -51,226 +60,209 @@ export default async function EmpresaDetailPage({ params }: EmpresaDetailPagePro
   if (!empresa) notFound();
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-      {/* Breadcrumb y Botón Volver */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link
-          href="/empresas"
-          className="inline-flex items-center gap-2 text-xs font-bold text-[#636569] hover:text-[#00A887] transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Volver al Directorio de Empresas
-        </Link>
-
-        <div className="flex items-center gap-2 text-xs text-zinc-400">
-          <Link href="/" className="hover:text-zinc-600">Inicio</Link>
+    <div className="py-10 sm:py-14 space-y-8">
+      <Container size="console">
+        {/* Retorno / Breadcrumb */}
+        <div className="flex items-center gap-2 text-caption text-ink-64 mb-6">
+          <Link
+            href="/empresas"
+            className="hover:text-ink flex items-center gap-1.5 transition-colors font-medium"
+          >
+            <ArrowLeft className="size-3.5" />
+            <span>Directorio de empresas</span>
+          </Link>
           <span>/</span>
-          <Link href="/empresas" className="hover:text-zinc-600">Directorio</Link>
-          <span>/</span>
-          <span className="text-[#2D2926] font-semibold truncate max-w-xs">{empresa.nombre}</span>
+          <span className="text-ink truncate max-w-sm">{empresa.nombre}</span>
         </div>
-      </div>
 
-      {/* Header Corporativo de la Empresa */}
-      <div className="bg-white rounded-3xl border border-zinc-200/80 p-6 sm:p-10 shadow-sm space-y-6">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-          <div className="flex items-start gap-5">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#00A887]/10 to-[#00A887]/20 border border-[#00A887]/30 flex items-center justify-center text-[#00A887] font-black text-2xl sm:text-3xl shrink-0 shadow-xs">
-              {empresa.nombre ? empresa.nombre.charAt(0).toUpperCase() : 'E'}
+        {/* Ficha Cabecera Corporativa */}
+        <Card className="p-6 sm:p-10 space-y-8 bg-canvas">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+            <div className="flex items-start gap-5">
+              <div className="size-16 sm:size-20 rounded-2xl bg-parchment ring-1 ring-inset ring-hairline flex items-center justify-center text-ink font-semibold text-2xl sm:text-3xl shrink-0">
+                {empresa.nombre ? empresa.nombre.charAt(0).toUpperCase() : 'E'}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Code>ID #{empresa.id}</Code>
+                  <StatusPill tone="success">
+                    <CheckCircle2 className="size-3 text-primary" />
+                    Empresa Vinculada UTH
+                  </StatusPill>
+                </div>
+
+                <h1 className="text-display-md text-ink tracking-tight font-semibold">
+                  {empresa.nombre}
+                </h1>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {empresa.sector && <Tag>{empresa.sector}</Tag>}
+                  {empresa.giro && <Tag>{empresa.giro}</Tag>}
+                  {empresa.campo && <Tag>Campo: {empresa.campo}</Tag>}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-bold px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
-                  Empresa Vinculada UTH
-                </span>
-                <span className="text-xs font-mono text-zinc-400">ID #{empresa.id}</span>
+            {empresa.correo_contacto && (
+              <div className="shrink-0 self-start">
+                <ButtonLink
+                  href={`mailto:${empresa.correo_contacto}`}
+                  variant="primary"
+                  size="md"
+                >
+                  <Mail className="size-4" />
+                  Contactar empresa
+                </ButtonLink>
               </div>
-
-              <h1 className="text-2xl sm:text-3xl font-black text-[#2D2926] tracking-tight">
-                {empresa.nombre}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
-                <span className="font-semibold text-[#00A887]">
-                  {empresa.sector}
-                </span>
-                <span className="text-zinc-300">•</span>
-                <span>{empresa.giro}</span>
-                {empresa.campo && (
-                  <>
-                    <span className="text-zinc-300">•</span>
-                    <span className="text-zinc-500">Campo: {empresa.campo}</span>
-                  </>
-                )}
-              </div>
-            </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-2 self-start">
-            <a
-              href={`mailto:${empresa.correo_contacto}`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] shadow-xs transition-all cursor-pointer"
-            >
-              <Mail className="w-4 h-4" />
-              Contactar Organización
-            </a>
+          {/* Actividad de la empresa */}
+          <div className="rounded-card bg-parchment p-5 sm:p-6 space-y-2">
+            <h2 className="text-caption font-semibold uppercase tracking-wider text-ink-64">
+              Actividad de la organización
+            </h2>
+            <p className="text-body text-ink leading-relaxed">
+              {empresa.actividad_de_la_empresa ||
+                'Organización colaboradora comprometida con el desarrollo profesional y la empleabilidad de la comunidad tecnológica de Huejotzingo.'}
+            </p>
           </div>
-        </div>
 
-        {/* Actividad Empresarial */}
-        <div className="p-5 rounded-2xl bg-zinc-50 border border-zinc-200/70 space-y-2">
-          <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-            Actividad de la Organización
-          </h3>
-          <p className="text-xs sm:text-sm text-[#2D2926] leading-relaxed">
-            {empresa.actividad_de_la_empresa || 'Organización colaboradora comprometida con el desarrollo profesional y la empleabilidad de la comunidad tecnológica de Huejotzingo.'}
-          </p>
-        </div>
+          {/* Datos de contacto y ubicación */}
+          <DataList
+            columns={3}
+            items={[
+              ...(empresa.domicilio
+                ? [
+                    {
+                      icon: MapPin,
+                      label: 'Ubicación física',
+                      value: empresa.domicilio,
+                    },
+                  ]
+                : []),
+              {
+                icon: User,
+                label: 'Enlace de vinculación',
+                value: (
+                  <div>
+                    <p className="font-semibold">{empresa.nombre_contacto || 'Dirección de Recursos Humanos'}</p>
+                    <p className="text-caption text-ink-64">{empresa.cargo_contacto || 'Representante'}</p>
+                  </div>
+                ),
+              },
+              {
+                icon: Phone,
+                label: 'Líneas de contacto',
+                value: (
+                  <div>
+                    <p className="font-semibold truncate">
+                      {empresa.telefono_oficina || empresa.telefono_celular || empresa.correo_contacto || 'No disponible'}
+                    </p>
+                    {empresa.correo_contacto && (
+                      <p className="text-caption text-ink-64 truncate">{empresa.correo_contacto}</p>
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </Card>
 
-        {/* Contacto & Ubicación Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          {empresa.domicilio && (
-            <div className="p-4 rounded-xl border border-zinc-200/80 space-y-1">
-              <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wide">
-                <MapPin className="w-4 h-4 text-[#00A887]" />
-                Ubicación
-              </div>
-              <p className="text-xs text-[#2D2926] font-medium leading-snug">
-                {empresa.domicilio}
+        {/* Ofertas laborales vigentes */}
+        <div className="mt-12 space-y-6">
+          <div className="flex items-center justify-between border-b border-hairline pb-4">
+            <div>
+              <h2 className="text-tagline text-ink">
+                Ofertas laborales vigentes
+              </h2>
+              <p className="text-caption text-ink-64 mt-0.5">
+                Vacantes autorizadas institucionalmente por la Universidad Tecnológica de Huejotzingo.
               </p>
             </div>
-          )}
 
-          <div className="p-4 rounded-xl border border-zinc-200/80 space-y-1">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wide">
-              <User className="w-4 h-4 text-[#691C32]" />
-              Enlace de Vinculación
-            </div>
-            <p className="text-xs text-[#2D2926] font-bold">
-              {empresa.nombre_contacto || 'Dirección de Recursos Humanos'}
-            </p>
-            <p className="text-[11px] text-[#636569]">
-              {empresa.cargo_contacto || 'Representante Legal'}
-            </p>
+            <StatusPill tone="neutral">
+              {vacantes.length} {vacantes.length === 1 ? 'oferta' : 'ofertas'}
+            </StatusPill>
           </div>
 
-          <div className="p-4 rounded-xl border border-zinc-200/80 space-y-1">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wide">
-              <Phone className="w-4 h-4 text-[#C2BA98]" />
-              Líneas de Contacto
-            </div>
-            <p className="text-xs text-[#2D2926] font-medium truncate">
-              {empresa.telefono_oficina || empresa.telefono_celular || empresa.correo_contacto}
-            </p>
-            <p className="text-[11px] text-zinc-500 truncate">
-              {empresa.correo_contacto}
-            </p>
-          </div>
-        </div>
-      </div>
+          {vacantes.length === 0 ? (
+            <Card className="p-8">
+              <EmptyState
+                icon={Briefcase}
+                title="Sin vacantes activas en este momento"
+                description={`Actualmente ${empresa.nombre} no tiene convocatorias laborales vigentes. Explora otras empresas y vacantes en la bolsa universitaria.`}
+                action={
+                  <ButtonLink href="/vacantes" variant="primary" size="sm">
+                    Ver todas las vacantes UTH
+                  </ButtonLink>
+                }
+              />
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {vacantes.map((v) => {
+                const sueldoTexto = v.salario_a_tratar
+                  ? 'Sueldo a tratar'
+                  : v.sueldo_minimo && v.sueldo_maximo
+                  ? `${formatMXN(v.sueldo_minimo)} – ${formatMXN(v.sueldo_maximo)} MXN`
+                  : v.sueldo_minimo
+                  ? `Desde ${formatMXN(v.sueldo_minimo)} MXN`
+                  : 'Sueldo a tratar';
 
-      {/* Ofertas Laborales Vigentes de esta Empresa */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
-          <div>
-            <h2 className="text-xl font-bold text-[#2D2926]">
-              Ofertas Laborales Vigentes
-            </h2>
-            <p className="text-xs text-[#636569]">
-              Vacantes autorizadas institucionalmente por la Universidad Tecnológica de Huejotzingo.
-            </p>
-          </div>
-
-          <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-zinc-100 text-[#2D2926]">
-            {vacantes.length} {vacantes.length === 1 ? 'oferta' : 'ofertas'}
-          </span>
-        </div>
-
-        {vacantes.length === 0 ? (
-          <div className="py-16 text-center space-y-3 bg-white rounded-2xl border border-zinc-200 p-8 shadow-xs">
-            <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mx-auto text-zinc-400">
-              <Briefcase className="w-6 h-6" />
-            </div>
-            <h3 className="text-sm font-bold text-[#2D2926]">
-              Sin vacantes activas en este momento
-            </h3>
-            <p className="text-xs text-[#636569] max-w-md mx-auto">
-              Actualmente {empresa.nombre} no tiene convocatorias laborales vigentes. Explora otras empresas y vacantes en la bolsa universitaria.
-            </p>
-            <Link
-              href="/vacantes"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer"
-            >
-              Ver Todas las Vacantes UTH
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {vacantes.map((v) => (
-              <div
-                key={v.id}
-                className="bg-white rounded-2xl border border-zinc-200 hover:border-[#00A887]/60 p-6 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-all group"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded bg-zinc-100 text-zinc-700">
-                      {v.clave_vacante || `VAC-${v.id}`}
-                    </span>
-                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      Vigente
-                    </span>
-                  </div>
-
-                  <h3 className="text-base font-bold text-[#2D2926] group-hover:text-[#00A887] transition-colors leading-snug">
-                    {v.titulo}
-                  </h3>
-
-                  <div className="space-y-1.5 text-xs text-[#636569]">
-                    <div className="flex items-center gap-1.5 font-semibold text-[#00A887]">
-                      <GraduationCap className="w-3.5 h-3.5" />
-                      <span>{v.area_estudio_nombre || 'Área Tecnológica'} ({v.nivel_estudios})</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-[#2D2926] font-bold">
-                      <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>
-                        {v.salario_a_tratar
-                          ? 'Sueldo a tratar'
-                          : `$${parseFloat(v.sueldo_minimo || '0').toLocaleString('es-MX')} — $${parseFloat(v.sueldo_maximo || '0').toLocaleString('es-MX')} MXN`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-zinc-500">
-                      <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                      <span>Modalidad: {v.modalidad} · {v.tipo_contratacion}</span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-[#636569] line-clamp-2 leading-relaxed">
-                    {v.responsabilidades || v.conocimientos || 'Consulta los requisitos y responsabilidades detalladas de esta vacante institucional.'}
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-zinc-100 flex items-center justify-between">
-                  <span className="text-[11px] text-zinc-400">
-                    Publicado en Bolsa UTH
-                  </span>
-
-                  <Link
-                    href={`/vacantes/${v.id}`}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-xs"
+                return (
+                  <Card
+                    key={v.id}
+                    interactive
+                    className="p-6 flex flex-col justify-between space-y-5 bg-canvas"
                   >
-                    Postularme / Ver Vacante
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <Code>{v.clave_vacante || `VAC-${v.id}`}</Code>
+                        <StatusPill tone="success">Vigente</StatusPill>
+                      </div>
+
+                      <h3 className="text-tagline text-ink font-semibold leading-snug">
+                        {v.titulo}
+                      </h3>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Tag icon={GraduationCap}>
+                          {v.area_estudio_nombre || 'Área Tecnológica'} ({getNivelLabel(v.nivel_estudios)})
+                        </Tag>
+                        <Tag icon={DollarSign}>{sueldoTexto}</Tag>
+                        <Tag icon={Clock}>{getModalidadLabel(v.modalidad)}</Tag>
+                      </div>
+
+                      <p className="text-caption text-ink-64 line-clamp-2 leading-relaxed">
+                        {v.responsabilidades ||
+                          v.conocimientos ||
+                          'Consulta los requisitos y responsabilidades detalladas de esta vacante institucional.'}
+                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-hairline flex items-center justify-between">
+                      <span className="text-fine text-ink-48">
+                        Publicado en Bolsa UTH
+                      </span>
+
+                      <ButtonLink
+                        href={`/vacantes/${v.id}`}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        Ver vacante
+                        <ArrowRight className="size-3.5" />
+                      </ButtonLink>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Container>
     </div>
   );
 }

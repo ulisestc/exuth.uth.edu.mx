@@ -1,18 +1,14 @@
 'use client';
 
 import React from 'react';
-import { 
-  CheckCircle2, 
-  Clock, 
-  Send, 
-  Building2, 
-  Award, 
-  XCircle, 
-  AlertCircle,
-  HelpCircle,
-  MessageSquare
+import {
+  CheckCircle2,
+  Clock,
+  XCircle,
+  MessageSquare,
 } from 'lucide-react';
 import { Postulacion } from '@/lib/api';
+import { Card, StatusPill, Alert } from '@/components/ui';
 
 interface PostulacionTimelineProps {
   postulacion: Postulacion;
@@ -57,109 +53,113 @@ export default function PostulacionTimeline({ postulacion }: PostulacionTimeline
       num: 1,
       title: 'Postulación Enviada',
       subtitle: 'Solicitud registrada',
-      desc: 'Tu solicitud de empleo fue recibida en la plataforma institucional.',
+      desc: 'Tu solicitud fue recibida en la plataforma institucional.',
     },
     {
       num: 2,
       title: 'Filtro Institucional UTH',
       subtitle: 'Validación académica',
-      desc: estado === 'rechazada_uth'
-        ? 'El comité de Vinculación determinó que el perfil no cumplía con los requisitos afines.'
-        : 'La Dirección de Vinculación UTH audita la pertinencia de tu carrera y tu currículum vitae.',
+      desc:
+        estado === 'rechazada_uth'
+          ? 'El comité de Vinculación determinó que el perfil no cumplía con los requisitos afines.'
+          : 'Vinculación UTH audita la pertinencia de tu carrera y currículum vitae.',
     },
     {
       num: 3,
       title: 'Turnado a la Empresa',
       subtitle: 'Revisión por empleador',
-      desc: 'Tu CV y datos de contacto fueron entregados al reclutador para agendar entrevistas.',
+      desc: 'Tu CV y contacto fueron turnados al reclutador para agendar entrevistas.',
     },
     {
       num: 4,
       title: 'Resolución Final',
       subtitle: 'Contratación / Cierre',
-      desc: estado === 'Aceptada'
-        ? '¡Felicidades! Fuiste contratado y tu colocación laboral quedó registrada ante la UTH.'
-        : estado === 'Rechazada'
-        ? 'La empresa ha cubierto la vacante o finalizado el proceso de selección.'
-        : 'Resolución definitiva del proceso de contratación por parte de la empresa.',
+      desc:
+        estado === 'Aceptada'
+          ? '¡Felicidades! Fuiste contratado y tu colocación quedó registrada ante la UTH.'
+          : estado === 'Rechazada'
+          ? 'La empresa ha cubierto la vacante o finalizado el proceso de selección.'
+          : 'Resolución definitiva del proceso de contratación por parte de la empresa.',
     },
   ];
 
   return (
-    <div className="bg-zinc-50/80 rounded-2xl p-4 sm:p-5 border border-zinc-200/80 space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-[#00A887]" />
-          Línea de Trazabilidad UTH (Modelo Opción B)
+    <div className="rounded-card bg-parchment p-5 sm:p-6 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-caption font-semibold text-ink-64 uppercase tracking-wider flex items-center gap-1.5">
+          <Clock className="size-3.5 text-primary" />
+          Trazabilidad Institucional (Modelo Opción B)
         </span>
 
         {estado === 'revision_uth' && (
-          <span className="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-full border border-amber-200">
+          <StatusPill tone="warning">
             Paso 2: En revisión por Vinculación UTH
-          </span>
+          </StatusPill>
         )}
         {estado === 'enviada_empresa' && (
-          <span className="text-[11px] font-bold text-blue-800 bg-blue-100/80 px-2.5 py-0.5 rounded-full border border-blue-200">
+          <StatusPill tone="brand">
             Paso 3: Visible para el reclutador
-          </span>
+          </StatusPill>
         )}
         {estado === 'Aceptada' && (
-          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200">
+          <StatusPill tone="success">
             Proceso Exitoso · Contratado
-          </span>
+          </StatusPill>
         )}
         {estado === 'rechazada_uth' && (
-          <span className="text-[11px] font-bold text-rose-800 bg-rose-100/80 px-2.5 py-0.5 rounded-full border border-rose-200">
+          <StatusPill tone="danger">
             No turnado a empresa
-          </span>
+          </StatusPill>
         )}
       </div>
 
-      {/* Stepper horizontal en desktop, vertical en mobile */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 relative">
+      {/* Stepper horizontal en desktop, responsive en mobile */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         {steps.map((st) => {
           const status = getStepStatus(st.num);
 
-          let circleClass = 'bg-zinc-200 text-zinc-500 border-zinc-300';
-          let borderClass = 'border-zinc-200 bg-white';
+          let circleClass = 'bg-divider text-ink-64';
+          let cardClass = 'bg-canvas ring-1 ring-inset ring-hairline';
 
           if (status === 'completed') {
-            circleClass = 'bg-[#00A887] text-white border-[#00A887]';
-            borderClass = 'border-emerald-200 bg-emerald-50/40';
+            circleClass = 'bg-primary text-white';
+            cardClass = 'bg-canvas ring-1 ring-inset ring-brand/40';
           } else if (status === 'current') {
-            circleClass = 'bg-[#691C32] text-white border-[#691C32] ring-4 ring-[#691C32]/20 animate-pulse';
-            borderClass = 'border-[#691C32]/30 bg-[#691C32]/5';
+            circleClass = 'bg-wine text-white ring-4 ring-wine/20';
+            cardClass = 'bg-canvas ring-2 ring-inset ring-wine/50';
           } else if (status === 'rejected') {
-            circleClass = 'bg-rose-600 text-white border-rose-600';
-            borderClass = 'border-rose-200 bg-rose-50/40';
+            circleClass = 'bg-danger text-white';
+            cardClass = 'bg-danger-tint ring-1 ring-inset ring-danger/30';
           }
 
           return (
-            <div 
+            <div
               key={st.num}
-              className={`p-3 rounded-xl border ${borderClass} transition-all space-y-2 flex flex-col justify-between`}
+              className={`p-4 rounded-field ${cardClass} transition-all space-y-2 flex flex-col justify-between`}
             >
-              <div className="flex items-center gap-2">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border shrink-0 ${circleClass}`}>
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`size-6 rounded-full flex items-center justify-center text-fine font-semibold shrink-0 ${circleClass}`}
+                >
                   {status === 'completed' ? (
-                    <CheckCircle2 className="w-4 h-4" />
+                    <CheckCircle2 className="size-3.5" />
                   ) : status === 'rejected' ? (
-                    <XCircle className="w-4 h-4" />
+                    <XCircle className="size-3.5" />
                   ) : (
                     st.num
                   )}
                 </div>
-                <div className="leading-tight truncate">
-                  <h4 className="text-xs font-bold text-[#2D2926] truncate">
+                <div className="leading-tight min-w-0">
+                  <h4 className="text-caption font-semibold text-ink truncate">
                     {st.title}
                   </h4>
-                  <span className="text-[10px] text-zinc-500 font-medium">
+                  <span className="text-fine text-ink-64 block">
                     {st.subtitle}
                   </span>
                 </div>
               </div>
 
-              <p className="text-[11px] text-[#636569] leading-snug">
+              <p className="text-fine text-ink-64 leading-snug pt-1">
                 {st.desc}
               </p>
             </div>
@@ -167,17 +167,11 @@ export default function PostulacionTimeline({ postulacion }: PostulacionTimeline
         })}
       </div>
 
-      {/* Notas Institucionales de Vinculación UTH si existen */}
+      {/* Dictamen Institucional UTH */}
       {notas_uth && (
-        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-xs text-amber-900 space-y-1">
-          <div className="flex items-center gap-1.5 font-bold text-amber-800">
-            <MessageSquare className="w-3.5 h-3.5 text-amber-700" />
-            Dictamen Institucional de Vinculación UTH:
-          </div>
-          <p className="text-[11px] leading-relaxed pl-5">
-            {notas_uth}
-          </p>
-        </div>
+        <Alert tone="warning" title="Dictamen Institucional de Vinculación UTH">
+          <p className="mt-0.5">{notas_uth}</p>
+        </Alert>
       )}
     </div>
   );

@@ -5,24 +5,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getRoleRedirectPath } from '@/lib/auth';
-import { 
-  fetchMiPerfilEmpresa, 
-  fetchMisVacantes, 
+import {
+  fetchMiPerfilEmpresa,
+  fetchMisVacantes,
   fetchPostulacionesEmpresa,
   cerrarVacante,
-  EmpresaProfile, 
+  EmpresaProfile,
   VacanteEmpresaItem,
-  Postulacion
+  Postulacion,
 } from '@/lib/api';
 import { NuevaVacanteModal } from '@/components/empresas/NuevaVacanteModal';
 import { CandidatosManager } from '@/components/empresas/CandidatosManager';
-import { 
-  Building2, 
-  PlusCircle, 
-  Users, 
-  Briefcase, 
-  CheckCircle2, 
-  LogOut, 
+import {
+  Building2,
+  PlusCircle,
+  Users,
+  Briefcase,
+  CheckCircle2,
   ArrowRight,
   ShieldCheck,
   Clock,
@@ -31,20 +30,49 @@ import {
   Lock,
   Calendar,
   DollarSign,
-  Tag,
-  Loader2,
+  Tag as TagIcon,
   Mail,
   MapPin,
-  FileText,
-  Edit3
+  Edit3,
+  Layers,
+  Phone,
 } from 'lucide-react';
 import EditarPerfilEmpresaModal from '@/components/empresas/EditarPerfilEmpresaModal';
+import {
+  Container,
+  Card,
+  StatTile,
+  Button,
+  ButtonLink,
+  SubNav,
+  useTabParam,
+  StatusPill,
+  EmptyState,
+  PageLoader,
+  Code,
+  Tag,
+  Modal,
+  Alert,
+} from '@/components/ui';
+import {
+  getVacanteStatus,
+  getModalidadLabel,
+  getNivelLabel,
+  formatDate,
+  formatMXN,
+} from '@/lib/status';
+
+type EmpresaTab = 'resumen' | 'vacantes' | 'candidatos' | 'perfil';
 
 export default function PortalEmpresaPage() {
   const router = useRouter();
   const { user, accessToken, isAuthenticated, isLoading: authLoading, logout } = useAuth();
 
-  const [tabActiva, setTabActiva] = useState<'vacantes' | 'candidatos'>('vacantes');
+  const [tab, setTab] = useTabParam<EmpresaTab>(
+    ['resumen', 'vacantes', 'candidatos', 'perfil'],
+    'resumen'
+  );
+
   const [empresa, setEmpresa] = useState<EmpresaProfile | null>(null);
   const [vacantes, setVacantes] = useState<VacanteEmpresaItem[]>([]);
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
@@ -52,6 +80,11 @@ export default function PortalEmpresaPage() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalPerfilAbierto, setModalPerfilAbierto] = useState(false);
   const [accionEnProceso, setAccionEnProceso] = useState<number | null>(null);
+  const [confirmCloseVacante, setConfirmCloseVacante] = useState<{
+    id: number;
+    titulo: string;
+  } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Redirigir a login si no está autenticado o a su portal correspondiente
   useEffect(() => {
@@ -67,18 +100,18 @@ export default function PortalEmpresaPage() {
   // Cargar datos de la empresa, vacantes y postulaciones
   useEffect(() => {
     async function loadData() {
-      if (accessToken && user?.rol === 'empresa') {
+      if (accessToken && user && (user.rol === 'empresa' || user.rol === 'soporte_ti')) {
         try {
           const [perfilData, vacantesData, postulacionesData] = await Promise.all([
-            fetchMiPerfilEmpresa(accessToken),
-            fetchMisVacantes(accessToken),
-            fetchPostulacionesEmpresa(accessToken),
+            fetchMiPerfilEmpresa(accessToken).catch(() => null),
+            fetchMisVacantes(accessToken).catch(() => []),
+            fetchPostulacionesEmpresa(accessToken).catch(() => []),
           ]);
           setEmpresa(perfilData);
           setVacantes(vacantesData);
           setPostulaciones(postulacionesData);
         } catch (error) {
-          console.error('Error loading empresa data:', error);
+          console.error('Error cargando información de la empresa:', error);
         } finally {
           setLoadingData(false);
         }
@@ -92,483 +125,511 @@ export default function PortalEmpresaPage() {
     }
   }, [accessToken, user]);
 
-  const handleCerrarVacante = async (vacanteId: number, titulo: string) => {
-    if (!window.confirm(`¿Confirmas que deseas cerrar la vacante "${titulo}"? Ya no recibirá nuevas postulaciones de egresados.`)) {
-      return;
-    }
-
-    if (!accessToken) return;
+  const executeCerrarVacante = async () => {
+    if (!confirmCloseVacante || !accessToken) return;
+    const { id: vacanteId } = confirmCloseVacante;
     setAccionEnProceso(vacanteId);
+    setActionError(null);
 
     try {
       const res = await cerrarVacante(accessToken, vacanteId);
       if (res.success) {
-        setVacantes(prev => prev.map(v => v.id === vacanteId ? { ...v, status: 'cerrada' } : v));
+        setVacantes((prev) =>
+          prev.map((v) => (v.id === vacanteId ? { ...v, status: 'cerrada' } : v))
+        );
+        setConfirmCloseVacante(null);
       } else {
-        alert(res.error || 'No se pudo cerrar la vacante.');
+        setActionError(res.error || 'No se pudo cerrar la vacante.');
+        setConfirmCloseVacante(null);
       }
     } catch (err: any) {
-      alert(err.message || 'Error al procesar la solicitud.');
+      setActionError(err.message || 'Error al procesar la solicitud.');
+      setConfirmCloseVacante(null);
     } finally {
       setAccionEnProceso(null);
     }
   };
 
   const handleVacanteCreada = (nuevaVacante: VacanteEmpresaItem) => {
-    setVacantes(prev => [nuevaVacante, ...prev]);
+    setVacantes((prev) => [nuevaVacante, ...prev]);
   };
 
   const handlePostulacionActualizada = (pActualizada: Postulacion) => {
-    setPostulaciones(prev => prev.map(p => p.id === pActualizada.id ? pActualizada : p));
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'aprobada':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
-            Aprobada y Vigente
-          </span>
-        );
-      case 'pendiente':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
-            Pendiente de Aprobación UTH
-          </span>
-        );
-      case 'cerrada':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
-            <Lock className="w-3.5 h-3.5 text-zinc-400" />
-            Concluida / Cerrada
-          </span>
-        );
-      case 'rechazada':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">
-            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-            Rechazada por UTH
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700">
-            {status}
-          </span>
-        );
-    }
-  };
-
-  const formatFecha = (fechaStr: string) => {
-    try {
-      const d = new Date(fechaStr);
-      return d.toLocaleDateString('es-MX', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return fechaStr;
-    }
+    setPostulaciones((prev) =>
+      prev.map((p) => (p.id === pActualizada.id ? pActualizada : p))
+    );
   };
 
   const totalCandidatos = postulaciones.length;
-  const vacantesAprobadas = vacantes.filter(v => v.status === 'aprobada').length;
+  const vacantesAprobadas = vacantes.filter((v) => v.status === 'aprobada').length;
 
   if (authLoading || (loadingData && !empresa)) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-3 border-[#691C32] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-[#636569] font-medium">Cargando portal empresarial UTH...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Iniciando portal de empresa…" />;
   }
 
   if (!user || (user.rol !== 'empresa' && user.rol !== 'soporte_ti')) return null;
 
+  const tabItems = [
+    { id: 'resumen' as const, label: 'Resumen', icon: Layers },
+    {
+      id: 'vacantes' as const,
+      label: 'Mis Vacantes',
+      icon: Briefcase,
+      count: vacantes.length,
+    },
+    {
+      id: 'candidatos' as const,
+      label: 'Candidatos',
+      icon: Users,
+      count: totalCandidatos,
+    },
+    { id: 'perfil' as const, label: 'Perfil y Convenio', icon: Building2 },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Banner de Bienvenida Institucional */}
-      <div className="bg-gradient-to-r from-[#2D2926] to-[#451824] text-white rounded-2xl shadow-sm border border-zinc-800 overflow-hidden relative">
-        <div className="w-full h-1.5 flex">
-          <div className="h-full w-2/3 bg-[#691C32]" />
-          <div className="h-full w-1/3 bg-[#C2BA98]" />
-        </div>
+    <div className="min-h-[85vh] bg-canvas flex flex-col">
+      {/* Sub-Navegación Esmerilada Fija (Apple Sub-nav) */}
+      <SubNav
+        title="Portal de Empresa"
+        items={tabItems}
+        value={tab}
+        onChange={setTab}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<PlusCircle className="size-4" />}
+            onClick={() => setModalAbierto(true)}
+          >
+            Publicar Vacante
+          </Button>
+        }
+      />
 
-        <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-            {/* Logotipo de la Empresa o Ícono Oficial */}
-            <div className="w-20 h-20 rounded-2xl bg-white p-2 border border-zinc-200/40 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
-              {empresa?.logo ? (
-                <img 
-                  src={empresa.logo} 
-                  alt={empresa.nombre} 
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="text-center text-zinc-400">
-                  <Building2 className="w-8 h-8 mx-auto text-[#691C32]" />
-                  <span className="text-[9px] font-bold text-zinc-500 block mt-0.5">Sin Logo</span>
+      <main className="py-8 sm:py-10 flex-1">
+        <Container size="console" className="space-y-8">
+          {/* Banner Institucional de la Organización */}
+          <Card tone="parchment" padded className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                {/* Logotipo de la Empresa */}
+                <div className="size-20 rounded-card bg-canvas p-2.5 ring-1 ring-hairline flex items-center justify-center overflow-hidden shrink-0">
+                  {empresa?.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={empresa.logo}
+                      alt={empresa.nombre}
+                      className="size-full object-contain"
+                    />
+                  ) : (
+                    <Building2 className="size-8 text-ink-48" />
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="space-y-2.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#691C32]/40 text-rose-200 border border-[#691C32]/60">
-                  <Building2 className="w-3.5 h-3.5" />
-                  Empresa Vinculada UTH
-                </span>
-                {empresa?.status === 'aprobada' && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Convenio Acreditado
-                  </span>
-                )}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {empresa?.status === 'rechazada' ? (
+                      <StatusPill tone="danger">Convenio Inactivo</StatusPill>
+                    ) : (
+                      <StatusPill tone="success">Convenio Activo</StatusPill>
+                    )}
+                  </div>
+
+                  <h1 className="text-display-md text-ink font-semibold">
+                    {empresa?.nombre || `${user.nombres} ${user.apellido_paterno}`}
+                  </h1>
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-ink-64">
+                    {empresa?.nombre_contacto && (
+                      <span className="flex items-center gap-1.5 font-medium text-ink">
+                        <Users className="size-4 text-primary" />
+                        <span>Contacto: {empresa.nombre_contacto} ({empresa.cargo_contacto || 'RH'})</span>
+                      </span>
+                    )}
+                    {empresa?.giro && (
+                      <>
+                        <span className="hidden sm:inline text-ink-48">•</span>
+                        <span>{empresa.giro}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-                {empresa?.nombre || `${user.nombres} ${user.apellido_paterno}`}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300">
-                {empresa?.nombre_contacto && (
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-[#C2BA98]" />
-                    Contacto: {empresa.nombre_contacto} ({empresa.cargo_contacto || 'Representante'})
-                  </span>
-                )}
-                {empresa?.giro && (
-                  <>
-                    <span className="text-zinc-600 hidden sm:inline">•</span>
-                    <span className="flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5 text-[#00A887]" />
-                      {empresa.giro}
-                    </span>
-                  </>
-                )}
-                {empresa?.domicilio && (
-                  <>
-                    <span className="text-zinc-600 hidden sm:inline">•</span>
-                    <span className="flex items-center gap-1.5 text-zinc-400 truncate max-w-xs">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {empresa.domicilio}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              onClick={() => setModalPerfilAbierto(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10 cursor-pointer shadow-xs"
-              title="Editar datos de contacto y subir logotipo corporativo"
-            >
-              <Edit3 className="w-4 h-4 text-[#C2BA98]" />
-              Editar Perfil y Logo
-            </button>
-            <button
-              onClick={() => setModalAbierto(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-md cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Publicar Nueva Vacante
-            </button>
-            <button
-              onClick={() => {
-                logout();
-                router.push('/login');
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-zinc-300 bg-white/10 hover:bg-white/15 transition-all cursor-pointer"
-              title="Cerrar sesión"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Salir
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Grid de Métricas en Tiempo Real */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Vacantes */}
-        <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#00A887]">
-              <Briefcase className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-black text-[#2D2926]">
-              {loadingData ? '...' : vacantes.length}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-[#2D2926]">Vacantes Registradas</h2>
-            <p className="text-xs text-[#636569] mt-1">
-              Total de ofertas laborales creadas por tu organización en la plataforma.
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setTabActiva('vacantes');
-              setModalAbierto(true);
-            }}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00A887] hover:text-[#008F73] cursor-pointer"
-          >
-            + Registrar otra oferta
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Vacantes Aprobadas */}
-        <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-black text-[#2D2926]">
-              {loadingData ? '...' : vacantesAprobadas}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-[#2D2926]">Ofertas Activas y Vigentes</h2>
-            <p className="text-xs text-[#636569] mt-1">
-              Vacantes aprobadas por Vinculación UTH disponibles para postulación.
-            </p>
-          </div>
-          <Link
-            href="/vacantes"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800"
-          >
-            Ver bolsa pública UTH
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {/* Candidatos Postulados */}
-        <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-[#691C32]">
-              <Users className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-black text-[#2D2926]">
-              {loadingData ? '...' : totalCandidatos}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-[#2D2926]">Candidatos Turnados</h2>
-            <p className="text-xs text-[#636569] mt-1">
-              Egresados con CV validado por Vinculación UTH listos para entrevista.
-            </p>
-          </div>
-          <button
-            onClick={() => setTabActiva('candidatos')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#691C32] hover:underline cursor-pointer"
-          >
-            Ver candidatos y expedientes
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Pestañas de Navegación del Portal */}
-      <div className="flex items-center gap-3 border-b border-zinc-200 pb-1">
-        <button
-          onClick={() => setTabActiva('vacantes')}
-          className={`inline-flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-            tabActiva === 'vacantes'
-              ? 'border-[#00A887] text-[#00A887]'
-              : 'border-transparent text-zinc-500 hover:text-[#2D2926]'
-          }`}
-        >
-          <Briefcase className="w-4 h-4" />
-          Mis Ofertas de Empleo ({vacantes.length})
-        </button>
-
-        <button
-          onClick={() => setTabActiva('candidatos')}
-          className={`inline-flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-            tabActiva === 'candidatos'
-              ? 'border-[#691C32] text-[#691C32]'
-              : 'border-transparent text-zinc-500 hover:text-[#2D2926]'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Candidatos y CVs Recibidos ({postulaciones.length})
-        </button>
-      </div>
-
-      {/* CONTENIDO PESTAÑA: VACANTES */}
-      {tabActiva === 'vacantes' && (
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden space-y-6">
-          <div className="p-6 border-b border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-black text-[#2D2926]">
-                Gestión de Ofertas Laborales Publicadas
-              </h2>
-              <p className="text-xs text-[#636569] mt-0.5">
-                Supervisión de vacantes, estatus institucional de aprobación y recepción de candidatos.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-[#691C32] bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
-                {vacantes.length} vacante(s)
-              </span>
-              <button
-                onClick={() => setModalAbierto(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all cursor-pointer shadow-xs"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                Publicar
-              </button>
-            </div>
-          </div>
-
-          {loadingData ? (
-            <div className="p-12 text-center space-y-3">
-              <div className="w-6 h-6 border-2 border-[#691C32] border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-xs text-zinc-500 font-medium">Cargando tus vacantes registradas...</p>
-            </div>
-          ) : vacantes.length === 0 ? (
-            <div className="p-10 text-center space-y-3">
-              <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-400">
-                <Briefcase className="w-6 h-6" />
-              </div>
-              <h3 className="text-sm font-bold text-[#2D2926]">
-                Aún no has registrado vacantes de empleo
-              </h3>
-              <p className="text-xs text-[#636569] max-w-sm mx-auto">
-                Publica tu primera oferta de empleo para vincularte con los egresados de TSU, Ingeniería y Licenciatura de la UTH.
-              </p>
-              <div className="pt-2">
-                <button
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <Button
+                  variant="pearl"
+                  size="sm"
+                  icon={<Edit3 className="size-4 text-primary" />}
+                  onClick={() => setModalPerfilAbierto(true)}
+                >
+                  Editar Perfil / Logo
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={<PlusCircle className="size-4" />}
                   onClick={() => setModalAbierto(true)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all cursor-pointer"
                 >
-                  <PlusCircle className="w-4 h-4" />
-                  Publicar Primera Vacante
-                </button>
+                  Nueva Vacante
+                </Button>
               </div>
             </div>
-          ) : (
-            <div className="divide-y divide-zinc-100">
-              {vacantes.map((v) => (
-                <div 
-                  key={v.id} 
-                  className="p-6 hover:bg-zinc-50/60 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  <div className="space-y-2 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-mono font-bold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
-                        {v.clave_vacante}
-                      </span>
-                      <span className="text-[11px] font-semibold text-zinc-600 uppercase bg-zinc-100 px-2 py-0.5 rounded">
-                        {v.modalidad}
-                      </span>
-                      <span className="text-[11px] font-semibold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded">
-                        {v.tipo_contratacion?.replace('_', ' ')}
-                      </span>
-                      {getStatusBadge(v.status)}
-                    </div>
 
-                    <h3 className="text-base font-bold text-[#2D2926]">
-                      {v.titulo}
-                    </h3>
-
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
-                      <span className="flex items-center gap-1 font-medium text-zinc-700">
-                        <Briefcase className="w-3.5 h-3.5 text-[#00A887]" />
-                        {v.area_estudio_nombre || 'Área Tecnológica UTH'}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                        Registrada el {formatFecha(v.fecha_registro)}
-                      </span>
-                      <span className="flex items-center gap-1 font-semibold text-zinc-800">
-                        <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                        {v.salario_a_tratar 
-                          ? 'Salario a tratar' 
-                          : v.sueldo_minimo && v.sueldo_maximo 
-                            ? `$${Number(v.sueldo_minimo).toLocaleString('es-MX')} - $${Number(v.sueldo_maximo).toLocaleString('es-MX')} MXN`
-                            : 'Sueldo competitivo'}
-                      </span>
-                    </div>
+            {!empresa && !loadingData && (
+              <div className="mt-4 pt-4 border-t border-divider">
+                <Alert tone="info">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <span>Tu cuenta empresarial aún no tiene un perfil corporativo completado. Configúralo para que los egresados conozcan tu organización.</span>
+                    <Button variant="secondary" size="sm" onClick={() => setModalPerfilAbierto(true)}>
+                      Completar Perfil
+                    </Button>
                   </div>
+                </Alert>
+              </div>
+            )}
+          </Card>
 
-                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-zinc-100">
-                    <button
-                      onClick={() => setTabActiva('candidatos')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors cursor-pointer"
-                    >
-                      <Users className="w-3.5 h-3.5 text-[#00A887]" />
-                      <span>{v.num_postulaciones || 0} candidato(s)</span>
-                    </button>
+          {/* ── PESTAÑA 1: RESUMEN ───────────────────────────────────── */}
+          {tab === 'resumen' && (
+            <div className="space-y-8 animate-fade-in">
+              {/* Métricas Principales */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <StatTile
+                  label="Vacantes Registradas"
+                  value={loadingData ? '…' : vacantes.length}
+                  hint="Ofertas de empleo de tu empresa"
+                  tone="canvas"
+                />
 
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/vacantes/${v.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#00A887] hover:underline"
-                      >
-                        Ver en bolsa
-                        <ExternalLink className="w-3 h-3" />
-                      </Link>
+                <StatTile
+                  label="Vacantes Aprobadas y Vigentes"
+                  value={loadingData ? '…' : vacantesAprobadas}
+                  hint="Activas en la bolsa pública UTH"
+                  tone="canvas"
+                />
 
-                      {v.status === 'aprobada' && (
-                        <button
-                          onClick={() => handleCerrarVacante(v.id, v.titulo)}
-                          disabled={accionEnProceso === v.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-zinc-600 hover:text-red-700 hover:bg-red-50 border border-zinc-200 transition-all cursor-pointer disabled:opacity-50"
-                          title="Concluir y cerrar recepción de postulantes"
-                        >
-                          {accionEnProceso === v.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Lock className="w-3 h-3" />
-                          )}
-                          Cerrar vacante
-                        </button>
-                      )}
-                    </div>
+                <StatTile
+                  label="Candidatos Turnados por UTH"
+                  value={loadingData ? '…' : totalCandidatos}
+                  hint="Perfiles con filtro de pertinencia"
+                  tone="canvas"
+                />
+              </div>
+
+              {/* Vacantes Recientes */}
+              <Card padded className="space-y-6 bg-canvas">
+                <div className="flex items-center justify-between pb-3 border-b border-divider">
+                  <div>
+                    <h2 className="text-tagline text-ink">Tus Ofertas Laborales Recientes</h2>
+                    <p className="text-caption text-ink-64">
+                      Supervisa el estatus de aprobación de tus convocatorias.
+                    </p>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTab('vacantes')}
+                    iconRight={<ArrowRight className="size-3.5" />}
+                  >
+                    Ver todas ({vacantes.length})
+                  </Button>
                 </div>
-              ))}
+
+                {loadingData ? (
+                  <div className="py-8 text-center text-caption text-ink-64">
+                    Cargando vacantes…
+                  </div>
+                ) : vacantes.length === 0 ? (
+                  <EmptyState
+                    icon={Briefcase}
+                    title="No tienes vacantes registradas"
+                    description="Publica tu primera convocatoria para recibir perfiles técnicos y de ingeniería validados por la UTH."
+                    action={
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setModalAbierto(true)}
+                        icon={<PlusCircle className="size-4" />}
+                      >
+                        Publicar Vacante
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <div className="divide-y divide-divider">
+                    {vacantes.slice(0, 3).map((v) => {
+                      const st = getVacanteStatus(v.status);
+                      return (
+                        <div key={v.id} className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Code>{v.clave_vacante || `VAC-${v.id}`}</Code>
+                              {v.modalidad && (
+                                <Tag>{getModalidadLabel(v.modalidad)}</Tag>
+                              )}
+                              <StatusPill status={st} />
+                            </div>
+                            <h3 className="text-body-strong text-ink">{v.titulo}</h3>
+                            <p className="text-caption text-ink-64">
+                              <span>Plazas: {v.num_candidatos}</span>
+                              <span className="mx-2">•</span>
+                              <span>Registrada el {formatDate(v.fecha_registro)}</span>
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <ButtonLink
+                              href={`/vacantes/${v.id}`}
+                              variant="secondary"
+                              size="sm"
+                            >
+                              Ver en catálogo
+                            </ButtonLink>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
             </div>
           )}
-        </div>
-      )}
 
-      {/* CONTENIDO PESTAÑA: CANDIDATOS */}
-      {tabActiva === 'candidatos' && (
-        <CandidatosManager
-          postulaciones={postulaciones}
-          vacantes={vacantes}
-          token={accessToken || ''}
-          onPostulacionActualizada={handlePostulacionActualizada}
-        />
-      )}
+          {/* ── PESTAÑA 2: MIS VACANTES ──────────────────────────────── */}
+          {tab === 'vacantes' && (
+            <div className="space-y-6 animate-fade-in">
+              {actionError && (
+                <Alert tone="danger" onDismiss={() => setActionError(null)}>
+                  {actionError}
+                </Alert>
+              )}
 
-      {/* Modal de Publicación */}
+              <Card padded className="space-y-6 bg-canvas">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-divider">
+                  <div>
+                    <h2 className="text-tagline text-ink">Catálogo de Convocatorias Propias</h2>
+                    <p className="text-caption text-ink-64">
+                      Gestiona vacantes abiertas, cerradas o en proceso de revisión por la universidad.
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={<PlusCircle className="size-4" />}
+                    onClick={() => setModalAbierto(true)}
+                  >
+                    Nueva Vacante
+                  </Button>
+                </div>
+
+                {loadingData ? (
+                  <div className="py-12 text-center text-caption text-ink-64">
+                    Cargando vacantes…
+                  </div>
+                ) : vacantes.length === 0 ? (
+                  <EmptyState
+                    icon={Briefcase}
+                    title="Aún no tienes vacantes creadas"
+                    description="Registra los requerimientos del puesto para que Vinculación UTH apruebe y publique la convocatoria."
+                    action={
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setModalAbierto(true)}
+                      >
+                        Crear Vacante Ahora
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <div className="divide-y divide-divider space-y-4">
+                    {vacantes.map((v) => {
+                      const st = getVacanteStatus(v.status);
+                      return (
+                        <div key={v.id} className="pt-4 first:pt-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          <div className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Code>{v.clave_vacante || `VAC-${v.id}`}</Code>
+                              <StatusPill status={st} />
+                              <Tag>{getModalidadLabel(v.modalidad)}</Tag>
+                              <Tag>{getNivelLabel(v.nivel_estudios, true)}</Tag>
+                            </div>
+                            <h3 className="text-body-strong text-ink">{v.titulo}</h3>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-ink-64">
+                              <span>Plazas: <strong className="text-ink font-semibold">{v.num_candidatos}</strong></span>
+                              <span>•</span>
+                              <span>
+                                Salario:{' '}
+                                <strong className="text-ink font-semibold">
+                                  {v.salario_a_tratar
+                                    ? 'A tratar'
+                                    : `${formatMXN(v.sueldo_minimo)} - ${formatMXN(v.sueldo_maximo)}`}
+                                </strong>
+                              </span>
+                              <span>•</span>
+                              <span>Fecha: {formatDate(v.fecha_registro)}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 shrink-0">
+                            <ButtonLink
+                              href={`/vacantes/${v.id}`}
+                              variant="secondary"
+                              size="sm"
+                            >
+                              Ver detalle
+                            </ButtonLink>
+                            {v.status !== 'cerrada' && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                loading={accionEnProceso === v.id}
+                                onClick={() => setConfirmCloseVacante({ id: v.id, titulo: v.titulo })}
+                              >
+                                Cerrar vacante
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {/* ── PESTAÑA 3: CANDIDATOS TURNADOS ───────────────────────── */}
+          {tab === 'candidatos' && (
+            <div className="space-y-6 animate-fade-in">
+              <CandidatosManager
+                postulaciones={postulaciones}
+                vacantes={vacantes}
+                token={accessToken || ''}
+                onPostulacionActualizada={handlePostulacionActualizada}
+              />
+            </div>
+          )}
+
+          {/* ── PESTAÑA 4: PERFIL Y CONVENIO ─────────────────────────── */}
+          {tab === 'perfil' && (
+            <div className="space-y-6 animate-fade-in">
+              <Card padded className="space-y-6 bg-canvas">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-divider">
+                  <div>
+                    <h2 className="text-tagline text-ink">Información Legal y Corporativa</h2>
+                    <p className="text-caption text-ink-64">
+                      Datos institucionales registrados ante el Departamento de Vinculación UTH.
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={<Edit3 className="size-4" />}
+                    onClick={() => setModalPerfilAbierto(true)}
+                  >
+                    Editar Perfil / Logo
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-caption">
+                  <div className="space-y-2 p-4 rounded-field bg-parchment/50">
+                    <span className="text-fine uppercase font-semibold text-ink-64 flex items-center gap-1.5">
+                      <Building2 className="size-3.5 text-primary" />
+                      <span>Razón Social / Organización</span>
+                    </span>
+                    <p className="text-body font-semibold text-ink">{empresa?.nombre}</p>
+                    <p className="text-ink-64 text-fine">Actividad: {empresa?.actividad_de_la_empresa || 'Industrial'}</p>
+                  </div>
+
+                  <div className="space-y-2 p-4 rounded-field bg-parchment/50">
+                    <span className="text-fine uppercase font-semibold text-ink-64 flex items-center gap-1.5">
+                      <Users className="size-3.5 text-primary" />
+                      <span>Contacto Directo de RH</span>
+                    </span>
+                    <p className="text-body font-semibold text-ink">
+                      {empresa?.nombre_contacto || 'Sin contacto registrado'}
+                    </p>
+                    <p className="text-ink-64 text-fine">{empresa?.cargo_contacto || 'Representante'}</p>
+                    {(empresa?.telefono_oficina || empresa?.telefono_celular) && (
+                      <p className="text-ink-64 text-fine flex items-center gap-1">
+                        <Phone className="size-3" />
+                        <span>{empresa.telefono_oficina || empresa.telefono_celular}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 p-4 rounded-field bg-parchment/50">
+                    <span className="text-fine uppercase font-semibold text-ink-64 flex items-center gap-1.5">
+                      <MapPin className="size-3.5 text-primary" />
+                      <span>Ubicación y Sector</span>
+                    </span>
+                    <p className="text-body text-ink leading-relaxed">
+                      {empresa?.domicilio || 'No especificado'}
+                    </p>
+                    <p className="text-ink-64 text-fine">Giro: {empresa?.giro || 'Industria'}</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+        </Container>
+      </main>
+
+      {/* Modal de Confirmación de Cierre de Vacante */}
+      <Modal
+        open={Boolean(confirmCloseVacante)}
+        onClose={() => !accionEnProceso && setConfirmCloseVacante(null)}
+        size="sm"
+        eyebrow="Gestión de Convocatoria"
+        title="¿Cerrar esta vacante?"
+        description={
+          confirmCloseVacante
+            ? `La vacante "${confirmCloseVacante.titulo}" dejará de recibir nuevas postulaciones de egresados.`
+            : undefined
+        }
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setConfirmCloseVacante(null)}
+              disabled={Boolean(accionEnProceso)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              loading={Boolean(accionEnProceso)}
+              onClick={executeCerrarVacante}
+            >
+              Sí, Cerrar Vacante
+            </Button>
+          </>
+        }
+      >
+        <p className="text-caption text-ink-64">
+          Los candidatos que ya fueron turnados para esta oferta seguirán disponibles en tu bandeja de candidatos.
+        </p>
+      </Modal>
+
+      {/* Modal de Publicar Vacante */}
       <NuevaVacanteModal
         isOpen={modalAbierto}
         onClose={() => setModalAbierto(false)}
         token={accessToken || ''}
-        defaultContactoNombre={empresa?.nombre_contacto}
         onVacanteCreada={handleVacanteCreada}
       />
 
-      {/* Modal de Edición de Perfil de Empresa */}
+      {/* Modal de Edición de Perfil y Logotipo */}
       <EditarPerfilEmpresaModal
         isOpen={modalPerfilAbierto}
         onClose={() => setModalPerfilAbierto(false)}
         empresa={empresa}
         token={accessToken || ''}
-        onProfileUpdated={(updated) => setEmpresa(updated)}
+        onProfileUpdated={(updated: EmpresaProfile) => setEmpresa(updated)}
       />
     </div>
   );

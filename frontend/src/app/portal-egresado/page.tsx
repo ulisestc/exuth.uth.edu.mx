@@ -5,41 +5,68 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getRoleRedirectPath } from '@/lib/auth';
-import { 
-  fetchMisPostulaciones, 
-  fetchMiPerfilEgresado, 
-  Postulacion, 
-  EgresadoProfile 
+import {
+  fetchMisPostulaciones,
+  fetchMiPerfilEgresado,
+  Postulacion,
+  EgresadoProfile,
 } from '@/lib/api';
 import { CvManager } from '@/components/egresados/CvManager';
-import { 
-  GraduationCap, 
-  Briefcase, 
-  FileText, 
-  UserCheck, 
-  ArrowRight, 
-  Clock, 
-  Building2, 
-  ExternalLink, 
-  LogOut, 
-  Calendar, 
-  CheckCircle2,
-  AlertCircle,
-  Eye,
-  Send,
-  BookOpen,
-  Award,
+import {
+  GraduationCap,
+  Briefcase,
+  FileText,
+  UserCheck,
+  ArrowRight,
+  Clock,
+  Building2,
+  ExternalLink,
+  Calendar,
   UserCog,
   Phone,
   MapPin,
-  Wrench
+  Wrench,
+  BookOpen,
+  Award,
+  Layers,
+  Send,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import EditarPerfilEgresadoModal from '@/components/egresados/EditarPerfilEgresadoModal';
 import PostulacionTimeline from '@/components/egresados/PostulacionTimeline';
+import {
+  Container,
+  Card,
+  StatTile,
+  Button,
+  ButtonLink,
+  SubNav,
+  useTabParam,
+  StatusPill,
+  EmptyState,
+  PageLoader,
+  Alert,
+  Code,
+  Tag,
+} from '@/components/ui';
+import {
+  getPostulacionStatus,
+  getNivelLabel,
+  getModalidadLabel,
+  formatDate,
+} from '@/lib/status';
+
+type EgresadoTab = 'resumen' | 'postulaciones' | 'expediente' | 'perfil';
 
 export default function PortalEgresadoPage() {
   const router = useRouter();
   const { user, accessToken, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+
+  const [tab, setTab] = useTabParam<EgresadoTab>(
+    ['resumen', 'postulaciones', 'expediente', 'perfil'],
+    'resumen'
+  );
 
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
   const [loadingPostulaciones, setLoadingPostulaciones] = useState(true);
@@ -47,8 +74,9 @@ export default function PortalEgresadoPage() {
   const [profile, setProfile] = useState<EgresadoProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [modalEditarPerfil, setModalEditarPerfil] = useState(false);
+  const [filtroEstado, setFiltroEstado] = useState<string>('todas');
 
-  // Redirigir a login si no está autenticado o a su portal correspondiente
+  // Redirigir si no está autenticado o tiene rol no autorizado
   useEffect(() => {
     if (!authLoading) {
       if (!isAuthenticated) {
@@ -59,19 +87,19 @@ export default function PortalEgresadoPage() {
     }
   }, [authLoading, isAuthenticated, user, router]);
 
-  // Cargar perfil y postulaciones del egresado
+  // Cargar datos
   useEffect(() => {
     async function loadData() {
-      if (accessToken && user?.rol === 'egresado') {
+      if (accessToken && user && (user.rol === 'egresado' || user.rol === 'soporte_ti')) {
         try {
           const [postulacionesData, profileData] = await Promise.all([
-            fetchMisPostulaciones(accessToken),
-            fetchMiPerfilEgresado(accessToken),
+            fetchMisPostulaciones(accessToken).catch(() => []),
+            fetchMiPerfilEgresado(accessToken).catch(() => null),
           ]);
           setPostulaciones(postulacionesData);
           setProfile(profileData);
         } catch (error) {
-          console.error('Error loading egresado data:', error);
+          console.error('Error cargando datos del egresado:', error);
         } finally {
           setLoadingPostulaciones(false);
           setLoadingProfile(false);
@@ -87,451 +115,452 @@ export default function PortalEgresadoPage() {
     }
   }, [accessToken, user]);
 
-  const getStatusBadge = (estado: string) => {
-    switch (estado) {
-      case 'revision_uth':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
-            En Revisión por UTH
-          </span>
-        );
-      case 'enviada_empresa':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
-            <Send className="w-3.5 h-3.5 text-blue-600" />
-            Enviada a Empresa
-          </span>
-        );
-      case 'Aceptada':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-[#00A887] border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
-            Aceptada
-          </span>
-        );
-      case 'rechazada_uth':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-[#A8123E] border border-rose-200">
-            <AlertCircle className="w-3.5 h-3.5 text-[#A8123E]" />
-            No cubre perfil UTH
-          </span>
-        );
-      case 'Rechazada':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
-            Proceso Concluido
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700">
-            {estado}
-          </span>
-        );
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const d = new Date(dateString);
-      return d.toLocaleDateString('es-MX', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const getNivelEstudiosLabel = (nivel?: string) => {
-    switch (nivel) {
-      case 'TSU':
-        return 'Técnico Superior Universitario';
-      case 'ING_LIC':
-        return 'Ingeniería / Licenciatura';
-      case 'MTRIA':
-        return 'Maestría';
-      default:
-        return nivel || 'TSU / Ingeniería';
-    }
-  };
-
   if (authLoading || (loadingProfile && !profile)) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-3 border-[#00A887] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-[#636569] font-medium">Cargando portal de egresado...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Iniciando portal de egresado…" />;
   }
 
   if (!user || (user.rol !== 'egresado' && user.rol !== 'soporte_ti')) return null;
 
+  const postulacionesFiltradas = postulaciones.filter((p) => {
+    if (filtroEstado === 'todas') return true;
+    return p.estado === filtroEstado;
+  });
+
+  const tabItems = [
+    { id: 'resumen' as const, label: 'Resumen', icon: Layers },
+    {
+      id: 'postulaciones' as const,
+      label: 'Mis Postulaciones',
+      icon: Briefcase,
+      count: postulaciones.length,
+    },
+    { id: 'expediente' as const, label: 'CV y Documentos', icon: FileText },
+    { id: 'perfil' as const, label: 'Datos y Contacto', icon: UserCog },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Banner de Bienvenida Institucional */}
-      <div className="bg-gradient-to-r from-[#2D2926] to-[#3a3532] text-white rounded-2xl shadow-sm border border-zinc-800 overflow-hidden relative">
-        {/* Pleca Institucional Bicolor */}
-        <div className="w-full h-1.5 flex">
-          <div className="h-full w-2/3 bg-[#691C32]" />
-          <div className="h-full w-1/3 bg-[#C2BA98]" />
-        </div>
-
-        <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {profile?.es_verificado_padron ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#00A887]/20 text-[#00A887] border border-[#00A887]/30">
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  Egresado UTH Verificado
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  <Clock className="w-3.5 h-3.5" />
-                  En Validación de Padrón
-                </span>
-              )}
-
-              {profile?.matricula && (
-                <span className="text-xs font-mono font-bold bg-white/10 px-2.5 py-0.5 rounded text-zinc-300">
-                  Matrícula: {profile.matricula}
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Bienvenida(o), {user.nombres} {user.apellido_paterno}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300">
-              <span className="flex items-center gap-1.5 font-medium">
-                <BookOpen className="w-3.5 h-3.5 text-[#00A887]" />
-                {profile?.carrera || 'Programa Académico UTH'}
-              </span>
-              <span className="text-zinc-500 hidden sm:inline">•</span>
-              <span className="flex items-center gap-1.5 text-zinc-300">
-                <Award className="w-3.5 h-3.5 text-[#C2BA98]" />
-                {getNivelEstudiosLabel(profile?.nivel_estudios)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => setModalEditarPerfil(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10 cursor-pointer shadow-xs"
-              title="Editar datos de contacto y habilidades"
-            >
-              <UserCog className="w-4 h-4 text-[#00A887]" />
-              Editar Perfil
-            </button>
-            <Link
-              href="/vacantes"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-sm"
-            >
-              <Briefcase className="w-4 h-4" />
-              Explorar Vacantes
-            </Link>
-            <button
-              onClick={() => {
-                logout();
-                router.push('/login');
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-zinc-300 bg-white/10 hover:bg-white/15 transition-all cursor-pointer"
-              title="Cerrar sesión"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Salir
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Grid de Estadísticas y Accesos Rápidos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Tarjeta: Mis Postulaciones */}
-        <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#00A887]">
-              <Briefcase className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-black text-[#2D2926]">
-              {loadingPostulaciones ? '...' : postulaciones.length}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-[#2D2926]">Mis Postulaciones</h2>
-            <p className="text-xs text-[#636569] mt-1">
-              Rastreo en vivo del estatus de tus aplicaciones laborales validadas por UTH.
-            </p>
-          </div>
-          <Link
-            href="/vacantes"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00A887] hover:text-[#008F73]"
-          >
-            Explorar catálogo de vacantes
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {/* Tarjeta: Curriculum Vitae */}
-        <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              profile?.cv 
-                ? 'bg-emerald-50 border border-emerald-100 text-[#00A887]' 
-                : 'bg-amber-50 border border-amber-100 text-amber-700'
-            }`}>
-              <FileText className="w-5 h-5" />
-            </div>
-            {profile?.cv ? (
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                Activo
-              </span>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                Pendiente
-              </span>
-            )}
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-[#2D2926]">Currículum Vitae (PDF)</h2>
-            <p className="text-xs text-[#636569] mt-1">
-              {profile?.cv 
-                ? 'Tu CV está cargado y listo para vincularte con empresas.' 
-                : 'Sube tu CV actualizado para postularte con 1 clic a las empresas.'}
-            </p>
-          </div>
-          <a
-            href="#seccion-cv"
-            className={`inline-flex items-center gap-1.5 text-xs font-bold ${
-              profile?.cv 
-                ? 'text-[#00A887] hover:text-[#008F73]' 
-                : 'text-amber-700 hover:text-amber-800'
-            }`}
-          >
-            {profile?.cv ? 'Gestionar o actualizar CV' : 'Subir mi CV en PDF'}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </a>
-        </div>
-
-        {/* Tarjeta: Estado Institucional */}
-        <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
-              <UserCheck className="w-5 h-5" />
-            </div>
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-              profile?.es_verificado_padron 
-                ? 'bg-blue-50 text-blue-800 border border-blue-200' 
-                : 'bg-zinc-100 text-zinc-700 border border-zinc-200'
-            }`}>
-              {profile?.es_verificado_padron ? 'Verificado' : 'En Validación'}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-[#2D2926]">Padrón de Egresados</h2>
-            <p className="text-xs text-[#636569] mt-1">
-              {profile?.curp ? `CURP: ${profile.curp}` : 'Cuenta vinculada a Servicios Escolares'}
-            </p>
-          </div>
-          <div className="text-[11px] text-[#636569] flex items-center gap-1.5 font-medium truncate">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887] shrink-0" />
-            <span className="truncate">{user.email}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Tarjeta de Contacto y Habilidades */}
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
-          <div>
-            <h2 className="text-base font-bold text-[#2D2926] flex items-center gap-2">
-              <UserCog className="w-4 h-4 text-[#00A887]" />
-              Mis Datos de Contacto y Perfil Profesional
-            </h2>
-            <p className="text-xs text-[#636569] mt-0.5">
-              Información compartida con los reclutadores una vez que tu postulación es turnada por la UTH.
-            </p>
-          </div>
-          <button
-            onClick={() => setModalEditarPerfil(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#00A887] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer self-start sm:self-auto"
-          >
-            <UserCog className="w-3.5 h-3.5" />
-            Modificar Datos
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-          <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold text-[#636569] flex items-center gap-1">
-              <Phone className="w-3 h-3 text-[#00A887]" />
-              Teléfonos de Contacto
-            </span>
-            <p className="font-semibold text-[#2D2926]">
-              {profile?.telefono_celular ? `Móvil: ${profile.telefono_celular}` : 'Sin celular registrado'}
-            </p>
-            {profile?.telefono_casa && (
-              <p className="text-zinc-500 text-[11px]">Casa: {profile.telefono_casa}</p>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold text-[#636569] flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-[#00A887]" />
-              Domicilio Registrado
-            </span>
-            <p className="font-medium text-[#2D2926] line-clamp-2">
-              {profile?.domicilio || 'No especificado'}
-            </p>
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold text-[#636569] flex items-center gap-1">
-              <Wrench className="w-3 h-3 text-[#00A887]" />
-              Habilidades y Competencias
-            </span>
-            <p className="font-medium text-[#2D2926] line-clamp-2">
-              {profile?.habilidades || 'Sin habilidades registradas'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Módulo Interactivo: Gestión de CV (PDF) */}
-      <CvManager 
-        profile={profile} 
-        token={accessToken || ''} 
-        onProfileUpdated={(updated) => setProfile(updated)} 
+    <div className="min-h-[85vh] bg-canvas flex flex-col">
+      {/* Sub-Navegación Esmerilada Fija (Apple Sub-nav) */}
+      <SubNav
+        title="Portal de Egresados"
+        items={tabItems}
+        value={tab}
+        onChange={setTab}
+        action={
+          <ButtonLink href="/vacantes" variant="primary" size="sm" icon={<Briefcase className="size-4" />}>
+            Explorar vacantes
+          </ButtonLink>
+        }
       />
 
-      {/* Listado de Postulaciones en Tiempo Real */}
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden space-y-6">
-        <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-black text-[#2D2926]">
-              Historial de Postulaciones Laborales
-            </h2>
-            <p className="text-xs text-[#636569] mt-0.5">
-              Estado de avance del filtro institucional UTH y envío a empresas aliadas.
-            </p>
-          </div>
-          <span className="text-xs font-bold text-[#00A887] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-            {postulaciones.length} registro(s)
-          </span>
-        </div>
+      <main className="py-8 sm:py-10 flex-1">
+        <Container size="console" className="space-y-8">
+          {/* Banner de Bienvenida Institucional */}
+          <Card tone="parchment" padded className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {!profile ? (
+                    <StatusPill tone="danger">
+                      Ficha Académica Incompleta
+                    </StatusPill>
+                  ) : profile.es_verificado_padron ? (
+                    <StatusPill tone="success">
+                      Egresado Verificado en Padrón
+                    </StatusPill>
+                  ) : (
+                    <StatusPill tone="warning">
+                      En Validación de Padrón
+                    </StatusPill>
+                  )}
 
-        {loadingPostulaciones ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="w-6 h-6 border-2 border-[#00A887] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-zinc-500 font-medium">Cargando tus postulaciones...</p>
-          </div>
-        ) : postulaciones.length === 0 ? (
-          <div className="p-10 text-center space-y-3">
-            <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-400">
-              <Briefcase className="w-6 h-6" />
+                  {profile?.matricula && (
+                    <Code>Matrícula: {profile.matricula}</Code>
+                  )}
+                </div>
+
+                <h1 className="text-display-md text-ink font-semibold">
+                  Bienvenida(o), {user.nombres} {user.apellido_paterno}
+                </h1>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-ink-64">
+                  <span className="flex items-center gap-1.5 font-medium text-ink">
+                    <BookOpen className="size-4 text-primary shrink-0" />
+                    <span>{profile?.carrera || 'Programa Académico por capturar'}</span>
+                  </span>
+                  <span className="hidden sm:inline text-ink-48">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Award className="size-4 text-ink-64 shrink-0" />
+                    <span>{getNivelLabel(profile?.nivel_estudios)}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <Button
+                  variant={profile ? 'pearl' : 'primary'}
+                  size="sm"
+                  icon={<UserCog className={`size-4 ${profile ? 'text-primary' : ''}`} />}
+                  onClick={() => setModalEditarPerfil(true)}
+                >
+                  {profile ? 'Editar Perfil' : 'Completar Ficha Académica'}
+                </Button>
+                <ButtonLink
+                  href="/vacantes"
+                  variant={profile ? 'primary' : 'secondary'}
+                  size="sm"
+                  icon={<Briefcase className="size-4" />}
+                >
+                  Ver Vacantes
+                </ButtonLink>
+              </div>
             </div>
-            <h3 className="text-sm font-bold text-[#2D2926]">
-              Aún no tienes postulaciones activas
-            </h3>
-            <p className="text-xs text-[#636569] max-w-sm mx-auto">
-              Explora las oportunidades laborales exclusivas para egresados de la UTH y postúlate con un solo clic.
-            </p>
-            <div className="pt-2">
-              <Link
-                href="/vacantes"
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all"
-              >
-                Explorar Catálogo de Vacantes
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+          </Card>
+
+          {/* Retroalimentación institucional sobre el estado en el Padrón */}
+          {!profile ? (
+            <Alert tone="warning" title="Acción requerida: Completa tu Ficha Académica UTH">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span>
+                  Tu cuenta de usuario está activa, pero aún no se encuentran registrados tus datos escolares (matrícula, CURP, carrera y teléfono). Complétalos para poder subir tu CV, actualizar tu perfil y postularte a vacantes.
+                </span>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setModalEditarPerfil(true)}
+                  className="shrink-0"
+                >
+                  Capturar Datos Ahora
+                </Button>
+              </div>
+            </Alert>
+          ) : !profile.es_verificado_padron ? (
+            <Alert tone="info" title="Cuenta en Validación Manual por Dirección de Vinculación UTH">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span>
+                  Tu matrícula (<strong>{profile.matricula}</strong>) no se localizó en el último corte automatizado de Servicios Escolares, por lo que tu registro fue turnado a <strong>Dirección de Vinculación UTH</strong> para su validación manual. Mientras tanto, <strong>puedes editar libremente tu perfil, subir tu CV y postularte a vacantes</strong>. Si cometiste algún error al escribir tu matrícula o CURP, puedes corregirlo aquí.
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setModalEditarPerfil(true)}
+                  className="shrink-0"
+                >
+                  Revisar / Corregir Matrícula
+                </Button>
+              </div>
+            </Alert>
+          ) : null}
+
+          {/* ── PESTAÑA 1: RESUMEN ───────────────────────────────────── */}
+          {tab === 'resumen' && (
+            <div className="space-y-8 animate-fade-in">
+              {/* Métricas Principales */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <StatTile
+                  label="Mis Postulaciones Activas"
+                  value={loadingPostulaciones ? '…' : postulaciones.length}
+                  hint="Aplicaciones turnadas a empresas"
+                  tone="canvas"
+                />
+
+                <StatTile
+                  label="Currículum Vitae (PDF)"
+                  value={profile?.cv ? 'Cargado' : 'Pendiente'}
+                  hint={profile?.cv ? 'Listo para postularte con 1 clic' : 'Se requiere subir CV en PDF'}
+                  tone="canvas"
+                />
+
+                <StatTile
+                  label="Estatus en Padrón Escolar"
+                  value={profile?.es_verificado_padron ? 'Verificado' : 'En trámite'}
+                  hint={profile?.curp ? `CURP: ${profile.curp}` : 'Enlace a Servicios Escolares'}
+                  tone="canvas"
+                />
+              </div>
+
+              {/* Últimas Postulaciones */}
+              <Card padded className="space-y-6 bg-canvas">
+                <div className="flex items-center justify-between pb-3 border-b border-divider">
+                  <div>
+                    <h2 className="text-tagline text-ink">Postulaciones Recientes</h2>
+                    <p className="text-caption text-ink-64">
+                      Monitorea el avance de tus solicitudes de vinculación laboral.
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTab('postulaciones')}
+                    iconRight={<ArrowRight className="size-3.5" />}
+                  >
+                    Ver todas ({postulaciones.length})
+                  </Button>
+                </div>
+
+                {loadingPostulaciones ? (
+                  <div className="py-8 text-center text-caption text-ink-64">
+                    Cargando postulaciones…
+                  </div>
+                ) : postulaciones.length === 0 ? (
+                  <EmptyState
+                    icon={Briefcase}
+                    title="Aún no tienes postulaciones"
+                    description="Explora las oportunidades laborales exclusivas para egresados de la UTH y postúlate."
+                    action={
+                      <ButtonLink href="/vacantes" variant="primary" size="sm">
+                        Explorar Catálogo de Vacantes
+                      </ButtonLink>
+                    }
+                  />
+                ) : (
+                  <div className="divide-y divide-divider">
+                    {postulaciones.slice(0, 3).map((p) => {
+                      const st = getPostulacionStatus(p.estado);
+                      return (
+                        <div key={p.id} className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Code>{p.vacante_clave || `VAC-${p.vacante}`}</Code>
+                              {p.vacante_modalidad && (
+                                <Tag>{getModalidadLabel(p.vacante_modalidad)}</Tag>
+                              )}
+                            </div>
+                            <h3 className="text-body-strong text-ink">
+                              {p.vacante_titulo || `Vacante #${p.vacante}`}
+                            </h3>
+                            <p className="text-caption text-ink-64 flex items-center gap-3">
+                              <span>{p.vacante_empresa || 'Empresa Vinculada UTH'}</span>
+                              <span>•</span>
+                              <span>Postulado {formatDate(p.fecha_postulacion)}</span>
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0">
+                            <StatusPill status={st} />
+                            <ButtonLink
+                              href={`/vacantes/${p.vacante}`}
+                              variant="secondary"
+                              size="sm"
+                            >
+                              Ver vacante
+                            </ButtonLink>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              {/* Guía Rápida del Flujo de Vinculación */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <Card padded className="space-y-2 bg-parchment">
+                  <span className="text-fine font-semibold text-primary uppercase tracking-wider block">
+                    Fase 1
+                  </span>
+                  <h3 className="text-body-strong text-ink">Expediente y CV</h3>
+                  <p className="text-caption text-ink-64 leading-relaxed">
+                    Mantén tu CV en PDF y tus datos actualizados para que las empresas conozcan tu experiencia.
+                  </p>
+                </Card>
+
+                <Card padded className="space-y-2 bg-parchment">
+                  <span className="text-fine font-semibold text-wine uppercase tracking-wider block">
+                    Fase 2
+                  </span>
+                  <h3 className="text-body-strong text-ink">Validación Institucional</h3>
+                  <p className="text-caption text-ink-64 leading-relaxed">
+                    Vinculación UTH revisa que cumplas el perfil académico antes de turnar tu CV a la empresa.
+                  </p>
+                </Card>
+
+                <Card padded className="space-y-2 bg-parchment">
+                  <span className="text-fine font-semibold text-ink uppercase tracking-wider block">
+                    Fase 3
+                  </span>
+                  <h3 className="text-body-strong text-ink">Entrevista Directa</h3>
+                  <p className="text-caption text-ink-64 leading-relaxed">
+                    La empresa evalúa tu candidatura y te contacta directamente para agendar las entrevistas.
+                  </p>
+                </Card>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="divide-y divide-zinc-100">
-            {postulaciones.map((p) => (
-              <div key={p.id} className="p-6 hover:bg-zinc-50/40 transition-colors space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
-                        {p.vacante_clave || `VAC-${p.vacante}`}
-                      </span>
-                      {p.vacante_modalidad && (
-                        <span className="text-[11px] font-semibold text-zinc-600 uppercase bg-zinc-100 px-2 py-0.5 rounded">
-                          {p.vacante_modalidad}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-base font-bold text-[#2D2926]">
-                      {p.vacante_titulo || `Vacante #${p.vacante}`}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#636569]">
-                      <span className="flex items-center gap-1 font-medium text-zinc-700">
-                        <Building2 className="w-3.5 h-3.5 text-[#00A887]" />
-                        {p.vacante_empresa || 'Empresa Vinculada UTH'}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                        Postulado el {formatDate(p.fecha_postulacion)}
-                      </span>
-                    </div>
+          )}
+
+          {/* ── PESTAÑA 2: MIS POSTULACIONES ─────────────────────────── */}
+          {tab === 'postulaciones' && (
+            <div className="space-y-6 animate-fade-in">
+              <Card padded className="space-y-6 bg-canvas">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-divider">
+                  <div>
+                    <h2 className="text-tagline text-ink">Historial de Postulaciones</h2>
+                    <p className="text-caption text-ink-64">
+                      Trazabilidad institucional de cada una de tus solicitudes laborales.
+                    </p>
                   </div>
 
-                  <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center gap-3 shrink-0">
-                    {getStatusBadge(p.estado)}
-                    <Link
-                      href={`/vacantes/${p.vacante}`}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00A887] hover:underline"
-                    >
-                      Ver vacante
-                      <ExternalLink className="w-3 h-3" />
-                    </Link>
+                  {/* Filtro rápido por estado */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'todas', label: 'Todas' },
+                      { id: 'revision_uth', label: 'En revisión UTH' },
+                      { id: 'enviada_empresa', label: 'En empresa' },
+                      { id: 'Aceptada', label: 'Aceptadas' },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setFiltroEstado(f.id)}
+                        className={`press px-3 py-1 rounded-full text-caption transition-colors ${
+                          filtroEstado === f.id
+                            ? 'bg-primary text-white font-medium'
+                            : 'bg-parchment text-ink-64 hover:text-ink'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Línea de Trazabilidad UTH (Stepper) */}
-                <PostulacionTimeline postulacion={p} />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                {loadingPostulaciones ? (
+                  <div className="py-12 text-center text-caption text-ink-64">
+                    Cargando postulaciones…
+                  </div>
+                ) : postulacionesFiltradas.length === 0 ? (
+                  <EmptyState
+                    icon={Briefcase}
+                    title="No hay postulaciones en este filtro"
+                    description="Revisa otro estado o explora nuevas vacantes disponibles en la bolsa de trabajo."
+                    action={
+                      <ButtonLink href="/vacantes" variant="primary" size="sm">
+                        Explorar Vacantes
+                      </ButtonLink>
+                    }
+                  />
+                ) : (
+                  <div className="divide-y divide-divider space-y-6">
+                    {postulacionesFiltradas.map((p) => {
+                      const st = getPostulacionStatus(p.estado);
+                      return (
+                        <div key={p.id} className="pt-6 first:pt-0 space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                            <div className="space-y-1.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Code>{p.vacante_clave || `VAC-${p.vacante}`}</Code>
+                                {p.vacante_modalidad && (
+                                  <Tag>{getModalidadLabel(p.vacante_modalidad)}</Tag>
+                                )}
+                              </div>
+                              <h3 className="text-body-strong text-ink">
+                                {p.vacante_titulo || `Vacante #${p.vacante}`}
+                              </h3>
+                              <p className="text-caption text-ink-64 flex items-center gap-2">
+                                <Building2 className="size-3.5 text-primary" />
+                                <span>{p.vacante_empresa || 'Empresa Vinculada UTH'}</span>
+                                <span>•</span>
+                                <span>Postulado {formatDate(p.fecha_postulacion)}</span>
+                              </p>
+                            </div>
 
-      {/* Sección Informativa: Pasos para postularte */}
-      <div className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm space-y-6">
-        <h2 className="text-lg font-black text-[#2D2926]">
-          ¿Cómo funciona el proceso de vinculación laboral?
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#00A887]">Paso 1: Perfil y CV</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Expediente Digital</h3>
-            <p className="text-xs text-[#636569]">
-              Mantén tu CV en formato PDF cargado para que el departamento de vinculación cuente con tu historial.
-            </p>
-          </div>
-          <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#691C32]">Paso 2: Validación UTH</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Filtro Institucional</h3>
-            <p className="text-xs text-[#636569]">
-              La UTH revisa que cumplas con los requisitos de la vacante antes de turnar tu CV a la empresa.
-            </p>
-          </div>
-          <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
-            <div className="text-xs font-bold text-[#C2BA98]">Paso 3: Envío y Entrevista</div>
-            <h3 className="text-sm font-bold text-[#2D2926]">Contacto de la Empresa</h3>
-            <p className="text-xs text-[#636569]">
-              La empresa revisa tu currículum oficial y te contacta para agendar entrevistas de trabajo.
-            </p>
-          </div>
-        </div>
-      </div>
+                            <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center gap-2 shrink-0">
+                              <StatusPill status={st} />
+                              <Link
+                                href={`/vacantes/${p.vacante}`}
+                                className="text-caption text-primary hover:underline font-medium inline-flex items-center gap-1"
+                              >
+                                <span>Ver vacante</span>
+                                <ExternalLink className="size-3" />
+                              </Link>
+                            </div>
+                          </div>
+
+                          {/* Stepper de Trazabilidad */}
+                          <div className="p-4 rounded-field bg-parchment/60 ring-1 ring-hairline">
+                            <PostulacionTimeline postulacion={p} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {/* ── PESTAÑA 3: CV Y DOCUMENTOS ──────────────────────────── */}
+          {tab === 'expediente' && (
+            <div className="space-y-6 animate-fade-in">
+              <CvManager
+                profile={profile}
+                token={accessToken || ''}
+                onProfileUpdated={(updated) => setProfile(updated)}
+                onOpenEditProfile={() => setModalEditarPerfil(true)}
+              />
+            </div>
+          )}
+
+          {/* ── PESTAÑA 4: PERFIL Y DATOS ────────────────────────────── */}
+          {tab === 'perfil' && (
+            <div className="space-y-6 animate-fade-in">
+              <Card padded className="space-y-6 bg-canvas">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-divider">
+                  <div>
+                    <h2 className="text-tagline text-ink">Datos de Contacto y Perfil</h2>
+                    <p className="text-caption text-ink-64">
+                      Esta información se comparte con los reclutadores autorizados tras la validación UTH.
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={<UserCog className="size-4" />}
+                    onClick={() => setModalEditarPerfil(true)}
+                  >
+                    Modificar Datos
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-caption">
+                  <div className="space-y-2 p-4 rounded-field bg-parchment/50">
+                    <span className="text-fine uppercase font-semibold text-ink-64 flex items-center gap-1.5">
+                      <Phone className="size-3.5 text-primary" />
+                      <span>Teléfonos</span>
+                    </span>
+                    <p className="text-body font-semibold text-ink">
+                      {profile?.telefono_celular || 'Sin celular registrado'}
+                    </p>
+                    {profile?.telefono_casa && (
+                      <p className="text-ink-64 text-fine">Casa: {profile.telefono_casa}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 p-4 rounded-field bg-parchment/50">
+                    <span className="text-fine uppercase font-semibold text-ink-64 flex items-center gap-1.5">
+                      <MapPin className="size-3.5 text-primary" />
+                      <span>Domicilio</span>
+                    </span>
+                    <p className="text-body text-ink leading-relaxed">
+                      {profile?.domicilio || 'No especificado'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 p-4 rounded-field bg-parchment/50">
+                    <span className="text-fine uppercase font-semibold text-ink-64 flex items-center gap-1.5">
+                      <Wrench className="size-3.5 text-primary" />
+                      <span>Competencias y Habilidades</span>
+                    </span>
+                    <p className="text-body text-ink leading-relaxed">
+                      {profile?.habilidades || 'Sin habilidades registradas'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+        </Container>
+      </main>
 
       {/* Modal de Edición de Perfil */}
       <EditarPerfilEgresadoModal

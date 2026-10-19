@@ -4,34 +4,42 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  fetchCarreras, 
-  fetchGiros, 
-  fetchSectores, 
-  Carrera, 
-  Giro, 
-  Sector 
+import {
+  fetchCarreras,
+  fetchGiros,
+  fetchSectores,
+  Carrera,
+  Giro,
+  Sector,
 } from '@/lib/api';
 import { registerEgresado, registerEmpresa } from '@/lib/auth';
 import { UthLogo } from '@/components/brand/UthLogo';
-import { 
-  GraduationCap, 
-  Building2, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  AlertCircle, 
-  CheckCircle2, 
-  Loader2, 
+import {
+  GraduationCap,
+  Building2,
+  Lock,
+  Eye,
+  EyeOff,
+  User,
+  BookOpen,
   ArrowRight,
   ShieldCheck,
-  User,
-  Phone,
-  MapPin,
-  BookOpen,
-  Briefcase
+  MailCheck,
 } from 'lucide-react';
+import {
+  Container,
+  Card,
+  Field,
+  Input,
+  Select,
+  Checkbox,
+  Button,
+  ButtonLink,
+  Alert,
+  Pleca,
+  SegmentedTabs,
+  PageLoader,
+} from '@/components/ui';
 
 function RegistroForm() {
   const router = useRouter();
@@ -55,6 +63,7 @@ function RegistroForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   // Campos Egresado
   const [egresadoForm, setEgresadoForm] = useState({
@@ -180,11 +189,15 @@ function RegistroForm() {
       });
 
       if (result.success) {
-        router.push('/portal-egresado');
+        if (result.requiresActivation) {
+          setRegisteredEmail(egresadoForm.email);
+        } else {
+          router.push('/portal-egresado');
+        }
       } else {
         setErrorMsg(result.error || 'No se pudo completar el registro de egresado.');
       }
-    } catch (err: any) {
+    } catch {
       setErrorMsg('Ocurrió un error inesperado al conectar con el servidor.');
     } finally {
       setIsSubmitting(false);
@@ -214,7 +227,6 @@ function RegistroForm() {
     setIsSubmitting(true);
 
     try {
-      // Usar el nombre de contacto para nombres y apellidos
       const contactoPartes = empresaForm.nombre_contacto.trim().split(' ');
       const nombres = contactoPartes[0] || 'Contacto';
       const apellido_paterno = contactoPartes[1] || 'Empresa';
@@ -240,682 +252,640 @@ function RegistroForm() {
       });
 
       if (result.success) {
-        router.push('/portal-empresa');
+        if (result.requiresActivation) {
+          setRegisteredEmail(empresaForm.email);
+        } else {
+          router.push('/portal-empresa');
+        }
       } else {
         setErrorMsg(result.error || 'No se pudo completar el registro empresarial.');
       }
-    } catch (err: any) {
+    } catch {
       setErrorMsg('Ocurrió un error inesperado al conectar con el servidor.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (registeredEmail) {
+    return (
+      <div className="py-16 sm:py-24">
+        <Container size="reading">
+          <div className="mx-auto max-w-md space-y-6">
+            <div className="text-center space-y-3">
+              <div className="flex justify-center mb-2">
+                <UthLogo variant="cuadrado" />
+              </div>
+              <h1 className="text-display-md text-ink font-semibold tracking-tight">
+                Verifica tu Correo
+              </h1>
+              <p className="text-caption text-ink-64">
+                Bolsa de Trabajo y Seguimiento de Egresados · UTH
+              </p>
+            </div>
+
+            <Card className="p-0 overflow-hidden bg-canvas shadow-subtle border border-divider">
+              <Pleca />
+
+              <div className="p-6 sm:p-8 space-y-6 text-center">
+                <div className="size-14 rounded-full bg-primary-tint text-primary flex items-center justify-center mx-auto">
+                  <MailCheck className="size-7" />
+                </div>
+
+                <div className="space-y-2">
+                  <h2 className="text-tagline text-ink font-semibold">
+                    ¡Cuenta creada exitosamente!
+                  </h2>
+                  <p className="text-caption text-ink-64 leading-relaxed">
+                    Hemos enviado un enlace de activación institucional a tu correo electrónico:
+                  </p>
+                  <p className="text-body-strong text-ink font-mono bg-canvas-subtle py-2 px-3 rounded-lg border border-divider break-all">
+                    {registeredEmail}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-canvas-subtle border border-divider text-left space-y-2 text-caption text-ink-64">
+                  <div className="flex items-start gap-2">
+                    <ShieldCheck className="size-4 text-primary shrink-0 mt-0.5" />
+                    <span>
+                      Por seguridad institucional, pulsa en el botón <strong>Activar Mi Cuenta Institucional</strong> que te enviamos para comenzar a utilizar la plataforma.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-ink-48 pl-6">
+                    • Si no lo ves en tu bandeja principal, revisa la carpeta de <strong>Correo no deseado (Spam)</strong>.
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <ButtonLink href="/login" variant="primary" size="md" fullWidth>
+                    Ir a Iniciar Sesión <ArrowRight className="size-4 ml-1.5" />
+                  </ButtonLink>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    fullWidth
+                    onClick={() => {
+                      setRegisteredEmail(null);
+                      setErrorMsg(null);
+                    }}
+                  >
+                    Registrar otra cuenta
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-3xl space-y-6">
-        {/* Cabecera con imagotipo oficial */}
-        <div className="text-center space-y-3">
+    <div className="py-12 sm:py-16">
+      <Container size="reading">
+        {/* Cabecera institucional */}
+        <div className="text-center space-y-3 mb-8">
           <div className="flex justify-center mb-2">
             <UthLogo variant="cuadrado" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#2D2926] tracking-tight">
+          <h1 className="text-display-md text-ink font-semibold tracking-tight">
             Registro Institucional
           </h1>
-          <p className="text-sm text-[#636569]">
+          <p className="text-body text-ink-64">
             Bolsa de Trabajo y Vinculación Laboral · Universidad Tecnológica de Huejotzingo
           </p>
         </div>
 
-        {/* Selector de Pestaña */}
-        <div className="grid grid-cols-2 gap-2 p-1.5 bg-zinc-100 rounded-xl border border-zinc-200 text-xs font-bold">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('egresado');
+        {/* Selector de Perfil SegmentedTabs */}
+        <div className="flex justify-center mb-6">
+          <SegmentedTabs
+            items={[
+              { id: 'egresado', label: 'Soy Egresado(a) UTH', icon: GraduationCap },
+              { id: 'empresa', label: 'Soy Empresa / Empleador', icon: Building2 },
+            ]}
+            value={activeTab}
+            onChange={(val) => {
+              setActiveTab(val as 'egresado' | 'empresa');
               setErrorMsg(null);
             }}
-            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-all cursor-pointer ${
-              activeTab === 'egresado'
-                ? 'bg-white text-[#00A887] shadow-sm font-black'
-                : 'text-[#636569] hover:text-[#2D2926]'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4" />
-            Soy Egresado(a) UTH
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('empresa');
-              setErrorMsg(null);
-            }}
-            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-all cursor-pointer ${
-              activeTab === 'empresa'
-                ? 'bg-white text-[#691C32] shadow-sm font-black'
-                : 'text-[#636569] hover:text-[#2D2926]'
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            Soy Empresa / Empleador
-          </button>
+          />
         </div>
 
         {/* Tarjeta del Formulario */}
-        <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-          {/* Pleca Bicolor */}
-          <div className="w-full h-1.5 flex">
-            <div className="h-full w-2/3 bg-[#691C32]" />
-            <div className="h-full w-1/3 bg-[#C2BA98]" />
-          </div>
+        <Card className="p-0 overflow-hidden bg-canvas">
+          <Pleca />
 
-          <div className="p-6 sm:p-10 space-y-6">
+          <div className="p-6 sm:p-10 space-y-8">
             {/* Mensaje de Error */}
             {errorMsg && (
-              <div className="p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3 text-sm text-red-800 animate-in fade-in duration-200">
-                <AlertCircle className="w-5 h-5 text-[#A8123E] shrink-0 mt-0.5" />
-                <div className="flex-1 font-medium">{errorMsg}</div>
-              </div>
+              <Alert tone="danger">
+                {errorMsg}
+              </Alert>
             )}
 
             {/* FORMULARIO EGRESADO */}
             {activeTab === 'egresado' ? (
-              <form onSubmit={handleSubmitEgresado} className="space-y-6">
-                <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#00A887] flex items-center gap-2 mb-4">
-                    <User className="w-4 h-4" />
-                    1. Datos Personales y de Identidad
-                  </h2>
+              <form onSubmit={handleSubmitEgresado} className="space-y-8">
+                {/* 1. Datos Personales */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-hairline pb-2">
+                    <User className="size-4 text-primary" />
+                    <h2 className="text-tagline text-ink font-semibold">
+                      1. Identidad y Datos Personales
+                    </h2>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Matrícula UTH *
-                      </label>
-                      <input
-                        type="text"
+                    <Field label="Matrícula UTH" required>
+                      <Input
                         required
                         value={egresadoForm.matricula}
                         onChange={(e) => setEgresadoForm({ ...egresadoForm, matricula: e.target.value })}
                         placeholder="ej. 202303045"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        CURP (18 dígitos) *
-                      </label>
-                      <input
-                        type="text"
+                    <Field label="CURP (18 caracteres)" required>
+                      <Input
                         required
                         maxLength={18}
                         value={egresadoForm.curp}
                         onChange={(e) => setEgresadoForm({ ...egresadoForm, curp: e.target.value.toUpperCase() })}
                         placeholder="ej. SAPA010101MPLRRN01"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 uppercase focus:outline-none focus:ring-2 focus:ring-[#00A887]"
+                        className="uppercase font-mono"
                       />
-                    </div>
+                    </Field>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Nombre(s) *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={egresadoForm.nombres}
-                        onChange={(e) => setEgresadoForm({ ...egresadoForm, nombres: e.target.value })}
-                        placeholder="Nombre completo"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
-                      />
+                      <Field label="Nombre(s)" required>
+                        <Input
+                          required
+                          value={egresadoForm.nombres}
+                          onChange={(e) => setEgresadoForm({ ...egresadoForm, nombres: e.target.value })}
+                          placeholder="Nombre(s) completo(s)"
+                        />
+                      </Field>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Apellido Paterno *
-                      </label>
-                      <input
-                        type="text"
+                    <Field label="Primer apellido" required>
+                      <Input
                         required
                         value={egresadoForm.apellido_paterno}
                         onChange={(e) => setEgresadoForm({ ...egresadoForm, apellido_paterno: e.target.value })}
-                        placeholder="Primer apellido"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
+                        placeholder="Apellido paterno"
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Apellido Materno *
-                      </label>
-                      <input
-                        type="text"
+                    <Field label="Segundo apellido" required>
+                      <Input
                         required
                         value={egresadoForm.apellido_materno}
                         onChange={(e) => setEgresadoForm({ ...egresadoForm, apellido_materno: e.target.value })}
-                        placeholder="Segundo apellido"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
+                        placeholder="Apellido materno"
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Género *
-                      </label>
-                      <select
+                    <Field label="Género" required>
+                      <Select
                         value={egresadoForm.genero}
                         onChange={(e) => setEgresadoForm({ ...egresadoForm, genero: e.target.value as 'M' | 'F' | 'O' })}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887] bg-white"
                       >
                         <option value="M">Masculino</option>
                         <option value="F">Femenino</option>
                         <option value="O">Otro</option>
-                      </select>
-                    </div>
+                      </Select>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Teléfono Celular *
-                      </label>
-                      <input
+                    <Field label="Teléfono Celular" required>
+                      <Input
                         type="tel"
                         required
                         value={egresadoForm.telefono_celular}
                         onChange={(e) => setEgresadoForm({ ...egresadoForm, telefono_celular: e.target.value })}
                         placeholder="ej. 2221234567"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
                       />
-                    </div>
+                    </Field>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-zinc-100">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#00A887] flex items-center gap-2 mb-4">
-                    <BookOpen className="w-4 h-4" />
-                    2. Datos Académicos y Domicilio
-                  </h2>
+                {/* 2. Datos Académicos */}
+                <div className="space-y-4 pt-4 border-t border-hairline">
+                  <div className="flex items-center gap-2 border-b border-hairline pb-2">
+                    <BookOpen className="size-4 text-primary" />
+                    <h2 className="text-tagline text-ink font-semibold">
+                      2. Formación Académica y Residencia
+                    </h2>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Nivel de Estudios *
-                      </label>
-                      <select
+                    <Field label="Nivel de Estudios" required>
+                      <Select
                         value={egresadoForm.nivel_estudios}
                         onChange={(e) => setEgresadoForm({ ...egresadoForm, nivel_estudios: e.target.value as any })}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887] bg-white"
                       >
                         <option value="ING_LIC">Ingeniería / Licenciatura</option>
                         <option value="TSU">Técnico Superior Universitario (TSU)</option>
                         <option value="MTRIA">Maestría</option>
-                      </select>
-                    </div>
+                      </Select>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Programa / Carrera UTH *
-                      </label>
-                      <select
+                    <Field label="Programa Educativo / Carrera UTH" required>
+                      <Select
                         required
                         disabled={loadingCatalogs}
                         value={egresadoForm.carrera}
                         onChange={(e) => setEgresadoForm({ ...egresadoForm, carrera: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887] bg-white"
                       >
                         {carreras.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.nombre}
                           </option>
                         ))}
-                      </select>
+                      </Select>
+                    </Field>
+
+                    <div className="sm:col-span-2">
+                      <Field label="Domicilio de Residencia (Municipio, Estado)" required>
+                        <Input
+                          required
+                          value={egresadoForm.domicilio}
+                          onChange={(e) => setEgresadoForm({ ...egresadoForm, domicilio: e.target.value })}
+                          placeholder="ej. Calle 5 de Mayo #12, Santa Ana Xalmimilulco, Huejotzingo, Pue."
+                        />
+                      </Field>
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Domicilio Completo (Municipio, Estado) *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={egresadoForm.domicilio}
-                        onChange={(e) => setEgresadoForm({ ...egresadoForm, domicilio: e.target.value })}
-                        placeholder="ej. Calle 5 de Mayo #12, Santa Ana Xalmimilulco, Huejotzingo, Pue."
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Habilidades y Competencias Principales (Opcional)
-                      </label>
-                      <input
-                        type="text"
-                        value={egresadoForm.habilidades}
-                        onChange={(e) => setEgresadoForm({ ...egresadoForm, habilidades: e.target.value })}
-                        placeholder="ej. Java, Python, PLC, Mantenimiento Eléctrico, Trabajo en equipo"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
-                      />
+                      <Field label="Habilidades y Competencias Principales" optional>
+                        <Input
+                          value={egresadoForm.habilidades}
+                          onChange={(e) => setEgresadoForm({ ...egresadoForm, habilidades: e.target.value })}
+                          placeholder="ej. Python, PLC Siemens, SolidWorks, Redes Cisco, Inglés B2"
+                        />
+                      </Field>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-zinc-100">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#00A887] flex items-center gap-2 mb-4">
-                    <Lock className="w-4 h-4" />
-                    3. Cuenta y Seguridad
-                  </h2>
+                {/* 3. Seguridad de Acceso */}
+                <div className="space-y-4 pt-4 border-t border-hairline">
+                  <div className="flex items-center gap-2 border-b border-hairline pb-2">
+                    <Lock className="size-4 text-primary" />
+                    <h2 className="text-tagline text-ink font-semibold">
+                      3. Cuenta y Acceso
+                    </h2>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Correo Electrónico (Acceso institucional o personal) *
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={egresadoForm.email}
-                        onChange={(e) => setEgresadoForm({ ...egresadoForm, email: e.target.value })}
-                        placeholder="ej. tu_correo@uth.edu.mx"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
-                      />
+                      <Field label="Correo Electrónico (Institucional o personal)" required>
+                        <Input
+                          type="email"
+                          required
+                          value={egresadoForm.email}
+                          onChange={(e) => setEgresadoForm({ ...egresadoForm, email: e.target.value })}
+                          placeholder="ej. tu_correo@uth.edu.mx"
+                        />
+                      </Field>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Contraseña (mínimo 8 caracteres) *
-                      </label>
+                    <Field label="Contraseña (mínimo 8 caracteres)" required>
                       <div className="relative">
-                        <input
+                        <Input
                           type={showPassword ? 'text' : 'password'}
                           required
                           value={egresadoForm.password}
                           onChange={(e) => setEgresadoForm({ ...egresadoForm, password: e.target.value })}
                           placeholder="••••••••"
-                          className="w-full px-3 py-2 pr-10 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
+                          className="pr-10"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600"
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-ink-64 hover:text-ink cursor-pointer"
                         >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         </button>
                       </div>
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Confirmar Contraseña *
-                      </label>
+                    <Field label="Confirmar Contraseña" required>
                       <div className="relative">
-                        <input
+                        <Input
                           type={showConfirmPassword ? 'text' : 'password'}
                           required
                           value={egresadoForm.confirmPassword}
                           onChange={(e) => setEgresadoForm({ ...egresadoForm, confirmPassword: e.target.value })}
                           placeholder="••••••••"
-                          className="w-full px-3 py-2 pr-10 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#00A887]"
+                          className="pr-10"
                         />
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600"
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-ink-64 hover:text-ink cursor-pointer"
                         >
-                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         </button>
                       </div>
-                    </div>
+                    </Field>
                   </div>
                 </div>
 
-                {/* Aviso de Privacidad Obligatorio */}
-                <div className="pt-2">
-                  <label className="flex items-start gap-2.5 p-3 rounded-lg bg-zinc-50 border border-zinc-200 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      required
-                      checked={egresadoForm.acepta_aviso_privacidad}
-                      onChange={(e) => setEgresadoForm({ ...egresadoForm, acepta_aviso_privacidad: e.target.checked })}
-                      className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#00A887] focus:ring-[#00A887]"
-                    />
-                    <span className="text-xs text-[#636569] leading-relaxed">
-                      Acepto el <Link href="/aviso-privacidad" target="_blank" className="font-bold text-[#00A887] hover:underline">Aviso de Privacidad Institucional</Link> de la Universidad Tecnológica de Huejotzingo para el resguardo de mis datos personales y vinculación laboral con empresas registradas.
-                    </span>
-                  </label>
+                {/* Aviso de Privacidad */}
+                <div className="rounded-card bg-parchment p-4">
+                  <Checkbox
+                    checked={egresadoForm.acepta_aviso_privacidad}
+                    onChange={(e) => setEgresadoForm({ ...egresadoForm, acepta_aviso_privacidad: e.target.checked })}
+                    label={
+                      <span>
+                        Acepto el{' '}
+                        <Link href="/aviso-privacidad" target="_blank" className="font-semibold text-primary hover:underline">
+                          Aviso de Privacidad Institucional
+                        </Link>{' '}
+                        de la Universidad Tecnológica de Huejotzingo para el resguardo y vinculación laboral.
+                      </span>
+                    }
+                  />
                 </div>
 
-                {/* Botón de Enviar */}
-                <button
+                {/* Botón Acción Principal */}
+                <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#00A887] hover:bg-[#008F73] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00A887] disabled:opacity-60 transition-all cursor-pointer"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  loading={isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Registrando tu cuenta en UTH...
-                    </>
-                  ) : (
-                    <>
-                      Crear mi Cuenta de Egresado UTH
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
+                  Crear mi cuenta de egresado UTH
+                  <ArrowRight className="size-4" />
+                </Button>
               </form>
             ) : (
               /* FORMULARIO EMPRESA */
-              <form onSubmit={handleSubmitEmpresa} className="space-y-6">
-                <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#691C32] flex items-center gap-2 mb-4">
-                    <Building2 className="w-4 h-4" />
-                    1. Datos de la Organización o Empresa
-                  </h2>
+              <form onSubmit={handleSubmitEmpresa} className="space-y-8">
+                {/* 1. Datos Empresa */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-hairline pb-2">
+                    <Building2 className="size-4 text-wine" />
+                    <h2 className="text-tagline text-ink font-semibold">
+                      1. Datos de la Organización
+                    </h2>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Nombre o Razón Social *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={empresaForm.nombre}
-                        onChange={(e) => setEmpresaForm({ ...empresaForm, nombre: e.target.value })}
-                        placeholder="ej. AutoTech Solutions Puebla S.A. de C.V."
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
-                      />
+                      <Field label="Razón Social o Nombre Comercial" required>
+                        <Input
+                          required
+                          value={empresaForm.nombre}
+                          onChange={(e) => setEmpresaForm({ ...empresaForm, nombre: e.target.value })}
+                          placeholder="ej. AutoTech Solutions Puebla S.A. de C.V."
+                        />
+                      </Field>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        RFC de la Empresa *
-                      </label>
-                      <input
-                        type="text"
+                    <Field label="RFC de la Empresa" required>
+                      <Input
                         required
                         value={empresaForm.rfc}
                         onChange={(e) => setEmpresaForm({ ...empresaForm, rfc: e.target.value.toUpperCase() })}
                         placeholder="ej. ASP200101ABC"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 uppercase focus:outline-none focus:ring-2 focus:ring-[#691C32]"
+                        className="uppercase font-mono"
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Sector *
-                      </label>
-                      <select
+                    <Field label="Sector" required>
+                      <Select
                         required
                         disabled={loadingCatalogs}
                         value={empresaForm.sector}
                         onChange={(e) => setEmpresaForm({ ...empresaForm, sector: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32] bg-white"
                       >
                         {sectores.map((s) => (
                           <option key={s.id} value={s.id}>
                             {s.nombre}
                           </option>
                         ))}
-                      </select>
-                    </div>
+                      </Select>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Giro Empresarial *
-                      </label>
-                      <select
+                    <Field label="Giro Empresarial" required>
+                      <Select
                         required
                         disabled={loadingCatalogs}
                         value={empresaForm.giro}
                         onChange={(e) => setEmpresaForm({ ...empresaForm, giro: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32] bg-white"
                       >
                         {giros.map((g) => (
                           <option key={g.id} value={g.id}>
                             {g.nombre}
                           </option>
                         ))}
-                      </select>
-                    </div>
+                      </Select>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Teléfono de Oficina
-                      </label>
-                      <input
+                    <Field label="Teléfono de Oficina" optional>
+                      <Input
                         type="tel"
                         value={empresaForm.telefono_oficina}
                         onChange={(e) => setEmpresaForm({ ...empresaForm, telefono_oficina: e.target.value })}
                         placeholder="ej. 2222759000"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
                       />
+                    </Field>
+
+                    <div className="sm:col-span-2">
+                      <Field label="Domicilio Corporativo o Planta" required>
+                        <Input
+                          required
+                          value={empresaForm.domicilio}
+                          onChange={(e) => setEmpresaForm({ ...empresaForm, domicilio: e.target.value })}
+                          placeholder="ej. Corredor Industrial Huejotzingo Nave 4, Puebla"
+                        />
+                      </Field>
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Domicilio de la Empresa / Planta *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={empresaForm.domicilio}
-                        onChange={(e) => setEmpresaForm({ ...empresaForm, domicilio: e.target.value })}
-                        placeholder="ej. Corredor Industrial Huejotzingo Nave 4, Puebla"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Actividad Principal o Ramo *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={empresaForm.actividad_de_la_empresa}
-                        onChange={(e) => setEmpresaForm({ ...empresaForm, actividad_de_la_empresa: e.target.value })}
-                        placeholder="ej. Fabricación de arneses automotrices y software embebido"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
-                      />
+                      <Field label="Actividad Principal o Ramo" required>
+                        <Input
+                          required
+                          value={empresaForm.actividad_de_la_empresa}
+                          onChange={(e) => setEmpresaForm({ ...empresaForm, actividad_de_la_empresa: e.target.value })}
+                          placeholder="ej. Manufactura de arneses automotrices y software embebido"
+                        />
+                      </Field>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-zinc-100">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#691C32] flex items-center gap-2 mb-4">
-                    <User className="w-4 h-4" />
-                    2. Enlace de Recursos Humanos / Contacto
-                  </h2>
+                {/* 2. Contacto RH */}
+                <div className="space-y-4 pt-4 border-t border-hairline">
+                  <div className="flex items-center gap-2 border-b border-hairline pb-2">
+                    <User className="size-4 text-wine" />
+                    <h2 className="text-tagline text-ink font-semibold">
+                      2. Enlace de Recursos Humanos
+                    </h2>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Nombre del Contacto *
-                      </label>
-                      <input
-                        type="text"
+                    <Field label="Nombre del Contacto" required>
+                      <Input
                         required
                         value={empresaForm.nombre_contacto}
                         onChange={(e) => setEmpresaForm({ ...empresaForm, nombre_contacto: e.target.value })}
                         placeholder="ej. Lic. Laura Flores"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Cargo en la Empresa *
-                      </label>
-                      <input
-                        type="text"
+                    <Field label="Cargo en la Empresa" required>
+                      <Input
                         required
                         value={empresaForm.cargo_contacto}
                         onChange={(e) => setEmpresaForm({ ...empresaForm, cargo_contacto: e.target.value })}
                         placeholder="ej. Coordinadora de Reclutamiento"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Correo de Contacto RH *
-                      </label>
-                      <input
+                    <Field label="Correo de Contacto RH" required>
+                      <Input
                         type="email"
                         required
                         value={empresaForm.correo_contacto}
                         onChange={(e) => setEmpresaForm({ ...empresaForm, correo_contacto: e.target.value })}
                         placeholder="ej. talento@empresa.com"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Teléfono Celular
-                      </label>
-                      <input
+                    <Field label="Teléfono Celular" optional>
+                      <Input
                         type="tel"
                         value={empresaForm.telefono_celular}
                         onChange={(e) => setEmpresaForm({ ...empresaForm, telefono_celular: e.target.value })}
                         placeholder="ej. 2223456789"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
                       />
-                    </div>
+                    </Field>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-zinc-100">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#691C32] flex items-center gap-2 mb-4">
-                    <Lock className="w-4 h-4" />
-                    3. Cuenta y Acceso a la Plataforma
-                  </h2>
+                {/* 3. Acceso Cuenta */}
+                <div className="space-y-4 pt-4 border-t border-hairline">
+                  <div className="flex items-center gap-2 border-b border-hairline pb-2">
+                    <Lock className="size-4 text-wine" />
+                    <h2 className="text-tagline text-ink font-semibold">
+                      3. Cuenta y Acceso
+                    </h2>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Correo Electrónico de Usuario (Para iniciar sesión) *
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={empresaForm.email}
-                        onChange={(e) => setEmpresaForm({ ...empresaForm, email: e.target.value })}
-                        placeholder="ej. contacto@empresa.com"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
-                      />
+                      <Field label="Correo Electrónico (Inicio de sesión)" required>
+                        <Input
+                          type="email"
+                          required
+                          value={empresaForm.email}
+                          onChange={(e) => setEmpresaForm({ ...empresaForm, email: e.target.value })}
+                          placeholder="ej. contacto@empresa.com"
+                        />
+                      </Field>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Contraseña (mínimo 8 caracteres) *
-                      </label>
+                    <Field label="Contraseña (mínimo 8 caracteres)" required>
                       <div className="relative">
-                        <input
+                        <Input
                           type={showPassword ? 'text' : 'password'}
                           required
                           value={empresaForm.password}
                           onChange={(e) => setEmpresaForm({ ...empresaForm, password: e.target.value })}
                           placeholder="••••••••"
-                          className="w-full px-3 py-2 pr-10 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
+                          className="pr-10"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600"
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-ink-64 hover:text-ink cursor-pointer"
                         >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         </button>
                       </div>
-                    </div>
+                    </Field>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[#2D2926] uppercase mb-1">
-                        Confirmar Contraseña *
-                      </label>
+                    <Field label="Confirmar Contraseña" required>
                       <div className="relative">
-                        <input
+                        <Input
                           type={showConfirmPassword ? 'text' : 'password'}
                           required
                           value={empresaForm.confirmPassword}
                           onChange={(e) => setEmpresaForm({ ...empresaForm, confirmPassword: e.target.value })}
                           placeholder="••••••••"
-                          className="w-full px-3 py-2 pr-10 text-sm rounded-lg border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#691C32]"
+                          className="pr-10"
                         />
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600"
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-ink-64 hover:text-ink cursor-pointer"
                         >
-                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         </button>
                       </div>
-                    </div>
+                    </Field>
                   </div>
                 </div>
 
-                {/* Aviso de Privacidad Obligatorio */}
-                <div className="pt-2">
-                  <label className="flex items-start gap-2.5 p-3 rounded-lg bg-zinc-50 border border-zinc-200 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      required
-                      checked={empresaForm.acepta_aviso_privacidad}
-                      onChange={(e) => setEmpresaForm({ ...empresaForm, acepta_aviso_privacidad: e.target.checked })}
-                      className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#691C32] focus:ring-[#691C32]"
-                    />
-                    <span className="text-xs text-[#636569] leading-relaxed">
-                      Acepto el <Link href="/aviso-privacidad" target="_blank" className="font-bold text-[#691C32] hover:underline">Aviso de Privacidad Institucional</Link> y el compromiso de tratamiento responsable y legal de las postulaciones de egresados de la Universidad Tecnológica de Huejotzingo.
-                    </span>
-                  </label>
+                {/* Aviso de Privacidad */}
+                <div className="rounded-card bg-parchment p-4">
+                  <Checkbox
+                    checked={empresaForm.acepta_aviso_privacidad}
+                    onChange={(e) => setEmpresaForm({ ...empresaForm, acepta_aviso_privacidad: e.target.checked })}
+                    label={
+                      <span>
+                        Acepto el{' '}
+                        <Link href="/aviso-privacidad" target="_blank" className="font-semibold text-primary hover:underline">
+                          Aviso de Privacidad Institucional
+                        </Link>{' '}
+                        y el compromiso de tratamiento responsable de las postulaciones de egresados de la UTH.
+                      </span>
+                    }
+                  />
                 </div>
 
-                {/* Botón de Enviar */}
-                <button
+                {/* Botón Acción Principal */}
+                <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#691C32] hover:bg-[#531426] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#691C32] disabled:opacity-60 transition-all cursor-pointer"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  loading={isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Registrando empresa...
-                    </>
-                  ) : (
-                    <>
-                      Registrar Empresa en Bolsa UTH
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
+                  Registrar empresa en Bolsa UTH
+                  <ArrowRight className="size-4" />
+                </Button>
               </form>
             )}
 
             {/* Enlace al Login */}
-            <div className="pt-2 text-center text-xs text-[#636569] border-t border-zinc-100">
+            <div className="pt-4 text-center text-caption text-ink-64 border-t border-hairline">
               ¿Ya tienes cuenta en la Bolsa de Trabajo UTH?{' '}
-              <Link 
-                href="/login" 
-                className="font-bold text-[#00A887] hover:text-[#008F73] hover:underline"
+              <Link
+                href="/login"
+                className="font-semibold text-primary hover:underline"
               >
                 Inicia sesión aquí
               </Link>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Nota legal al pie */}
-        <p className="text-center text-[11px] text-zinc-400">
+        <p className="mt-8 text-center text-fine text-ink-48">
           Universidad Tecnológica de Huejotzingo · Organismo Público Descentralizado del Gobierno del Estado de Puebla
         </p>
-      </div>
+      </Container>
     </div>
   );
 }
 
 export default function RegistroPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#00A887] animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<PageLoader label="Cargando formulario de registro…" />}>
       <RegistroForm />
     </Suspense>
   );

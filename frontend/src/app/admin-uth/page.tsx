@@ -5,29 +5,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getRoleRedirectPath } from '@/lib/auth';
-import { 
-  ShieldCheck, 
-  ExternalLink, 
-  FileCode, 
-  Users, 
-  Briefcase, 
-  Building2, 
-  Database, 
-  LogOut,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  Award,
-  Layers,
-  Send,
+import {
+  ShieldCheck,
+  ExternalLink,
+  FileCode,
+  Users,
+  Briefcase,
+  Building2,
+  Database,
   RefreshCw,
   FileSpreadsheet,
   Download,
-  Loader2,
-  AlertCircle,
   Terminal,
   Calendar,
-  BarChart3
+  BarChart3,
+  Clock,
+  Send,
+  Award,
 } from 'lucide-react';
 import VacantesAuditor from '@/components/admin/VacantesAuditor';
 import PostulacionesFiltro from '@/components/admin/PostulacionesFiltro';
@@ -35,19 +29,36 @@ import EmpresasValidador from '@/components/admin/EmpresasValidador';
 import PadronManager from '@/components/admin/PadronManager';
 import EventosManager from '@/components/admin/EventosManager';
 import ReportesDashboard from '@/components/admin/ReportesDashboard';
-import { 
-  fetchAdminVacantes, 
-  fetchAdminPostulaciones, 
+import {
+  fetchAdminVacantes,
+  fetchAdminPostulaciones,
   fetchAdminEmpresas,
   fetchPadronEgresados,
   fetchReportsDashboard,
-  descargarReporteColocacionExcel
+  descargarReporteColocacionExcel,
 } from '@/lib/api';
+import {
+  Container,
+  Card,
+  StatTile,
+  Button,
+  SubNav,
+  useTabParam,
+  StatusPill,
+  PageLoader,
+  Alert,
+} from '@/components/ui';
+
+type AdminTab = 'vacantes' | 'postulaciones' | 'empresas' | 'padron' | 'eventos' | 'reportes';
 
 export default function AdminUthPage() {
   const router = useRouter();
   const { user, accessToken, isAuthenticated, isLoading, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'vacantes' | 'postulaciones' | 'empresas' | 'padron' | 'eventos' | 'reportes'>('vacantes');
+
+  const [tab, setTab] = useTabParam<AdminTab>(
+    ['vacantes', 'postulaciones', 'empresas', 'padron', 'eventos', 'reportes'],
+    'vacantes'
+  );
 
   // Métricas en vivo
   const [stats, setStats] = useState({
@@ -58,10 +69,14 @@ export default function AdminUthPage() {
     empresasActivas: 0,
     colocados: 0,
     padronTotal: 0,
+    egresadosPorValidar: 0,
   });
   const [loadingStats, setLoadingStats] = useState<boolean>(true);
   const [exportandoExcel, setExportandoExcel] = useState<boolean>(false);
-  const [notificacionExport, setNotificacionExport] = useState<{ tipo: 'success' | 'error'; mensaje: string } | null>(null);
+  const [notificacionExport, setNotificacionExport] = useState<{
+    tipo: 'success' | 'danger';
+    mensaje: string;
+  } | null>(null);
 
   const handleExportarExcel = async () => {
     if (!accessToken) return;
@@ -72,19 +87,21 @@ export default function AdminUthPage() {
       if (res.success) {
         setNotificacionExport({
           tipo: 'success',
-          mensaje: `Reporte de colocación generado exitosamente: ${res.filename || 'Reporte_Colocacion_Laboral_UTH.xlsx'}`
+          mensaje: `Reporte de colocación generado: ${
+            res.filename || 'Reporte_Colocacion_Laboral_UTH.xlsx'
+          }`,
         });
         setTimeout(() => setNotificacionExport(null), 8000);
       } else {
         setNotificacionExport({
-          tipo: 'error',
-          mensaje: res.error || 'No se pudo generar el reporte en Excel.'
+          tipo: 'danger',
+          mensaje: res.error || 'No se pudo generar el reporte en Excel.',
         });
       }
     } catch (err: any) {
       setNotificacionExport({
-        tipo: 'error',
-        mensaje: err.message || 'Error de conexión al generar el reporte.'
+        tipo: 'danger',
+        mensaje: err.message || 'Error de conexión al generar el reporte.',
       });
     } finally {
       setExportandoExcel(false);
@@ -96,8 +113,8 @@ export default function AdminUthPage() {
     setLoadingStats(true);
     try {
       const [dashboard, padr] = await Promise.all([
-        fetchReportsDashboard(accessToken),
-        fetchPadronEgresados(accessToken),
+        fetchReportsDashboard(accessToken).catch(() => null),
+        fetchPadronEgresados(accessToken).catch(() => ({ count: 0 })),
       ]);
 
       if (dashboard) {
@@ -109,12 +126,16 @@ export default function AdminUthPage() {
           empresasActivas: dashboard.empresas.total,
           colocados: dashboard.egresados.colocados,
           padronTotal: padr.count,
+          egresadosPorValidar: Math.max(
+            0,
+            dashboard.egresados.total - dashboard.egresados.verificados_padron
+          ),
         });
       } else {
         const [vacs, posts, emps] = await Promise.all([
-          fetchAdminVacantes(accessToken, 'todas'),
-          fetchAdminPostulaciones(accessToken, 'todas'),
-          fetchAdminEmpresas(accessToken, 'todas'),
+          fetchAdminVacantes(accessToken, 'todas').catch(() => []),
+          fetchAdminPostulaciones(accessToken, 'todas').catch(() => []),
+          fetchAdminEmpresas(accessToken, 'todas').catch(() => []),
         ]);
         setStats({
           vacantesPendientes: vacs.filter((v) => v.status === 'pendiente').length,
@@ -124,6 +145,7 @@ export default function AdminUthPage() {
           empresasActivas: emps.filter((e) => e.status === 'aprobada').length,
           colocados: posts.filter((p) => p.estado === 'Aceptada').length,
           padronTotal: padr.count,
+          egresadosPorValidar: 0,
         });
       }
     } catch (err) {
@@ -147,387 +169,235 @@ export default function AdminUthPage() {
     if (accessToken && user && (user.rol === 'admin_uth' || user.rol === 'soporte_ti')) {
       loadStats();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, user]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-3 border-[#00A887] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-[#636569] font-medium">Iniciando consola institucional UTH...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Iniciando consola institucional UTH…" />;
   }
 
-  // Prevenir renderizado a usuarios no autorizados antes de redirección
   if (!user || !accessToken || (user.rol !== 'admin_uth' && user.rol !== 'soporte_ti')) {
     return null;
   }
 
+  const tabItems = [
+    {
+      id: 'vacantes' as const,
+      label: 'Auditoría de Vacantes',
+      icon: Briefcase,
+      count: stats.vacantesPendientes,
+    },
+    {
+      id: 'postulaciones' as const,
+      label: 'Filtro de Candidatos',
+      icon: Send,
+      count: stats.postulacionesPendientes,
+    },
+    {
+      id: 'empresas' as const,
+      label: 'Directorio Empresas',
+      icon: Building2,
+    },
+    {
+      id: 'padron' as const,
+      label: 'Padrón y Validación',
+      icon: FileSpreadsheet,
+      count: stats.egresadosPorValidar,
+    },
+    {
+      id: 'eventos' as const,
+      label: 'Eventos y Ferias',
+      icon: Calendar,
+    },
+    {
+      id: 'reportes' as const,
+      label: 'Indicadores CACEI / ISO',
+      icon: BarChart3,
+    },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Banner de Bienvenida Institucional */}
-      <div className="bg-[#2D2926] text-white rounded-2xl shadow-sm border border-zinc-800 overflow-hidden relative">
-        <div className="w-full h-1.5 flex">
-          <div className="h-full w-2/3 bg-[#00A887]" />
-          <div className="h-full w-1/3 bg-[#C2BA98]" />
-        </div>
+    <div className="min-h-[85vh] bg-canvas flex flex-col">
+      {/* Sub-Navegación Esmerilada Fija (Apple Sub-nav) */}
+      <SubNav
+        title={user.rol === 'soporte_ti' ? 'Consola TI' : 'Consola Vinculación'}
+        items={tabItems}
+        value={tab}
+        onChange={setTab}
+        action={
+          <Button
+            variant="utility"
+            size="sm"
+            loading={exportandoExcel}
+            icon={<Download className="size-4" />}
+            onClick={handleExportarExcel}
+          >
+            <span className="hidden sm:inline">Exportar CACEI</span>
+            <span className="hidden xl:inline"> (.xlsx)</span>
+            <span className="sm:hidden">Excel</span>
+          </Button>
+        }
+      />
 
-        <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-[#00A887]/20 text-[#00A887] border border-[#00A887]/30">
-              {user.rol === 'soporte_ti' ? (
-                <>
-                  <Terminal className="w-3.5 h-3.5" />
-                  Soporte TI & Administración de Infraestructura
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Dirección de Vinculación y Extensión Universitaria
-                </>
-              )}
+      <main className="py-8 sm:py-10 flex-1">
+        <Container size="console" className="space-y-8">
+          {/* Banner Institucional Sobrio */}
+          <Card tone="parchment" padded className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusPill tone="brand">
+                    {user.rol === 'soporte_ti'
+                      ? 'Soporte TI & Infraestructura'
+                      : 'Dirección de Vinculación y Extensión'}
+                  </StatusPill>
+                  <span className="text-caption text-ink-64">
+                    {user.email}
+                  </span>
+                </div>
+
+                <h1 className="text-display-md text-ink font-semibold">
+                  {user.rol === 'soporte_ti' ? 'Consola de Sistemas' : 'Consola Institucional'} ·{' '}
+                  {user.nombres} {user.apellido_paterno}
+                </h1>
+
+                <p className="text-caption text-ink-64 max-w-2xl leading-relaxed">
+                  {user.rol === 'soporte_ti'
+                    ? 'Supervisión técnica de la plataforma, auditoría de ofertas, base de datos y catálogos normativos.'
+                    : 'Auditoría de convocatorias laborales, filtro de pertinencia de candidatos egresados y convenios empresariales.'}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <Button
+                  variant="pearl"
+                  size="sm"
+                  icon={<RefreshCw className={`size-3.5 ${loadingStats ? 'animate-spin' : ''}`} />}
+                  onClick={loadStats}
+                >
+                  Actualizar Métricas
+                </Button>
+
+                {user.rol === 'soporte_ti' && (
+                  <>
+                    <a
+                      href="http://localhost:8080/admin/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="press inline-flex items-center gap-1.5 h-9 px-3.5 rounded-field text-caption font-semibold bg-canvas ring-1 ring-hairline text-ink hover:bg-pearl"
+                      title="Abrir Django Admin"
+                    >
+                      <Database className="size-3.5 text-primary" />
+                      <span>Django Admin</span>
+                      <ExternalLink className="size-3 text-ink-48" />
+                    </a>
+
+                    <a
+                      href="http://localhost:8080/api/v1/docs"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="press inline-flex items-center gap-1.5 h-9 px-3.5 rounded-field text-caption font-semibold bg-canvas ring-1 ring-hairline text-ink hover:bg-pearl"
+                      title="Abrir Swagger OpenAPI"
+                    >
+                      <FileCode className="size-3.5 text-primary" />
+                      <span>API Docs</span>
+                      <ExternalLink className="size-3 text-ink-48" />
+                    </a>
+                  </>
+                )}
+              </div>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              {user.rol === 'soporte_ti' ? 'Consola de Sistemas y Soporte TI' : 'Panel Institucional'} · {user.nombres} {user.apellido_paterno}
-            </h1>
-            <p className="text-sm text-zinc-300 max-w-2xl">
-              {user.rol === 'soporte_ti'
-                ? 'Consola operativa con privilegios técnicos de auditoría de vacantes, filtro de pertinencia, directorio de empresas y herramientas de desarrollo.'
-                : 'Consola operativa para auditoría de ofertas de empleo, filtro de pertinencia de candidatos egresados y directorio de empresas vinculadas.'}
-            </p>
+          </Card>
+
+          {/* Alerta de notificación si aplica */}
+          {notificacionExport && (
+            <Alert
+              tone={notificacionExport.tipo}
+              title={notificacionExport.tipo === 'success' ? 'Reporte generado' : 'Aviso de exportación'}
+            >
+              {notificacionExport.mensaje}
+            </Alert>
+          )}
+
+          {/* Tarjetas de Métricas en Vivo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div
+              onClick={() => setTab('vacantes')}
+              className="cursor-pointer transition-transform hover:scale-[1.01]"
+            >
+              <StatTile
+                label="Vacantes por Auditar"
+                value={loadingStats ? '…' : stats.vacantesPendientes}
+                hint={`${stats.vacantesActivas} vacantes activas en bolsa`}
+                tone={tab === 'vacantes' ? 'parchment' : 'canvas'}
+              />
+            </div>
+
+            <div
+              onClick={() => setTab('postulaciones')}
+              className="cursor-pointer transition-transform hover:scale-[1.01]"
+            >
+              <StatTile
+                label="Candidatos por Turnar"
+                value={loadingStats ? '…' : stats.postulacionesPendientes}
+                hint={`${stats.postulacionesTurnadas} enviados a empresas`}
+                tone={tab === 'postulaciones' ? 'parchment' : 'canvas'}
+              />
+            </div>
+
+            <div
+              onClick={() => setTab('empresas')}
+              className="cursor-pointer transition-transform hover:scale-[1.01]"
+            >
+              <StatTile
+                label="Empresas en Convenio"
+                value={loadingStats ? '…' : stats.empresasActivas}
+                hint="Organizaciones activas en la región"
+                tone={tab === 'empresas' ? 'parchment' : 'canvas'}
+              />
+            </div>
+
+            <div
+              onClick={() => setTab('reportes')}
+              className="cursor-pointer transition-transform hover:scale-[1.01]"
+            >
+              <StatTile
+                label="Colocaciones UTH"
+                value={loadingStats ? '…' : stats.colocados}
+                hint="Egresados contratados (CACEI)"
+                tone={tab === 'reportes' ? 'parchment' : 'canvas'}
+              />
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              onClick={handleExportarExcel}
-              disabled={exportandoExcel}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-sm border border-[#00A887]/40 cursor-pointer disabled:opacity-60"
-              title="Descargar Reporte Oficial de Colocación Laboral en Excel para acreditaciones CACEI/CONAIC/ISO"
-            >
-              {exportandoExcel ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Download className="w-3.5 h-3.5" />
-              )}
-              <span>{exportandoExcel ? 'Generando Excel...' : 'Exportar Reporte CACEI / ISO (.xlsx)'}</span>
-            </button>
-
-            {/* Accesos a Django Admin y Swagger API Docs exclusivos para Soporte TI */}
-            {user.rol === 'soporte_ti' && (
-              <>
-                <a
-                  href="http://localhost:8080/admin/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10"
-                  title="Abrir Django Admin"
-                >
-                  <Database className="w-3.5 h-3.5" />
-                  Django Admin
-                  <ExternalLink className="w-3 h-3 text-zinc-400" />
-                </a>
-
-                <a
-                  href="http://localhost:8080/api/v1/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10"
-                  title="Abrir Swagger OpenAPI"
-                >
-                  <FileCode className="w-3.5 h-3.5" />
-                  API Docs
-                  <ExternalLink className="w-3 h-3 text-zinc-400" />
-                </a>
-              </>
+          {/* Contenido Dinámico de la Pestaña Activa */}
+          <div className="animate-fade-in">
+            {tab === 'vacantes' && (
+              <VacantesAuditor token={accessToken} onStatsChange={loadStats} />
             )}
 
-            <button
-              onClick={() => {
-                logout();
-                router.push('/login');
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer"
-              title="Cerrar sesión"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Salir
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Alerta de Notificación de Exportación */}
-      {notificacionExport && (
-        <div
-          className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
-            notificacionExport.tipo === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-              : 'bg-rose-50 border-rose-200 text-rose-900'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            {notificacionExport.tipo === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-[#00A887] shrink-0" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            {tab === 'postulaciones' && (
+              <PostulacionesFiltro token={accessToken} onStatsChange={loadStats} />
             )}
-            <p className="text-xs font-semibold">{notificacionExport.mensaje}</p>
+
+            {tab === 'empresas' && (
+              <EmpresasValidador token={accessToken} onStatsChange={loadStats} />
+            )}
+
+            {tab === 'padron' && (
+              <PadronManager token={accessToken} onStatsChange={loadStats} />
+            )}
+
+            {tab === 'eventos' && (
+              <EventosManager token={accessToken} />
+            )}
+
+            {tab === 'reportes' && (
+              <ReportesDashboard token={accessToken} />
+            )}
           </div>
-          <button
-            onClick={() => setNotificacionExport(null)}
-            className="text-xs font-bold text-zinc-500 hover:text-zinc-800 ml-4 cursor-pointer"
-          >
-            &times;
-          </button>
-        </div>
-      )}
-
-      {/* Tarjetas de Métricas en Vivo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Vacantes por Auditar */}
-        <div 
-          onClick={() => setActiveTab('vacantes')}
-          className={`p-5 rounded-xl border transition-all cursor-pointer bg-white ${
-            activeTab === 'vacantes' 
-              ? 'border-[#00A887] ring-2 ring-[#00A887]/20 shadow-sm' 
-              : 'border-zinc-200 hover:border-zinc-300'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
-              <Clock className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-black text-[#2D2926]">
-              {loadingStats ? '...' : stats.vacantesPendientes}
-            </span>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Vacantes por Auditar</h3>
-            <p className="text-[11px] text-[#00A887] font-semibold mt-0.5">
-              {stats.vacantesActivas} activas en bolsa pública
-            </p>
-          </div>
-        </div>
-
-        {/* Candidatos por Turnar */}
-        <div 
-          onClick={() => setActiveTab('postulaciones')}
-          className={`p-5 rounded-xl border transition-all cursor-pointer bg-white ${
-            activeTab === 'postulaciones' 
-              ? 'border-[#691C32] ring-2 ring-[#691C32]/20 shadow-sm' 
-              : 'border-zinc-200 hover:border-zinc-300'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-[#691C32]">
-              <Users className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-black text-[#2D2926]">
-              {loadingStats ? '...' : stats.postulacionesPendientes}
-            </span>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Filtro de Candidatos</h3>
-            <p className="text-[11px] text-[#691C32] font-semibold mt-0.5">
-              {stats.postulacionesTurnadas} turnados a empresas
-            </p>
-          </div>
-        </div>
-
-        {/* Empresas Vinculadas */}
-        <div 
-          onClick={() => setActiveTab('empresas')}
-          className={`p-5 rounded-xl border transition-all cursor-pointer bg-white ${
-            activeTab === 'empresas' 
-              ? 'border-[#00A887] ring-2 ring-[#00A887]/20 shadow-sm' 
-              : 'border-zinc-200 hover:border-zinc-300'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#00A887]">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-black text-[#2D2926]">
-              {loadingStats ? '...' : stats.empresasActivas}
-            </span>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Empresas Vinculadas</h3>
-            <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
-              Organizaciones activas en convenio
-            </p>
-          </div>
-        </div>
-
-        {/* Colocaciones Universitarias */}
-        <div className="p-5 rounded-xl border border-zinc-200 bg-white flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700">
-              <Award className="w-5 h-5" />
-            </div>
-            <span className="text-2xl font-black text-purple-700">
-              {loadingStats ? '...' : stats.colocados}
-            </span>
-          </div>
-          <div className="mt-3 flex items-end justify-between">
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#636569]">Colocación UTH</h3>
-              <p className="text-[11px] text-purple-600 font-semibold mt-0.5">
-                Egresados contratados en vivo
-              </p>
-            </div>
-            <button
-              onClick={handleExportarExcel}
-              disabled={exportandoExcel}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold text-[#00A887] bg-emerald-50 hover:bg-emerald-100 border border-[#00A887]/20 transition-all cursor-pointer disabled:opacity-50"
-              title="Descargar Reporte Oficial CACEI/ISO (.xlsx)"
-            >
-              {exportandoExcel ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Download className="w-3 h-3" />
-              )}
-              <span>Excel</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Pestañas Operativas de la UTH */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setActiveTab('vacantes')}
-              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-                activeTab === 'vacantes'
-                  ? 'border-[#00A887] text-[#00A887]'
-                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
-              }`}
-            >
-              <Briefcase className="w-4 h-4" />
-              1. Auditoría de Vacantes
-              {stats.vacantesPendientes > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">
-                  {stats.vacantesPendientes}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('postulaciones')}
-              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-                activeTab === 'postulaciones'
-                  ? 'border-[#691C32] text-[#691C32]'
-                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
-              }`}
-            >
-              <Send className="w-4 h-4" />
-              2. Filtro de Candidatos (Turnar a Empresa)
-              {stats.postulacionesPendientes > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800">
-                  {stats.postulacionesPendientes}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('empresas')}
-              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-                activeTab === 'empresas'
-                  ? 'border-[#00A887] text-[#00A887]'
-                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              3. Directorio de Empresas
-              {stats.empresasActivas > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
-                  {stats.empresasActivas}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('padron')}
-              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'padron'
-                  ? 'border-[#00A887] text-[#00A887]'
-                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
-              }`}
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              4. Padrón Escolar
-              {stats.padronTotal > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800">
-                  {stats.padronTotal}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('eventos')}
-              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'eventos'
-                  ? 'border-[#00A887] text-[#00A887]'
-                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              5. Gestión de Eventos
-            </button>
-
-            <button
-              onClick={() => setActiveTab('reportes')}
-              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'reportes'
-                  ? 'border-[#691C32] text-[#691C32]'
-                  : 'border-transparent text-[#636569] hover:text-[#2D2926]'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              6. Indicadores CACEI / ISO
-            </button>
-          </div>
-
-          <button
-            onClick={loadStats}
-            className="text-xs text-[#636569] hover:text-[#2D2926] inline-flex items-center gap-1 font-semibold"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingStats ? 'animate-spin' : ''}`} />
-            Actualizar métricas
-          </button>
-        </div>
-
-        {/* Renderizado de Componente Seleccionado */}
-        <div>
-          {activeTab === 'vacantes' && (
-            <VacantesAuditor token={accessToken} onStatsChange={loadStats} />
-          )}
-
-          {activeTab === 'postulaciones' && (
-            <PostulacionesFiltro token={accessToken} onStatsChange={loadStats} />
-          )}
-
-          {activeTab === 'empresas' && (
-            <EmpresasValidador token={accessToken} onStatsChange={loadStats} />
-          )}
-
-          {activeTab === 'padron' && (
-            <PadronManager token={accessToken} onStatsChange={loadStats} />
-          )}
-
-          {activeTab === 'eventos' && (
-            <EventosManager token={accessToken} />
-          )}
-
-          {activeTab === 'reportes' && (
-            <ReportesDashboard token={accessToken} />
-          )}
-        </div>
-      </div>
+        </Container>
+      </main>
     </div>
   );
 }

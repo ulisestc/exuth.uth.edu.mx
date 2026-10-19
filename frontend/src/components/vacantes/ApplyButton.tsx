@@ -3,31 +3,41 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  fetchMisPostulaciones, 
-  crearPostulacion, 
+import {
+  fetchMisPostulaciones,
+  crearPostulacion,
   Postulacion,
   fetchMiPerfilEgresado,
   EgresadoProfile,
   uploadMiCv,
-  uploadMisDocumentos
+  uploadMisDocumentos,
 } from '@/lib/api';
 import CvViewerModal from '@/components/shared/CvViewerModal';
-import { 
-  Send, 
-  CheckCircle2, 
-  Lock, 
-  Loader2, 
-  AlertCircle, 
+import {
+  Send,
+  CheckCircle2,
+  Lock,
+  Loader2,
+  AlertCircle,
   ArrowRight,
   ShieldCheck,
-  X,
   FileText,
   UploadCloud,
   FolderOpen,
   Eye,
-  Plus
+  Plus,
 } from 'lucide-react';
+import {
+  Button,
+  ButtonLink,
+  Modal,
+  Alert,
+  StatusPill,
+  Checkbox,
+  Select,
+  Input,
+  Tag,
+} from '@/components/ui';
 
 interface ApplyButtonProps {
   vacanteId: number;
@@ -246,9 +256,9 @@ export const ApplyButton: React.FC<ApplyButtonProps> = ({
 
   if (authLoading || isChecking) {
     return (
-      <div className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-zinc-500 bg-zinc-100 rounded-lg w-full sm:w-auto">
-        <Loader2 className="w-4 h-4 animate-spin text-[#00A887]" />
-        Verificando estado...
+      <div className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-caption font-medium text-ink-64 bg-parchment rounded-full">
+        <Loader2 className="size-4 animate-spin text-primary" />
+        Verificando estado…
       </div>
     );
   }
@@ -256,21 +266,22 @@ export const ApplyButton: React.FC<ApplyButtonProps> = ({
   // 1. Caso: Usuario No Autenticado
   if (!isAuthenticated || !user) {
     return (
-      <Link
+      <ButtonLink
         href={`/login?redirect=/vacantes/${vacanteId}`}
-        className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all w-full sm:w-auto"
+        variant="primary"
+        size="lg"
       >
-        <Send className="w-4 h-4" />
+        <Send className="size-4" />
         Postularme a esta Vacante
-      </Link>
+      </ButtonLink>
     );
   }
 
   // 2. Caso: Rol Empresa o Administrador
   if (user.rol !== 'egresado') {
     return (
-      <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-100 border border-zinc-200 text-xs font-semibold text-zinc-600">
-        <Lock className="w-3.5 h-3.5 text-zinc-400" />
+      <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-parchment text-caption font-medium text-ink-64">
+        <Lock className="size-3.5" />
         Postulación exclusiva para Egresados UTH
       </div>
     );
@@ -280,28 +291,27 @@ export const ApplyButton: React.FC<ApplyButtonProps> = ({
   if (isApplied) {
     const adjuntos = applicationData?.candidato_lista_documentos || [];
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {successMsg && (
-          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-2 text-xs text-emerald-900 max-w-xs">
-            <CheckCircle2 className="w-4 h-4 text-[#00A887] shrink-0 mt-0.5" />
-            <span>{successMsg}</span>
-          </div>
+          <Alert tone="success">
+            {successMsg}
+          </Alert>
         )}
-        <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-[#00A887]">
-          <CheckCircle2 className="w-4 h-4 text-[#00A887]" />
-          <span>Postulado · {getEstadoLabel(applicationData?.estado)}</span>
-        </div>
-        <div className="text-[11px] text-[#636569]">
-          Expediente enviado: CV Oficial
-          {adjuntos.length > 0 ? ` + ${adjuntos.length} documento(s) anexo(s)` : ''}
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill tone="success">
+            Postulado · {getEstadoLabel(applicationData?.estado)}
+          </StatusPill>
+          <span className="text-fine text-ink-64">
+            Expediente: CV Oficial{adjuntos.length > 0 ? ` + ${adjuntos.length} anexo(s)` : ''}
+          </span>
         </div>
         <div>
           <Link
             href="/portal-egresado"
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00A887] hover:underline"
+            className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
           >
             Ver estatus en mi portal
-            <ArrowRight className="w-3 h-3" />
+            <ArrowRight className="size-3" />
           </Link>
         </div>
       </div>
@@ -314,380 +324,322 @@ export const ApplyButton: React.FC<ApplyButtonProps> = ({
   // 4. Caso: Egresado Disponible para Postularse
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="primary"
+        size="lg"
         onClick={() => {
           setErrorMsg(null);
           setUploadSuccessMsg(null);
           setShowModal(true);
         }}
-        className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all w-full sm:w-auto cursor-pointer"
       >
-        <Send className="w-4 h-4" />
-        Postularme a esta Vacante
-      </button>
+        <Send className="size-4" />
+        Postularme a esta vacante
+      </Button>
 
       {/* Modal Institucional de Confirmación y Selección de Expediente */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full border border-zinc-200 shadow-2xl overflow-hidden relative my-8 max-h-[92vh] flex flex-col">
-            {/* Pleca Bicolor */}
-            <div className="w-full h-1.5 flex shrink-0">
-              <div className="h-full w-2/3 bg-[#691C32]" />
-              <div className="h-full w-1/3 bg-[#C2BA98]" />
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        size="lg"
+        title="Confirmar postulación y expediente"
+        description={
+          <>
+            Puesto: <strong className="text-ink">{vacanteTitulo}</strong> en{' '}
+            <strong className="text-ink">{empresaNombre}</strong>.
+          </>
+        }
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="pearl"
+              size="md"
+              disabled={isSubmitting}
+              onClick={() => setShowModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              loading={isSubmitting}
+              disabled={isSubmitting || !hasCv}
+              onClick={handleApply}
+            >
+              <Send className="size-4" />
+              Confirmar y enviar postulación
+            </Button>
+          </>
+        }
+      >
+        <input
+          type="file"
+          ref={cvInputRef}
+          onChange={handleCvUpload}
+          accept=".pdf,application/pdf"
+          className="hidden"
+        />
+        <input
+          type="file"
+          ref={docsInputRef}
+          onChange={handleDocsUpload}
+          accept=".pdf,application/pdf"
+          className="hidden"
+        />
+
+        <div className="space-y-6">
+          {/* Mensajes de éxito / error */}
+          {uploadSuccessMsg && (
+            <Alert tone="success">
+              {uploadSuccessMsg}
+            </Alert>
+          )}
+
+          {errorMsg && (
+            <Alert tone="danger">
+              {errorMsg}
+            </Alert>
+          )}
+
+          {/* Documentos solicitados por la empresa */}
+          {documentosRequeridos && (
+            <Alert tone="warning" title="Documentación solicitada por la empresa:">
+              <p className="mt-0.5">{documentosRequeridos}</p>
+            </Alert>
+          )}
+
+          {/* 1. CV Pre-cargado (Obligatorio) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-caption font-semibold uppercase tracking-wider text-ink">
+                1. Currículum Vitae Institucional (Obligatorio)
+              </span>
+              {hasCv && (
+                <StatusPill tone="success">
+                  {newlyUploadedCv ? 'Recién subido' : 'Pre-cargado'}
+                </StatusPill>
+              )}
             </div>
 
-            <input
-              type="file"
-              ref={cvInputRef}
-              onChange={handleCvUpload}
-              accept=".pdf,application/pdf"
-              className="hidden"
-            />
-            <input
-              type="file"
-              ref={docsInputRef}
-              onChange={handleDocsUpload}
-              accept=".pdf,application/pdf"
-              className="hidden"
-            />
-
-            <div className="p-6 space-y-5 overflow-y-auto flex-1">
-              <div className="flex items-center justify-between">
-                <div className="inline-flex items-center gap-2 text-xs font-bold text-[#00A887] uppercase tracking-wider">
-                  <ShieldCheck className="w-4 h-4" />
-                  Bolsa de Trabajo UTH · Selección de Expediente
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="text-zinc-400 hover:text-zinc-600 p-1 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-[#2D2926]">
-                  Confirmar Postulación y Documentos Adjuntos
-                </h3>
-                <p className="text-xs text-[#636569] mt-1 leading-relaxed">
-                  Puesto: <strong className="text-[#2D2926]">{vacanteTitulo}</strong> en{' '}
-                  <strong className="text-[#2D2926]">{empresaNombre}</strong>. Selecciona los documentos pre-cargados de tu perfil o sube nuevos archivos PDF.
-                </p>
-              </div>
-
-              {/* Retroalimentación inmediata cuando se sube un CV o Documento Adicional */}
-              {uploadSuccessMsg && (
-                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 flex items-start gap-2.5 text-xs text-emerald-900 animate-in fade-in duration-200 shadow-xs">
-                  <CheckCircle2 className="w-4 h-4 text-[#00A887] shrink-0 mt-0.5" />
-                  <div className="flex-1 font-semibold">{uploadSuccessMsg}</div>
-                </div>
-              )}
-
-              {errorMsg && (
-                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2.5 text-xs text-red-800 animate-in fade-in duration-200">
-                  <AlertCircle className="w-4 h-4 text-[#A8123E] shrink-0 mt-0.5" />
-                  <span className="font-medium">{errorMsg}</span>
-                </div>
-              )}
-
-              {/* Documentos solicitados por la empresa */}
-              {documentosRequeridos && (
-                <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 space-y-1">
-                  <p className="font-bold uppercase tracking-wider text-[11px] text-amber-800">
-                    Documentación solicitada por la empresa para esta vacante:
-                  </p>
-                  <p className="font-medium">{documentosRequeridos}</p>
-                </div>
-              )}
-
-              {/* 1. CV Pre-cargado (Obligatorio) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-[#2D2926]">
-                    1. Currículum Vitae Institucional (Obligatorio)
-                  </span>
-                  {hasCv && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      {newlyUploadedCv ? 'RECIÉN SUBIDO Y SELECCIONADO' : 'PRE-CARGADO · SELECCIONADO'}
-                    </span>
-                  )}
-                </div>
-
+            <div
+              className={`p-4 rounded-card ring-1 ring-inset flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                hasCv
+                  ? 'bg-primary-tint/40 ring-primary/30'
+                  : 'bg-danger-tint ring-danger/30'
+              }`}
+            >
+              <div className="flex items-start gap-3">
                 <div
-                  className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-                    hasCv
-                      ? 'bg-emerald-50/60 border-emerald-300'
-                      : 'bg-red-50 border-red-200'
+                  className={`size-9 rounded-field flex items-center justify-center shrink-0 mt-0.5 ${
+                    hasCv ? 'bg-primary text-white' : 'bg-danger text-white'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                        hasCv ? 'bg-[#00A887] text-white' : 'bg-red-100 text-red-600'
-                      }`}
-                    >
-                      {hasCv ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-                    </div>
-                    <div className="text-xs space-y-0.5">
-                      <p className="font-bold text-[#2D2926] break-all">
-                        {hasCv
-                          ? newlyUploadedCv || getFileDisplayName(profile?.cv, `CV_${profile?.matricula}.pdf`)
-                          : 'Sin Currículum Vitae cargado'}
-                      </p>
-                      <p className="text-[11px] text-[#636569]">
-                        {hasCv
-                          ? 'Archivo PDF listo en tu expediente. Se incluirá obligatoriamente en tu postulación.'
-                          : 'Es obligatorio subir tu CV en formato PDF para poder postularte.'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {hasCv && (
-                      <button
-                        type="button"
-                        onClick={() => setPreviewConfig({ tipo: 'cv', docNombre: 'Currículum Vitae' })}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#691C32] bg-white border border-zinc-300 hover:bg-zinc-50 transition-all cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        Ver PDF
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => cvInputRef.current?.click()}
-                      disabled={isUploadingCv}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        hasCv
-                          ? 'bg-white border border-zinc-300 text-[#2D2926] hover:bg-zinc-50'
-                          : 'bg-[#00A887] text-white hover:bg-[#008F73]'
-                      }`}
-                    >
-                      {isUploadingCv ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <UploadCloud className="w-3.5 h-3.5" />
-                      )}
-                      {hasCv ? 'Reemplazar CV' : 'Subir CV (PDF)'}
-                    </button>
-                  </div>
+                  {hasCv ? <CheckCircle2 className="size-5" /> : <FileText className="size-5" />}
+                </div>
+                <div className="text-caption space-y-0.5 min-w-0">
+                  <p className="font-semibold text-ink break-all">
+                    {hasCv
+                      ? newlyUploadedCv || getFileDisplayName(profile?.cv, `CV_${profile?.matricula}.pdf`)
+                      : 'Sin Currículum Vitae cargado'}
+                  </p>
+                  <p className="text-fine text-ink-64">
+                    {hasCv
+                      ? 'Archivo PDF listo en tu expediente institucional.'
+                      : 'Es obligatorio subir tu CV en formato PDF para poder postularte.'}
+                  </p>
                 </div>
               </div>
 
-              {/* 2. Selección de Documentos Pre-cargados y Subida de Nuevos Anexos */}
-              <div className="space-y-3 pt-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-[#2D2926] block">
-                      2. Documentos Adicionales Pre-cargados ({selectedDocIds.length} seleccionados)
-                    </span>
-                    <span className="text-[11px] text-[#636569]">
-                      Marca los documentos pre-cargados en tu perfil que deseas anexar a esta vacante o sube uno nuevo.
-                    </span>
-                  </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                {hasCv && (
+                  <Button
+                    type="button"
+                    variant="pearl"
+                    size="sm"
+                    onClick={() => setPreviewConfig({ tipo: 'cv', docNombre: 'Currículum Vitae' })}
+                  >
+                    <Eye className="size-3.5" />
+                    Ver PDF
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant={hasCv ? 'pearl' : 'primary'}
+                  size="sm"
+                  loading={isUploadingCv}
+                  onClick={() => cvInputRef.current?.click()}
+                >
+                  <UploadCloud className="size-3.5" />
+                  {hasCv ? 'Reemplazar' : 'Subir CV (PDF)'}
+                </Button>
+              </div>
+            </div>
+          </div>
 
-                  {docsPrecargados.length > 0 && (
-                    <div className="flex items-center gap-2 text-[11px]">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDocIds(docsPrecargados.map((d) => d.id))}
-                        className="font-bold text-[#00A887] hover:underline cursor-pointer"
+          {/* 2. Documentos Adicionales */}
+          <div className="space-y-3 pt-2 border-t border-hairline">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="text-caption font-semibold uppercase tracking-wider text-ink block">
+                  2. Documentos Adicionales ({selectedDocIds.length} seleccionados)
+                </span>
+                <span className="text-fine text-ink-64">
+                  Selecciona los documentos de tu perfil que deseas anexar a esta postulación.
+                </span>
+              </div>
+
+              {docsPrecargados.length > 0 && (
+                <div className="flex items-center gap-2 text-fine">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDocIds(docsPrecargados.map((d) => d.id))}
+                    className="font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    Seleccionar todos
+                  </button>
+                  <span className="text-ink-48">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDocIds([])}
+                    className="font-medium text-ink-64 hover:underline cursor-pointer"
+                  >
+                    Desmarcar todos
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Lista de documentos existentes */}
+            {docsPrecargados.length > 0 ? (
+              <div className="space-y-2">
+                {docsPrecargados.map((doc) => {
+                  const isSelected = selectedDocIds.includes(doc.id);
+                  const isNewlyUploaded = newlyUploadedDocIds.includes(doc.id);
+
+                  return (
+                    <div
+                      key={doc.id}
+                      onClick={() => toggleDocSelection(doc.id)}
+                      className={`p-3.5 rounded-card ring-1 ring-inset flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary-tint/30 ring-primary/40'
+                          : 'bg-canvas ring-hairline hover:ring-ink-48'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          className="mt-0.5 size-4 rounded accent-primary cursor-pointer shrink-0"
+                        />
+                        <div className="text-caption space-y-0.5 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-ink">{doc.nombre}</span>
+                            {isNewlyUploaded && (
+                              <StatusPill tone="brand">Recién subido</StatusPill>
+                            )}
+                          </div>
+                          <p className="text-fine text-ink-64 break-all">
+                            Archivo PDF: <strong className="text-ink">{doc.archivo_nombre}</strong>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        className="flex items-center gap-2 shrink-0 self-end sm:self-center"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        Seleccionar todos
-                      </button>
-                      <span className="text-zinc-300">|</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDocIds([])}
-                        className="font-semibold text-zinc-500 hover:underline cursor-pointer"
-                      >
-                        Desmarcar todos
-                      </button>
+                        <Button
+                          type="button"
+                          variant="pearl"
+                          size="sm"
+                          onClick={() =>
+                            setPreviewConfig({
+                              tipo: 'documentos',
+                              docId: doc.id,
+                              docNombre: doc.nombre,
+                            })
+                          }
+                        >
+                          <Eye className="size-3.5" />
+                          Ver PDF
+                        </Button>
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-4 rounded-card border-2 border-dashed border-hairline bg-parchment text-center text-caption text-ink-64">
+                No tienes documentos adicionales en tu expediente todavía.
+              </div>
+            )}
+
+            {/* Subir nuevo PDF adicional */}
+            <div className="p-4 rounded-card bg-parchment space-y-3">
+              <div className="flex items-center gap-2 text-caption font-semibold text-ink">
+                <FolderOpen className="size-4 text-wine" />
+                <span>Agregar nuevo documento adicional a mi expediente (PDF)</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="sm:col-span-2 space-y-2">
+                  <Select
+                    value={nuevoDocTipo}
+                    onChange={(e) => setNuevoDocTipo(e.target.value)}
+                  >
+                    {TIPOS_DOCUMENTO_SUGERIDOS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </Select>
+
+                  {nuevoDocTipo === 'Otro documento requerido por la vacante' && (
+                    <Input
+                      type="text"
+                      value={nuevoDocNombrePersonalizado}
+                      onChange={(e) => setNuevoDocNombrePersonalizado(e.target.value)}
+                      placeholder="Nombre del documento (ej. Licencia Tipo B)"
+                    />
                   )}
                 </div>
 
-                {/* Lista de documentos pre-cargados seleccionables */}
-                {docsPrecargados.length > 0 ? (
-                  <div className="space-y-2">
-                    {docsPrecargados.map((doc) => {
-                      const isSelected = selectedDocIds.includes(doc.id);
-                      const isNewlyUploaded = newlyUploadedDocIds.includes(doc.id);
-
-                      return (
-                        <div
-                          key={doc.id}
-                          onClick={() => toggleDocSelection(doc.id)}
-                          className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-emerald-50/70 border-emerald-300 shadow-2xs'
-                              : 'bg-white border-zinc-200 hover:border-zinc-300'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {}}
-                              className="mt-1 w-4 h-4 rounded text-[#00A887] focus:ring-[#00A887] border-zinc-300 cursor-pointer"
-                            />
-                            <div className="text-xs space-y-0.5">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-bold text-[#2D2926]">{doc.nombre}</span>
-                                {isNewlyUploaded ? (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#00A887] text-white">
-                                    RECIÉN SUBIDO
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-200/80 text-zinc-700">
-                                    PRE-CARGADO
-                                  </span>
-                                )}
-                                {isSelected && (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                    SELECCIONADO PARA ENVÍO
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[11px] text-[#636569] break-all">
-                                Archivo PDF: <strong className="text-[#2D2926]">{doc.archivo_nombre}</strong>
-                              </p>
-                            </div>
-                          </div>
-
-                          <div
-                            className="flex items-center gap-2 shrink-0 self-end sm:self-center"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPreviewConfig({
-                                  tipo: 'documentos',
-                                  docId: doc.id,
-                                  docNombre: doc.nombre,
-                                })
-                              }
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-[#691C32] bg-white border border-zinc-300 hover:bg-zinc-50 transition-all cursor-pointer"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              Ver PDF
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center text-xs text-[#636569]">
-                    No tienes documentos adicionales pre-cargados en tu perfil todavía. Puedes subir uno a continuación.
-                  </div>
-                )}
-
-                {/* Subir un nuevo documento adicional desde el modal */}
-                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#2D2926]">
-                    <FolderOpen className="w-4 h-4 text-[#691C32]" />
-                    <span>Agregar un nuevo documento adicional a mi expediente (PDF)</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <div className="sm:col-span-2 space-y-2">
-                      <select
-                        value={nuevoDocTipo}
-                        onChange={(e) => setNuevoDocTipo(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-zinc-300 bg-white text-xs text-[#2D2926] focus:outline-none focus:ring-2 focus:ring-[#00A887]"
-                      >
-                        {TIPOS_DOCUMENTO_SUGERIDOS.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
-
-                      {nuevoDocTipo === 'Otro documento requerido por la vacante' && (
-                        <input
-                          type="text"
-                          value={nuevoDocNombrePersonalizado}
-                          onChange={(e) => setNuevoDocNombrePersonalizado(e.target.value)}
-                          placeholder="Escribe el nombre del documento (ej. Licencia Tipo B)"
-                          className="w-full px-3 py-2 rounded-lg border border-zinc-300 bg-white text-xs text-[#2D2926] focus:outline-none focus:ring-2 focus:ring-[#00A887]"
-                        />
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => docsInputRef.current?.click()}
-                      disabled={isUploadingDocs}
-                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-[#2D2926] hover:bg-black transition-all cursor-pointer disabled:opacity-50 h-fit"
-                    >
-                      {isUploadingDocs ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00A887]" />
-                          Subiendo PDF...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5 text-[#00A887]" />
-                          Subir Nuevo PDF
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
+                <Button
+                  type="button"
+                  variant="utility"
+                  size="md"
+                  loading={isUploadingDocs}
+                  onClick={() => docsInputRef.current?.click()}
+                  className="h-11"
+                >
+                  <Plus className="size-4" />
+                  Subir PDF
+                </Button>
               </div>
-
-              {/* Resumen del envío */}
-              <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-[#636569] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <span className="font-bold text-[#2D2926]">Resumen de documentos a enviar: </span>
-                  <span>
-                    {hasCv ? '1 CV Oficial' : '0 CV'} + {selectedDocIds.length} documento(s) adicional(es) seleccionado(s).
-                  </span>
-                </div>
-                <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200 shrink-0">
-                  Estatus inicial: En Revisión por UTH
-                </span>
-              </div>
-            </div>
-
-            {/* Pie del Modal */}
-            <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex items-center justify-end gap-3 shrink-0">
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-[#2D2926] bg-white border border-zinc-300 hover:bg-zinc-100 rounded-lg transition-all cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={isSubmitting || !hasCv}
-                onClick={handleApply}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] rounded-lg shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Enviando Postulación...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5" />
-                    Confirmar y Enviar Postulación
-                  </>
-                )}
-              </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Visor de PDF en línea dentro del flujo de postulación */}
+          {/* Resumen */}
+          <div className="p-4 rounded-card bg-parchment text-caption text-ink-64 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span className="font-semibold text-ink">Resumen a enviar: </span>
+              <span>
+                {hasCv ? '1 CV Oficial' : '0 CV'} + {selectedDocIds.length} anexo(s).
+              </span>
+            </div>
+            <StatusPill tone="warning">
+              Estatus inicial: En Revisión por UTH
+            </StatusPill>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Visor de PDF */}
       {previewConfig && accessToken && (
         <CvViewerModal
           isOpen={true}

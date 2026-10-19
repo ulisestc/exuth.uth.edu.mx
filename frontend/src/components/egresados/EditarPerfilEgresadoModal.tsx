@@ -1,20 +1,28 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  UserCog, 
-  Phone, 
-  Home, 
-  Wrench, 
-  HeartHandshake, 
-  Loader2, 
-  CheckCircle2, 
-  AlertCircle,
-  ShieldCheck,
-  GraduationCap
+import {
+  CheckCircle2,
+  ShieldAlert,
 } from 'lucide-react';
-import { EgresadoProfile, updateMiPerfilEgresado } from '@/lib/api';
+import {
+  EgresadoProfile,
+  Carrera,
+  fetchCarreras,
+  crearMiPerfilEgresado,
+  updateMiPerfilEgresado,
+} from '@/lib/api';
+import {
+  Modal,
+  Button,
+  Alert,
+  Field,
+  Input,
+  Select,
+  Textarea,
+  Code,
+  StatusPill,
+} from '@/components/ui';
 
 interface EditarPerfilEgresadoModalProps {
   isOpen: boolean;
@@ -31,6 +39,14 @@ export default function EditarPerfilEgresadoModal({
   token,
   onProfileUpdated,
 }: EditarPerfilEgresadoModalProps) {
+  const [carreras, setCarreras] = useState<Carrera[]>([]);
+
+  const [matricula, setMatricula] = useState('');
+  const [curp, setCurp] = useState('');
+  const [carreraId, setCarreraId] = useState<string>('');
+  const [nivelEstudios, setNivelEstudios] = useState<'TSU' | 'ING_LIC' | 'MTRIA'>('ING_LIC');
+  const [genero, setGenero] = useState<'M' | 'F' | 'O'>('M');
+
   const [telefonoCelular, setTelefonoCelular] = useState('');
   const [telefonoCasa, setTelefonoCasa] = useState('');
   const [domicilio, setDomicilio] = useState('');
@@ -41,30 +57,83 @@ export default function EditarPerfilEgresadoModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const isCreating = !profile;
+  const canEditAcademicFields = isCreating || !profile?.es_verificado_padron;
+
+  useEffect(() => {
+    if (isOpen && canEditAcademicFields) {
+      fetchCarreras()
+        .then((list) => {
+          setCarreras(list);
+          if (list.length > 0 && !profile?.carrera_id) {
+            const matched = profile?.carrera
+              ? list.find((c) => c.nombre === profile.carrera)
+              : undefined;
+            setCarreraId(String(matched ? matched.id : list[0].id));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, canEditAcademicFields, profile]);
+
   // Inicializar campos con el perfil actual
   useEffect(() => {
     if (profile) {
+      setMatricula(profile.matricula || '');
+      setCurp(profile.curp || '');
+      if (profile.carrera_id) {
+        setCarreraId(String(profile.carrera_id));
+      }
+      setNivelEstudios(profile.nivel_estudios || 'ING_LIC');
+      setGenero(profile.genero || 'M');
       setTelefonoCelular(profile.telefono_celular || '');
       setTelefonoCasa(profile.telefono_casa || '');
       setDomicilio(profile.domicilio || '');
       setHabilidades(profile.habilidades || '');
       setCapacidadesEspeciales(profile.capacidades_especiales || '');
-      setErrorMessage(null);
-      setSuccessMessage(null);
+    } else {
+      setMatricula('');
+      setCurp('');
+      setNivelEstudios('ING_LIC');
+      setGenero('M');
+      setTelefonoCelular('');
+      setTelefonoCasa('');
+      setDomicilio('');
+      setHabilidades('');
+      setCapacidadesEspeciales('');
     }
+    setErrorMessage(null);
+    setSuccessMessage(null);
   }, [profile, isOpen]);
 
-  if (!isOpen || !profile) return null;
+  if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    // Validaciones básicas
+    if (canEditAcademicFields) {
+      if (!matricula.trim()) {
+        setErrorMessage('La matrícula institucional es obligatoria.');
+        return;
+      }
+      const curpLimpia = curp.trim().toUpperCase();
+      if (curpLimpia.length !== 18) {
+        setErrorMessage('La CURP debe contener exactamente 18 caracteres alfanuméricos.');
+        return;
+      }
+    }
+
     const telLimpio = telefonoCelular.trim().replace(/\D/g, '');
-    if (telLimpio.length < 10) {
-      setErrorMessage('El teléfono celular debe contener al menos 10 dígitos numéricos.');
+    if (telLimpio.length < 10 || telLimpio.length > 15) {
+      setErrorMessage('El teléfono celular debe contener entre 10 y 15 dígitos numéricos.');
+      return;
+    }
+
+    const telCasaLimpio = telefonoCasa.trim().replace(/\D/g, '');
+    if (telCasaLimpio && (telCasaLimpio.length < 10 || telCasaLimpio.length > 15)) {
+      setErrorMessage('El teléfono fijo debe contener entre 10 y 15 dígitos numéricos.');
       return;
     }
 
@@ -79,194 +148,271 @@ export default function EditarPerfilEgresadoModal({
     }
 
     setIsSubmitting(true);
-    const res = await updateMiPerfilEgresado(token, {
-      telefono_celular: telefonoCelular.trim(),
-      telefono_casa: telefonoCasa.trim() || undefined,
-      domicilio: domicilio.trim(),
-      habilidades: habilidades.trim(),
-      capacidades_especiales: capacidadesEspeciales.trim() || undefined,
-    });
+
+    let res: { success: boolean; profile?: EgresadoProfile; error?: string };
+
+    if (isCreating) {
+      res = await crearMiPerfilEgresado(token, {
+        matricula: matricula.trim(),
+        curp: curp.trim().toUpperCase(),
+        carrera: Number(carreraId) || 1,
+        nivel_estudios: nivelEstudios,
+        genero,
+        telefono_celular: telLimpio,
+        telefono_casa: telCasaLimpio || undefined,
+        domicilio: domicilio.trim(),
+        habilidades: habilidades.trim(),
+        capacidades_especiales: capacidadesEspeciales.trim() || undefined,
+      });
+    } else {
+      const payload: Parameters<typeof updateMiPerfilEgresado>[1] = {
+        telefono_celular: telLimpio,
+        telefono_casa: telCasaLimpio || undefined,
+        domicilio: domicilio.trim(),
+        habilidades: habilidades.trim(),
+        capacidades_especiales: capacidadesEspeciales.trim() || undefined,
+        nivel_estudios: nivelEstudios,
+      };
+      if (canEditAcademicFields) {
+        payload.matricula = matricula.trim();
+        payload.curp = curp.trim().toUpperCase();
+        if (carreraId) payload.carrera = Number(carreraId);
+        payload.genero = genero;
+      }
+      res = await updateMiPerfilEgresado(token, payload);
+    }
+
     setIsSubmitting(false);
 
     if (res.success && res.profile) {
-      setSuccessMessage('Tu información de perfil ha sido actualizada exitosamente.');
+      const msg = isCreating
+        ? res.profile.es_verificado_padron
+          ? 'Ficha académica registrada y verificada automáticamente en el Padrón UTH.'
+          : 'Ficha académica registrada. Tu cuenta ha quedado en espera de validación manual por Dirección de Vinculación UTH.'
+        : res.profile.es_verificado_padron && !profile?.es_verificado_padron
+        ? '¡Perfil actualizado y matrícula verificada automáticamente contra el Padrón Oficial UTH!'
+        : 'Tu información de perfil ha sido actualizada exitosamente.';
+      setSuccessMessage(msg);
       onProfileUpdated(res.profile);
       setTimeout(() => {
         onClose();
-      }, 1200);
+      }, 1400);
     } else {
-      setErrorMessage(res.error || 'Ocurrió un error al actualizar los datos.');
+      setErrorMessage(res.error || 'Ocurrió un error al guardar los datos.');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-zinc-200 max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        
-        {/* Cabecera del Modal */}
-        <div className="p-6 bg-[#2D2926] text-white flex items-center justify-between relative border-b border-zinc-800">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#00A887]/20 text-[#00A887] border border-[#00A887]/30">
-              <UserCog className="w-3.5 h-3.5" />
-              Actualización de Perfil Egresado
-            </div>
-            <h2 className="text-lg font-black tracking-tight text-white">
-              Editar Datos de Contacto y Habilidades
-            </h2>
-          </div>
-          <button
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      size="lg"
+      eyebrow={isCreating ? 'Registro de Expediente Académico' : 'Actualización de Perfil Egresado'}
+      title={isCreating ? 'Completar Ficha Académica UTH' : 'Editar Datos de Contacto y Perfil'}
+      description={
+        isCreating
+          ? 'Captura tus datos escolares y de contacto para activar tu expediente de vinculación laboral.'
+          : 'Mantén actualizados tus medios de contacto y competencias para los reclutadores.'
+      }
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            title="Cerrar ventana"
+            disabled={isSubmitting}
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            loading={isSubmitting}
+            onClick={() => handleSubmit()}
+            leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+          >
+            {isCreating ? 'Crear Ficha Académica' : 'Guardar Información'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        {/* Aviso informativo cuando está en validación de padrón */}
+        {!isCreating && !profile.es_verificado_padron && (
+          <Alert tone="warning" title="Cuenta en Validación Manual de Padrón">
+            Tu matrícula aún no figura en el último corte Excel de Servicios Escolares. Dirección de Vinculación UTH puede validarte manualmente; si cometiste algún error al capturar tu matrícula, CURP o carrera, puedes corregirlo aquí mismo.
+          </Alert>
+        )}
 
-        {/* Ficha informativa institucional de solo lectura */}
-        <div className="px-6 py-3.5 bg-[#F8FAFC] border-b border-zinc-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-[#636569] block">Matrícula</span>
-            <span className="font-mono font-bold text-[#2D2926]">{profile.matricula}</span>
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-[#636569] block">CURP</span>
-            <span className="font-mono text-[#2D2926]">{profile.curp}</span>
-          </div>
-          <div className="sm:col-span-2">
-            <span className="text-[10px] uppercase font-bold text-[#636569] block">Programa UTH</span>
-            <span className="font-semibold text-[#00A887] truncate block">{profile.carrera}</span>
-          </div>
-        </div>
-
-        {/* Formulario editable */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 flex-1">
-          {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{errorMessage}</span>
+        {/* Si ya está verificado en padrón, mostrar ficha institucional de solo lectura */}
+        {!canEditAcademicFields && profile && (
+          <div className="p-4 rounded-xl bg-parchment border border-hairline grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <span className="text-micro uppercase font-semibold text-ink-muted block mb-0.5">
+                Matrícula (Verificada)
+              </span>
+              <Code>{profile.matricula}</Code>
             </div>
-          )}
+            <div>
+              <span className="text-micro uppercase font-semibold text-ink-muted block mb-0.5">
+                CURP
+              </span>
+              <Code>{profile.curp}</Code>
+            </div>
+            <div className="col-span-2">
+              <span className="text-micro uppercase font-semibold text-ink-muted block">
+                Programa UTH
+              </span>
+              <span className="text-caption font-semibold text-primary truncate block">
+                {profile.carrera}
+              </span>
+            </div>
+          </div>
+        )}
 
-          {successMessage && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#00A887] shrink-0" />
-              <span>{successMessage}</span>
+        {errorMessage && (
+          <Alert tone="danger" onDismiss={() => setErrorMessage(null)}>
+            {errorMessage}
+          </Alert>
+        )}
+
+        {successMessage && (
+          <Alert tone="success" onDismiss={() => setSuccessMessage(null)}>
+            {successMessage}
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Campos académicos editables si aún no está verificado en padrón o si está creando su ficha */}
+          {canEditAcademicFields && (
+            <div className="p-4 rounded-xl bg-parchment/60 border border-hairline space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-fine font-semibold uppercase tracking-wider text-ink-64 flex items-center gap-1.5">
+                  <ShieldAlert className="size-3.5 text-warning" />
+                  Datos Escolares para Validación en Padrón
+                </span>
+                <StatusPill tone="warning">Validación Pendiente</StatusPill>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Matrícula UTH" required hint="Si corriges tu matrícula y coincide con el padrón, se verificará al instante.">
+                  <Input
+                    type="text"
+                    required
+                    value={matricula}
+                    onChange={(e) => setMatricula(e.target.value)}
+                    placeholder="Ej. 3523110265"
+                  />
+                </Field>
+
+                <Field label="CURP (18 caracteres)" required>
+                  <Input
+                    type="text"
+                    required
+                    maxLength={18}
+                    value={curp}
+                    onChange={(e) => setCurp(e.target.value.toUpperCase())}
+                    placeholder="18 caracteres oficiales"
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <Field label="Programa Educativo / Carrera UTH" required>
+                    <Select
+                      value={carreraId}
+                      onChange={(e) => setCarreraId(e.target.value)}
+                    >
+                      {carreras.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+
+                <Field label="Nivel de Egreso" required>
+                  <Select
+                    value={nivelEstudios}
+                    onChange={(e) => setNivelEstudios(e.target.value as 'TSU' | 'ING_LIC' | 'MTRIA')}
+                  >
+                    <option value="TSU">TSU</option>
+                    <option value="ING_LIC">Ingeniería / Licenciatura</option>
+                    <option value="MTRIA">Maestría / Posgrado</option>
+                  </Select>
+                </Field>
+              </div>
             </div>
           )}
 
           {/* Teléfonos */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#00A887]" />
-                Teléfono Celular *
-              </label>
-              <input
+            <Field
+              label="Teléfono Celular (10 dígitos)"
+              required
+              hint="Usado por los reclutadores para contactarte."
+            >
+              <Input
                 type="tel"
                 required
                 value={telefonoCelular}
                 onChange={(e) => setTelefonoCelular(e.target.value)}
                 placeholder="Ej. 2221234567"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
               />
-              <span className="text-[10px] text-[#636569]">Usado por los reclutadores para contactarte.</span>
-            </div>
+            </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#636569]" />
-                Teléfono Fijo / Casa (Opcional)
-              </label>
-              <input
+            <Field label="Teléfono Fijo / Casa (Opcional)">
+              <Input
                 type="tel"
                 value={telefonoCasa}
                 onChange={(e) => setTelefonoCasa(e.target.value)}
                 placeholder="Ej. 2271000000"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
               />
-            </div>
+            </Field>
           </div>
 
           {/* Domicilio */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-              <Home className="w-3.5 h-3.5 text-[#00A887]" />
-              Domicilio Completo *
-            </label>
-            <input
+          <Field label="Domicilio Completo" required>
+            <Input
               type="text"
               required
               value={domicilio}
               onChange={(e) => setDomicilio(e.target.value)}
               placeholder="Calle, número, colonia, municipio y código postal"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
             />
-          </div>
+          </Field>
 
           {/* Habilidades */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-              <Wrench className="w-3.5 h-3.5 text-[#00A887]" />
-              Habilidades Técnicas y Competencias *
-            </label>
-            <textarea
+          <Field
+            label="Habilidades Técnicas y Competencias"
+            required
+            hint="Destaca tus competencias clave para que las empresas identifiquen tu compatibilidad."
+          >
+            <Textarea
               rows={3}
               required
               value={habilidades}
               onChange={(e) => setHabilidades(e.target.value)}
               placeholder="Ej. Programación en Python, PLC Siemens, SolidWorks, Mantenimiento preventivo, Trabajo en equipo..."
-              className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none resize-none"
             />
-            <span className="text-[10px] text-[#636569]">Destaca tus competencias clave para que las empresas identifiquen tu compatibilidad.</span>
-          </div>
+          </Field>
 
           {/* Capacidades Especiales */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-              <HeartHandshake className="w-3.5 h-3.5 text-[#691C32]" />
-              Inclusión / Necesidades de Accesibilidad (Opcional)
-            </label>
-            <input
+          <Field label="Inclusión / Necesidades de Accesibilidad (Opcional)">
+            <Input
               type="text"
               value={capacidadesEspeciales}
               onChange={(e) => setCapacidadesEspeciales(e.target.value)}
               placeholder="Ej. Discapacidad motriz leve, adaptación ergonómica requerida, ninguna..."
-              className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 text-xs text-[#2D2926] focus:border-[#00A887] focus:ring-2 focus:ring-[#00A887]/20 outline-none"
             />
-          </div>
-
-          {/* Botones de acción */}
-          <div className="pt-4 border-t border-zinc-200 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-4 py-2.5 rounded-lg text-xs font-semibold text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#00A887] hover:bg-[#008F73] transition-all shadow-sm cursor-pointer disabled:opacity-60"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Guardando Cambios...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Guardar Información</span>
-                </>
-              )}
-            </button>
-          </div>
+          </Field>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }
+export { EditarPerfilEgresadoModal };

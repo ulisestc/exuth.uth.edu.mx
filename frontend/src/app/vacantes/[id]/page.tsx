@@ -2,29 +2,36 @@ import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fetchVacanteById } from '@/lib/api';
-import { 
-  Building2, 
-  MapPin, 
-  Briefcase, 
-  DollarSign, 
-  GraduationCap, 
-  Bus, 
-  Utensils, 
-  Clock, 
-  Calendar,
+import {
+  Building2,
+  MapPin,
+  Briefcase,
+  DollarSign,
+  GraduationCap,
+  Bus,
+  Utensils,
+  Clock,
   ArrowLeft,
   CheckCircle2,
   FileText,
-  UserCheck,
-  Send,
-  AlertCircle,
   Mail,
   Phone,
   Globe,
   HeartHandshake,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
 } from 'lucide-react';
 import { ApplyButton } from '@/components/vacantes/ApplyButton';
+import {
+  Container,
+  Card,
+  StatusPill,
+  Tag,
+  Code,
+  DataList,
+  Alert,
+} from '@/components/ui';
+import { getNivelLabel, getModalidadLabel, formatMXN } from '@/lib/status';
 
 interface VacanteDetailPageProps {
   params: Promise<{ id: string }>;
@@ -49,383 +56,317 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
     notFound();
   }
 
-  const formatSueldo = () => {
+  const getSueldoTexto = () => {
     if (vacante.salario_a_tratar) return 'Sueldo a tratar en entrevista';
     if (vacante.sueldo_minimo && vacante.sueldo_maximo) {
-      const min = Number(vacante.sueldo_minimo).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-      const max = Number(vacante.sueldo_maximo).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-      return `${min} - ${max} MXN mensuales`;
+      return `${formatMXN(vacante.sueldo_minimo)} – ${formatMXN(vacante.sueldo_maximo)} MXN mensuales`;
     }
     if (vacante.sueldo_minimo) {
-      const min = Number(vacante.sueldo_minimo).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-      return `Desde ${min} MXN mensuales`;
+      return `Desde ${formatMXN(vacante.sueldo_minimo)} MXN mensuales`;
     }
     return 'No especificado';
   };
 
-  const getNivelLabel = (nivel: string) => {
-    switch (nivel) {
-      case 'TSU': return 'Técnico Superior Universitario';
-      case 'ING_LIC': return 'Ingeniería / Licenciatura';
-      case 'MTRIA': return 'Maestría';
-      default: return nivel;
-    }
-  };
-
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Navegación de retorno */}
-      <Link 
-        href="/vacantes" 
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#636569] hover:text-[#00A887] transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Regresar al catálogo de vacantes
-      </Link>
-
-      {/* Cabecera Principal de la Vacante */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6 sm:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono tracking-wider text-[#636569] bg-zinc-100 px-2.5 py-0.5 rounded font-medium">
-                {vacante.clave_vacante}
-              </span>
-              <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-[#00A887]/10 text-[#00A887]">
-                {getNivelLabel(vacante.nivel_estudios)}
-              </span>
-              <span className="px-2.5 py-0.5 rounded text-xs font-medium bg-zinc-100 text-[#2D2926] uppercase">
-                {vacante.modalidad}
-              </span>
-              {vacante.es_inclusiva && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                  <HeartHandshake className="w-3.5 h-3.5" />
-                  Vacante Inclusiva
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#2D2926]">
-              {vacante.titulo}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#636569]">
-              <Link
-                href={`/empresas/${vacante.empresa}`}
-                className="flex items-center gap-1.5 font-semibold text-[#2D2926] hover:text-[#00A887] transition-colors"
-              >
-                {vacante.empresa_logo ? (
-                  <img 
-                    src={vacante.empresa_logo} 
-                    alt={vacante.empresa_nombre || 'Empresa'} 
-                    className="w-5 h-5 object-contain rounded border border-zinc-200 shrink-0" 
-                  />
-                ) : (
-                  <Building2 className="w-4 h-4 text-[#00A887]" />
-                )}
-                {vacante.empresa_nombre || 'Empresa Aliada UTH'}
-              </Link>
-              {vacante.area_estudio_nombre && (
-                <span className="flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-[#636569]" />
-                  {vacante.area_estudio_nombre}
-                </span>
-              )}
-              <span className="flex items-center gap-1.5 text-[#00A887] font-bold">
-                <DollarSign className="w-4 h-4" />
-                {formatSueldo()}
-              </span>
-            </div>
-          </div>
-
-          {/* Botón de Postulación Primario */}
-          <div className="sm:self-center">
-            <ApplyButton 
-              vacanteId={vacante.id} 
-              vacanteTitulo={vacante.titulo} 
-              empresaNombre={vacante.empresa_nombre}
-              documentosRequeridos={vacante.documentos_requeridos}
-            />
-          </div>
+    <div className="py-10 sm:py-14 space-y-8">
+      <Container size="console">
+        {/* Navegación de retorno */}
+        <div className="flex items-center gap-2 text-caption text-ink-64 mb-6">
+          <Link
+            href="/vacantes"
+            className="hover:text-ink flex items-center gap-1.5 transition-colors font-medium"
+          >
+            <ArrowLeft className="size-3.5" />
+            <span>Catálogo de vacantes</span>
+          </Link>
+          <span>/</span>
+          <span className="text-ink truncate max-w-sm">{vacante.titulo}</span>
         </div>
 
-        {/* Resumen de Condiciones Rápidas */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 p-4 rounded-lg bg-[#F8FAFC] border border-zinc-200/80 text-xs">
-          <div>
-            <span className="block text-[#A6A6A8] font-medium">Tipo de Contrato</span>
-            <span className="font-semibold text-[#2D2926] capitalize">
-              {vacante.tipo_contratacion.replace('_', ' ')}
-            </span>
-          </div>
-          <div>
-            <span className="block text-[#A6A6A8] font-medium">Horario</span>
-            <span className="font-semibold text-[#2D2926]">{vacante.horario_trabajo}</span>
-          </div>
-          <div>
-            <span className="block text-[#A6A6A8] font-medium">Plazas a Cubrir</span>
-            <span className="font-semibold text-[#2D2926]">{vacante.num_candidatos} candidato(s)</span>
-          </div>
-          <div>
-            <span className="block text-[#A6A6A8] font-medium">Transporte</span>
-            <span className="font-semibold text-[#2D2926] inline-flex items-center gap-1">
-              {vacante.incluye_transporte ? (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
-                  Incluido
-                </>
-              ) : (
-                'No contemplado'
-              )}
-            </span>
-          </div>
-          <div>
-            <span className="block text-[#A6A6A8] font-medium">Comedor</span>
-            <span className="font-semibold text-[#2D2926] inline-flex items-center gap-1">
-              {vacante.incluye_comedor ? (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00A887]" />
-                  Incluido
-                </>
-              ) : (
-                'No contemplado'
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Secciones de Detalles */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna Principal: Requisitos y Responsabilidades */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Responsabilidades */}
-          {vacante.responsabilidades && (
-            <section className="bg-white rounded-xl border border-zinc-200 p-6 space-y-3">
-              <h2 className="text-base font-bold text-[#2D2926] flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-[#00A887]" />
-                Actividades y Responsabilidades del Puesto
-              </h2>
-              <p className="text-xs sm:text-sm text-[#636569] leading-relaxed whitespace-pre-line">
-                {vacante.responsabilidades}
-              </p>
-            </section>
-          )}
-
-          {/* Experiencia y Conocimientos */}
-          <section className="bg-white rounded-xl border border-zinc-200 p-6 space-y-4">
-            <h2 className="text-base font-bold text-[#2D2926] flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-[#00A887]" />
-              Perfil y Competencias Requeridas
-            </h2>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-zinc-50 border border-zinc-200/70 text-xs">
-              <div>
-                <span className="block text-zinc-400">Nivel Académico</span>
-                <span className="font-semibold text-[#2D2926]">
+        {/* Ficha Cabecera */}
+        <Card className="p-6 sm:p-10 space-y-8 bg-canvas">
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+            <div className="space-y-3.5 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <Code>{vacante.clave_vacante || `VAC-${vacante.id}`}</Code>
+                <span className="text-caption font-semibold text-primary">
                   {getNivelLabel(vacante.nivel_estudios)}
                 </span>
+                <StatusPill tone="neutral">
+                  {getModalidadLabel(vacante.modalidad)}
+                </StatusPill>
+                {vacante.es_inclusiva && (
+                  <StatusPill tone="brand">Inclusiva</StatusPill>
+                )}
               </div>
-              <div>
-                <span className="block text-zinc-400">Rango de Edad</span>
-                <span className="font-semibold text-[#2D2926]">
-                  {vacante.edad || 'Indistinto'}
-                </span>
-              </div>
-              <div>
-                <span className="block text-zinc-400">Género</span>
-                <span className="font-semibold text-[#2D2926] capitalize">
-                  {vacante.genero || 'Indistinto'}
-                </span>
-              </div>
-              <div>
-                <span className="block text-zinc-400">Estado Civil</span>
-                <span className="font-semibold text-[#2D2926] capitalize">
-                  {vacante.estado_civil || 'Indistinto'}
-                </span>
-              </div>
-            </div>
-            
-            {vacante.experiencia && (
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-[#2D2926]">Experiencia previa:</h4>
-                <p className="text-xs sm:text-sm text-[#636569] leading-relaxed">{vacante.experiencia}</p>
-              </div>
-            )}
 
-            {vacante.conocimientos && (
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-[#2D2926]">Conocimientos técnicos (Saberes):</h4>
-                <p className="text-xs sm:text-sm text-[#636569] leading-relaxed">{vacante.conocimientos}</p>
-              </div>
-            )}
+              <h1 className="text-display-md sm:text-display-lg text-ink font-semibold leading-tight">
+                {vacante.titulo}
+              </h1>
 
-            {vacante.habilidades && (
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-[#2D2926]">Habilidades requeridas:</h4>
-                <p className="text-xs sm:text-sm text-[#636569] leading-relaxed">{vacante.habilidades}</p>
-              </div>
-            )}
-
-            {vacante.actitudes && (
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-[#2D2926]">Actitudes y valores:</h4>
-                <p className="text-xs sm:text-sm text-[#636569] leading-relaxed">{vacante.actitudes}</p>
-              </div>
-            )}
-
-            {vacante.idiomas && vacante.idiomas.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                <h4 className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-[#00A887]" />
-                  Idiomas requeridos:
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {vacante.idiomas.map((req, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-[#00A887] border border-emerald-200 text-xs font-semibold"
-                    >
-                      {req.idioma_nombre || `Idioma #${req.idioma}`} · Nivel {req.nivel}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {vacante.es_inclusiva && vacante.capacidades_especiales && (
-              <div className="p-3 rounded-lg bg-blue-50/70 border border-blue-200 space-y-1">
-                <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                  <HeartHandshake className="w-3.5 h-3.5 text-blue-700" />
-                  Inclusión y Accesibilidad Laboral:
-                </h4>
-                <p className="text-xs text-blue-800 leading-relaxed">
-                  {vacante.capacidades_especiales}
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* Prestaciones */}
-          {vacante.prestaciones && (
-            <section className="bg-white rounded-xl border border-zinc-200 p-6 space-y-3">
-              <h2 className="text-base font-bold text-[#2D2926] flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#00A887]" />
-                Prestaciones y Beneficios
-              </h2>
-              <p className="text-xs sm:text-sm text-[#636569] leading-relaxed">
-                {vacante.prestaciones}
-              </p>
-            </section>
-          )}
-
-          {/* Observaciones adicionales */}
-          {vacante.observaciones && (
-            <section className="bg-white rounded-xl border border-zinc-200 p-6 space-y-2">
-              <h2 className="text-sm font-bold text-[#2D2926]">
-                Observaciones Adicionales
-              </h2>
-              <p className="text-xs sm:text-sm text-[#636569] leading-relaxed whitespace-pre-line">
-                {vacante.observaciones}
-              </p>
-            </section>
-          )}
-        </div>
-
-        {/* Columna Lateral: Requisitos Documentales y Validación UTH */}
-        <div className="space-y-6">
-          {/* Contacto de Selección y Empresa */}
-          <div className="bg-white rounded-xl border border-zinc-200 p-5 space-y-3 text-xs">
-            <span className="text-[11px] font-bold text-[#691C32] uppercase tracking-wider block">
-              Contacto de Selección
-            </span>
-
-            <div className="space-y-1">
-              <p className="font-bold text-sm text-[#2D2926]">
-                {vacante.persona_contacto || vacante.empresa_contacto_nombre || 'Coordinación de Talento Humano'}
-              </p>
-              {vacante.empresa_contacto_cargo && (
-                <p className="text-[11px] text-[#636569]">{vacante.empresa_contacto_cargo}</p>
-              )}
-              {vacante.entrevistador && vacante.entrevistador !== vacante.persona_contacto && (
-                <p className="text-[11px] text-[#636569]">
-                  Entrevistador(a): <strong className="text-[#2D2926]">{vacante.entrevistador}</strong>
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-zinc-100">
-              {vacante.empresa_correo && (
-                <a
-                  href={`mailto:${vacante.empresa_correo}`}
-                  className="flex items-center gap-2 text-[#00A887] hover:underline font-medium break-all"
-                >
-                  <Mail className="w-3.5 h-3.5 shrink-0" />
-                  <span>{vacante.empresa_correo}</span>
-                </a>
-              )}
-
-              {vacante.empresa_telefono && (
-                <div className="flex items-center gap-2 text-[#636569]">
-                  <Phone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                  <span>
-                    Tel. Oficina: <strong className="text-[#2D2926]">{vacante.empresa_telefono}</strong>
-                  </span>
-                </div>
-              )}
-
-              {vacante.empresa_celular && (
-                <div className="flex items-center gap-2 text-[#636569]">
-                  <Phone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                  <span>
-                    Celular / Directo: <strong className="text-[#2D2926]">{vacante.empresa_celular}</strong>
-                  </span>
-                </div>
-              )}
-
-              {vacante.empresa_domicilio && (
-                <div className="flex items-start gap-2 text-[#636569]">
-                  <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
-                  <span>{vacante.empresa_domicilio}</span>
-                </div>
-              )}
-            </div>
-
-            {vacante.empresa && (
-              <div className="pt-2 border-t border-zinc-100">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-body text-ink-64 pt-1">
                 <Link
                   href={`/empresas/${vacante.empresa}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00A887] hover:underline"
+                  className="flex items-center gap-2 font-medium text-ink hover:text-primary transition-colors"
                 >
-                  Ver perfil institucional de la empresa
-                  <ExternalLink className="w-3 h-3" />
+                  {vacante.empresa_logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={vacante.empresa_logo}
+                      alt={vacante.empresa_nombre || 'Empresa'}
+                      className="size-5 object-contain rounded-utility shrink-0"
+                    />
+                  ) : (
+                    <Building2 className="size-5 text-primary shrink-0" />
+                  )}
+                  <span>{vacante.empresa_nombre || 'Empresa Vinculada UTH'}</span>
                 </Link>
+
+                {vacante.area_estudio_nombre && (
+                  <span className="flex items-center gap-1.5 text-caption">
+                    <GraduationCap className="size-4 text-ink-64 shrink-0" />
+                    <span>{vacante.area_estudio_nombre}</span>
+                  </span>
+                )}
               </div>
+
+              <div className="flex items-center gap-2 text-lead text-primary font-semibold pt-1">
+                <DollarSign className="size-5 shrink-0" />
+                <span>{getSueldoTexto()}</span>
+              </div>
+            </div>
+
+            {/* Acción Primaria: Postulación */}
+            <div className="lg:self-center shrink-0">
+              <ApplyButton
+                vacanteId={vacante.id}
+                vacanteTitulo={vacante.titulo}
+                empresaNombre={vacante.empresa_nombre}
+                documentosRequeridos={vacante.documentos_requeridos}
+              />
+            </div>
+          </div>
+
+          {/* Resumen Técnico de Condiciones */}
+          <div className="pt-6 border-t border-divider">
+            <DataList
+              columns={3}
+              items={[
+                {
+                  label: 'Tipo de Contratación',
+                  value: vacante.tipo_contratacion === 'tiempo_completo' ? 'Tiempo completo' : 'Contrato indeterminado',
+                  icon: Clock,
+                },
+                {
+                  label: 'Horario Laboral',
+                  value: vacante.horario_trabajo || 'Por definir',
+                  icon: Clock,
+                },
+                {
+                  label: 'Plazas Ofertadas',
+                  value: `${vacante.num_candidatos || 1} plaza(s)`,
+                  icon: Briefcase,
+                },
+                {
+                  label: 'Transporte UTH',
+                  value: vacante.incluye_transporte ? 'Incluido (ruta industrial)' : 'No contemplado',
+                  icon: Bus,
+                },
+                {
+                  label: 'Comedor',
+                  value: vacante.incluye_comedor ? 'Servicio incluido' : 'No contemplado',
+                  icon: Utensils,
+                },
+                {
+                  label: 'Edad / Género Requerido',
+                  value: `${vacante.edad || 'Indistinta'} · ${vacante.genero || 'Indistinto'}`,
+                  icon: GraduationCap,
+                },
+              ]}
+            />
+          </div>
+        </Card>
+
+        {/* Contenido en dos columnas */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Columna Principal: Requisitos y Saberes */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Actividades del Puesto */}
+            {vacante.responsabilidades && (
+              <Card padded className="space-y-4 bg-canvas">
+                <h2 className="text-tagline text-ink flex items-center gap-2">
+                  <Briefcase className="size-5 text-primary" />
+                  <span>Actividades y Responsabilidades</span>
+                </h2>
+                <p className="text-body text-ink-80 whitespace-pre-line leading-relaxed">
+                  {vacante.responsabilidades}
+                </p>
+              </Card>
+            )}
+
+            {/* Perfil Requerido */}
+            <Card padded className="space-y-6 bg-canvas">
+              <h2 className="text-tagline text-ink flex items-center gap-2">
+                <GraduationCap className="size-5 text-primary" />
+                <span>Perfil y Competencias Requeridas</span>
+              </h2>
+
+              {vacante.experiencia && (
+                <div className="space-y-1">
+                  <h3 className="text-caption font-semibold text-ink">Experiencia requerida:</h3>
+                  <p className="text-body text-ink-80 leading-relaxed">{vacante.experiencia}</p>
+                </div>
+              )}
+
+              {vacante.conocimientos && (
+                <div className="space-y-1">
+                  <h3 className="text-caption font-semibold text-ink">Conocimientos técnicos (Saberes):</h3>
+                  <p className="text-body text-ink-80 leading-relaxed">{vacante.conocimientos}</p>
+                </div>
+              )}
+
+              {vacante.habilidades && (
+                <div className="space-y-1">
+                  <h3 className="text-caption font-semibold text-ink">Habilidades prácticas:</h3>
+                  <p className="text-body text-ink-80 leading-relaxed">{vacante.habilidades}</p>
+                </div>
+              )}
+
+              {vacante.actitudes && (
+                <div className="space-y-1">
+                  <h3 className="text-caption font-semibold text-ink">Actitudes y valores:</h3>
+                  <p className="text-body text-ink-80 leading-relaxed">{vacante.actitudes}</p>
+                </div>
+              )}
+
+              {/* Idiomas */}
+              {vacante.idiomas && vacante.idiomas.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-divider">
+                  <h3 className="text-caption font-semibold text-ink flex items-center gap-1.5">
+                    <Globe className="size-4 text-primary" />
+                    <span>Idiomas requeridos:</span>
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {vacante.idiomas.map((req, idx) => (
+                      <Tag key={idx} icon={Globe}>
+                        <span>{req.idioma_nombre || `Idioma #${req.idioma}`} · Nivel {req.nivel}</span>
+                      </Tag>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Inclusión */}
+              {vacante.es_inclusiva && vacante.capacidades_especiales && (
+                <Alert tone="info" title="Inclusión Laboral">
+                  {vacante.capacidades_especiales}
+                </Alert>
+              )}
+            </Card>
+
+            {/* Prestaciones */}
+            {vacante.prestaciones && (
+              <Card padded className="space-y-4 bg-canvas">
+                <h2 className="text-tagline text-ink flex items-center gap-2">
+                  <CheckCircle2 className="size-5 text-primary" />
+                  <span>Prestaciones y Beneficios</span>
+                </h2>
+                <p className="text-body text-ink-80 leading-relaxed">
+                  {vacante.prestaciones}
+                </p>
+              </Card>
+            )}
+
+            {/* Observaciones */}
+            {vacante.observaciones && (
+              <Card padded className="space-y-3 bg-canvas">
+                <h3 className="text-caption font-semibold text-ink">Observaciones adicionales:</h3>
+                <p className="text-caption text-ink-64 whitespace-pre-line leading-relaxed">
+                  {vacante.observaciones}
+                </p>
+              </Card>
             )}
           </div>
 
-          {/* Documentación */}
-          <div className="bg-white rounded-xl border border-zinc-200 p-5 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[#691C32] flex items-center gap-1.5">
-              <FileText className="w-4 h-4" />
-              Documentos Requeridos
-            </h3>
-            <p className="text-xs text-[#636569] leading-relaxed">
-              {vacante.documentos_requeridos || 'CV actualizado en PDF, Carta de pasante o Título, RFC e identificación oficial.'}
-            </p>
-          </div>
+          {/* Columna Lateral: Contacto y Validación */}
+          <div className="space-y-6">
+            {/* Contacto de la Empresa */}
+            <Card padded className="space-y-4 bg-canvas">
+              <span className="text-fine font-semibold text-wine uppercase tracking-wider block">
+                Contacto de Selección
+              </span>
 
-          {/* Sello de Validación Institucional */}
-          <div className="bg-[#00A887]/5 border border-[#00A887]/20 rounded-xl p-5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#00A887]">
-              <CheckCircle2 className="w-4 h-4" />
-              Vacante Verificada UTH
-            </div>
-            <p className="text-[11px] text-[#636569] leading-relaxed">
-              Esta vacante fue validada por el Departamento de Vinculación de la Universidad Tecnológica de Huejotzingo. Tu postulación es enviada de forma directa y segura.
-            </p>
+              <div>
+                <p className="text-body font-semibold text-ink">
+                  {vacante.persona_contacto || vacante.empresa_contacto_nombre || 'Coordinación de Talento Humano'}
+                </p>
+                {vacante.empresa_contacto_cargo && (
+                  <p className="text-caption text-ink-64">{vacante.empresa_contacto_cargo}</p>
+                )}
+              </div>
+
+              <div className="space-y-2.5 pt-3 border-t border-divider text-caption">
+                {vacante.empresa_correo && (
+                  <a
+                    href={`mailto:${vacante.empresa_correo}`}
+                    className="flex items-center gap-2 text-primary hover:underline font-medium break-all"
+                  >
+                    <Mail className="size-4 shrink-0" />
+                    <span>{vacante.empresa_correo}</span>
+                  </a>
+                )}
+
+                {vacante.empresa_telefono && (
+                  <p className="flex items-center gap-2 text-ink-64">
+                    <Phone className="size-4 text-ink-48 shrink-0" />
+                    <span>Oficina: <strong className="text-ink font-semibold">{vacante.empresa_telefono}</strong></span>
+                  </p>
+                )}
+
+                {vacante.empresa_domicilio && (
+                  <p className="flex items-start gap-2 text-ink-64">
+                    <MapPin className="size-4 text-ink-48 shrink-0 mt-0.5" />
+                    <span>{vacante.empresa_domicilio}</span>
+                  </p>
+                )}
+              </div>
+
+              {vacante.empresa && (
+                <div className="pt-3 border-t border-divider">
+                  <Link
+                    href={`/empresas/${vacante.empresa}`}
+                    className="inline-flex items-center gap-1.5 text-caption font-semibold text-primary hover:underline"
+                  >
+                    <span>Ver perfil de la empresa</span>
+                    <ExternalLink className="size-3.5" />
+                  </Link>
+                </div>
+              )}
+            </Card>
+
+            {/* Documentos Requeridos */}
+            <Card padded className="space-y-3 bg-canvas">
+              <h3 className="text-caption font-semibold text-ink flex items-center gap-1.5">
+                <FileText className="size-4 text-primary" />
+                <span>Documentos para Postulación</span>
+              </h3>
+              <p className="text-caption text-ink-64 leading-relaxed">
+                {vacante.documentos_requeridos ||
+                  'Currículum Vitae oficial en formato PDF, constancia de estudios o título y documento de identificación.'}
+              </p>
+            </Card>
+
+            {/* Sello Oficial de Vinculación */}
+            <Alert
+              tone="success"
+              title="Vacante Verificada por la UTH"
+            >
+              Esta convocatoria fue validada por el Departamento de Vinculación de la
+              Universidad Tecnológica de Huejotzingo. Tu expediente se transmite de forma ética y directa.
+            </Alert>
           </div>
         </div>
-      </div>
+      </Container>
     </div>
   );
 }
