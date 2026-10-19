@@ -1,0 +1,30 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Confirmación de Postulación - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-info">Postulación Registrada</span>
+<h2>Confirmación de Recepción de Postulación</h2>
+
+<p>Estimado(a) <strong>{{ egresado.user.nombres }} {{ egresado.user.apellido_paterno }}</strong>,</p>
+
+<p>Confirmamos que tu postulación para la vacante <strong>"{{ vacante.titulo }}"</strong> ofertada por la empresa <strong>{{ vacante.empresa.nombre }}</strong> ha sido recibida exitosamente en el sistema institucional de la UTH.</p>
+
+<div class="card">
+    <div class="card-title">Detalles de la Vacante</div>
+    <p><strong>Clave Institucional:</strong> <span class="code-box">{{ vacante.clave_vacante }}</span></p>
+    <p><strong>Puesto:</strong> {{ vacante.titulo }}</p>
+    <p><strong>Empresa Empleadora:</strong> {{ vacante.empresa.nombre }}</p>
+    <p><strong>Modalidad:</strong> {{ vacante.get_modalidad_display }}</p>
+    <p><strong>Estatus Actual:</strong> En Revisión por Dirección de Vinculación UTH</p>
+</div>
+
+<p><strong>Filtro de Pertinencia UTH:</strong><br>
+El personal de Vinculación Universitaria revisará tu perfil académico y tu Currículum Vitae cargado en el sistema. Una vez auditado y validado, tu expediente será turnado formalmente a los reclutadores de <strong>{{ vacante.empresa.nombre }}</strong> para coordinar tu proceso de entrevista.</p>
+
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/portal-egresado" class="btn">Consultar Estado en Portal Egresado &rarr;</a>
+</div>
+
+<p style="margin-top: 24px;">Atentamente,<br><strong>Dirección de Vinculación y Extensión UTH</strong></p>
+{% endblock %}

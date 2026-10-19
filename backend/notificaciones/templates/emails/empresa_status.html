@@ -1,36 +1,48 @@
 {% extends 'emails/base_email.html' %}
 
-{% block title %}Estatus de Registro de Empresa - UTH{% endblock %}
+{% block title %}Estatus de Cuenta de Empresa - UTH{% endblock %}
 
 {% block content %}
 {% if empresa.status == 'aprobada' %}
-    <span class="badge badge-success">Cuenta Aprobada</span>
-    <h2>¡Tu Empresa ha sido Aprobada en EXUTH!</h2>
+    <span class="badge badge-success">Convenio Activo</span>
+    <h2>Acceso Corporativo Activo en EXUTH</h2>
 
     <p>Estimados representantes de <strong>{{ empresa.nombre }}</strong>,</p>
 
-    <p>Nos complace informarle que el Departamento de Desempeño de Egresados de la Universidad Tecnológica de Huejotzingo (UTH) ha revisado y <strong>aprobado</strong> su registro institucional.</p>
+    <p>Les confirmamos que la vinculación institucional de su organización en el Sistema de Bolsa de Trabajo y Seguimiento de Egresados de la Universidad Tecnológica de Huejotzingo (UTH) se encuentra <strong>activa y vigente</strong>.</p>
 
     <div class="card">
-        <div class="card-title">Resumen de Registro</div>
-        <p><strong>Empresa:</strong> {{ empresa.nombre }}</p>
+        <div class="card-title">Datos Registrados de la Organización</div>
+        <p><strong>Razón Social:</strong> {{ empresa.nombre }}</p>
         <p><strong>Giro / Sector:</strong> {{ empresa.giro.nombre }} / {{ empresa.sector.nombre }}</p>
-        <p><strong>Contacto Principal:</strong> {{ empresa.nombre_contacto }} ({{ empresa.cargo_contacto }})</p>
+        <p><strong>Enlace Institucional:</strong> {{ empresa.nombre_contacto }} ({{ empresa.cargo_contacto }})</p>
     </div>
 
-    <p>A partir de este momento, pueden acceder a la plataforma institucional para comenzar a publicar vacantes laborales y conectar con nuestros graduados talentosos.</p>
+    <p>Tienen pleno acceso al portal para publicar ofertas laborales, definir perfiles requeridos y recibir candidatos calificados de nuestros programas académicos.</p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 24px 0 10px 0;">
+        <tr>
+            <td align="center" style="border-radius: 980px; background-color: #007F66;">
+                <a href="http://localhost:3000/portal-empresa" target="_blank" class="btn" style="margin: 0;">
+                    Acceder al Portal Empresa &rarr;
+                </a>
+            </td>
+        </tr>
+    </table>
 {% else %}
-    <span class="badge badge-danger">Registro No Aprobado</span>
-    <h2>Actualización sobre tu Registro de Empresa</h2>
+    <span class="badge badge-danger">Convenio Suspendido</span>
+    <h2>Aviso sobre el Estatus de tu Cuenta Empresarial</h2>
 
     <p>Estimados representantes de <strong>{{ empresa.nombre }}</strong>,</p>
 
-    <p>Le informamos que tras la revisión de su solicitud de registro, la administración de la UTH ha determinado no aprobar el perfil en este momento.</p>
+    <p>Les informamos que el acceso corporativo de su empresa ha sido <strong>suspendido temporalmente</strong> por la Dirección de Vinculación y Extensión de la UTH.</p>
 
     <div class="card">
-        <p>Si considera que se trata de un malentendido o desea más información, puede comunicarse directamente con el departamento de vinculación institucional.</p>
+        <div class="card-title">¿Qué significa este estado?</div>
+        <p>Mientras la cuenta permanezca suspendida, sus vacantes no serán visibles en la bolsa de trabajo pública ni se turnarán nuevas candidaturas.</p>
+        <p>Para aclarar la situación de su convenio o solicitar su reactivación, por favor comuníquense con el Departamento de Prácticas, Estadías y Bolsa de Trabajo.</p>
     </div>
 {% endif %}
 
-<p>Atentamente,<br><strong>Departamento de Desempeño de Egresados UTH</strong></p>
+<p style="margin-top: 24px;">Atentamente,<br><strong>Dirección de Vinculación y Extensión UTH</strong></p>
 {% endblock %}

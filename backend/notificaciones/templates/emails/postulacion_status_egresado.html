@@ -1,32 +1,45 @@
 {% extends 'emails/base_email.html' %}
 
-{% block title %}Estatus de Postulación Actualizado - UTH{% endblock %}
+{% block title %}Estatus de Postulación - UTH{% endblock %}
 
 {% block content %}
-{% if postulacion.estado == 'Aceptada' %}
-    <span class="badge badge-success">Postulación Aceptada</span>
-    <h2>¡Felicidades! Tu postulación ha sido Aceptada</h2>
+{% if postulacion.estado == 'rechazada_uth' %}
+    <span class="badge badge-warning">Filtro Institucional UTH</span>
+    <h2>Estatus de tu Postulación en Bolsa de Trabajo</h2>
 {% else %}
-    <span class="badge badge-warning">Postulación Finalizada</span>
+    <span class="badge badge-wine">Proceso Finalizado</span>
     <h2>Estatus de tu Postulación Laboral</h2>
 {% endif %}
 
 <p>Hola <strong>{{ egresado.user.nombres }}</strong>,</p>
 
-<p>La empresa <strong>{{ vacante.empresa.nombre }}</strong> ha revisado tu postulación para la vacante <strong>{{ vacante.titulo }}</strong> y ha actualizado tu estatus a: <strong>{{ postulacion.estado }}</strong>.</p>
-
 <div class="card">
     <div class="card-title">Resumen de la Oferta</div>
     <p><strong>Puesto:</strong> {{ vacante.titulo }}</p>
     <p><strong>Empresa:</strong> {{ vacante.empresa.nombre }}</p>
-    <p><strong>Contacto Empresa:</strong> {{ vacante.persona_contacto }} ({{ vacante.empresa.correo_contacto }})</p>
+    <p><strong>Estatus:</strong> {{ postulacion.get_estado_display }}</p>
 </div>
 
-{% if postulacion.estado == 'Aceptada' %}
-    <p>La empresa se pondrá en contacto contigo próximamente para continuar con el proceso de contratación o entrevista final. ¡Mucho éxito!</p>
+{% if postulacion.estado == 'rechazada_uth' %}
+    <p>La Dirección de Vinculación de la UTH ha concluido la revisión de tu postulación para la vacante <strong>"{{ vacante.titulo }}"</strong> en <strong>{{ vacante.empresa.nombre }}</strong>. En esta ocasión tu expediente no fue turnado a la organización empleadora debido a que los requerimientos específicos solicitados no concuerdan plenamente con los datos o documentos registrados.</p>
+
+    {% if postulacion.notas_uth %}
+    <div class="card" style="border-left-color: #C2BA98; background-color: #FAF9F6;">
+        <div class="card-title" style="color: #691C32;">Observaciones de Vinculación UTH</div>
+        <p>{{ postulacion.notas_uth }}</p>
+    </div>
+    {% endif %}
+
+    <p>Te recomendamos mantener actualizados tus datos y currículum vitae institucional, y continuar postulándote a las oportunidades activas que coincidan con tu área formativa.</p>
 {% else %}
-    <p>Agradecemos tu participación en esta convocatoria. Te invitamos a consultar las demás vacantes disponibles en la plataforma que se adapten a tu perfil profesional.</p>
+    <p>La empresa <strong>{{ vacante.empresa.nombre }}</strong> ha revisado tu postulación para la vacante <strong>"{{ vacante.titulo }}"</strong> y ha determinado dar por concluido el proceso de selección para esta posición.</p>
+
+    <p>Agradecemos tu interés y participación en esta convocatoria. Nuevas convocatorias se abren continuamente en la plataforma, por lo que te invitamos a consultar con regularidad la bolsa de trabajo institucional.</p>
 {% endif %}
 
-<p>Atentamente,<br><strong>Bolsa de Trabajo y Empleabilidad UTH</strong></p>
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/vacantes" class="btn">Explorar Vacantes Disponibles &rarr;</a>
+</div>
+
+<p style="margin-top: 24px;">Atentamente,<br><strong>Bolsa de Trabajo y Empleabilidad UTH</strong></p>
 {% endblock %}

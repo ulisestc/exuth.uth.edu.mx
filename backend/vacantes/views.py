@@ -54,12 +54,7 @@ class VacanteViewSet(viewsets.ModelViewSet):
         if not hasattr(self.request.user, 'empresa'):
             raise PermissionDenied("Solo las empresas registradas pueden crear vacantes desde la API. Los administradores deben usar el panel interno de Django.")       
         # Asignar la empresa del usuario autenticado al crear una vacante
-        vacante = serializer.save(empresa=self.request.user.empresa)
-        try:
-            from .emails import send_nueva_vacante_email
-            send_nueva_vacante_email(vacante)
-        except Exception:
-            pass
+        serializer.save(empresa=self.request.user.empresa)
 
     @action(
         detail=True, 
@@ -156,12 +151,6 @@ class PostulacionViewSet(viewsets.ModelViewSet):
                 postulacion.documentos_adjuntos.set(docs_validos)
             elif incluir_docs:
                 postulacion.documentos_adjuntos.set(egresado.documentos_precargados.all())
-
-            try:
-                from .emails import send_postulacion_recibida_email
-                send_postulacion_recibida_email(postulacion)
-            except Exception:
-                pass
         else:
             raise exceptions.PermissionDenied("Solo los egresados pueden crear postulaciones.") #403
     
@@ -176,12 +165,6 @@ class PostulacionViewSet(viewsets.ModelViewSet):
         if 'notas_uth' in request.data:
             postulacion.notas_uth = request.data['notas_uth']
         postulacion.save()
-
-        try:
-            from .emails import send_postulacion_turnada_email
-            send_postulacion_turnada_email(postulacion)
-        except Exception:
-            pass
 
         return Response(PostulacionSerializer(postulacion).data, status=status.HTTP_200_OK)
 
@@ -226,11 +209,6 @@ class PostulacionViewSet(viewsets.ModelViewSet):
                     'observaciones': f'Colocación generada automáticamente al aceptar la postulación #{updated_instance.id}.'
                 }
             )
-            try:
-                from .emails import send_candidato_contratado_email
-                send_candidato_contratado_email(updated_instance)
-            except Exception:
-                pass
 class ColocacionViewSet(viewsets.ModelViewSet):
     serializer_class = ColocacionSerializer
     permission_classes = [permissions.IsAuthenticated]

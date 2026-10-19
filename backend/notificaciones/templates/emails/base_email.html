@@ -3,119 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>{% block title %}Bolsa de Trabajo UTH{% endblock %}</title>
+    <!--[if mso]>
+    <style type="text/css">
+        body, table, td, a { font-family: Arial, Helvetica, sans-serif !important; }
+    </style>
+    <![endif]-->
     <style>
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #f4f6f8;
             margin: 0;
             padding: 0;
+            background-color: #F5F4F1;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #2D2926;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        img {
+            border: 0;
+            outline: none;
+            text-decoration: none;
+            display: block;
         }
         .wrapper {
             width: 100%;
-            background-color: #f4f6f8;
-            padding: 30px 0;
+            background-color: #F5F4F1;
+            padding: 40px 15px;
+            box-sizing: border-box;
         }
         .container {
             max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
-            border-radius: 8px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid #E4E2DD;
+            box-shadow: 0 4px 20px rgba(45, 41, 38, 0.05);
         }
-        .header {
-            background-color: #006633;
-            color: #ffffff;
-            padding: 24px 30px;
-            text-align: center;
+        .header-content {
+            padding: 24px 32px 20px 32px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #EFEDE9;
+            text-align: left;
         }
-        .header h1 {
+        .header-eyebrow {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #691C32;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .header-title {
             margin: 0;
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            color: #2D2926;
+            letter-spacing: -0.02em;
         }
-        .header p {
+        .header-sub {
             margin: 4px 0 0 0;
-            font-size: 13px;
-            opacity: 0.9;
+            font-size: 12px;
+            color: #636569;
         }
         .content {
-            padding: 30px;
-            color: #333333;
+            padding: 32px;
+            color: #2D2926;
             line-height: 1.6;
-            font-size: 15px;
+            font-size: 14px;
+        }
+        .content h1, .content h2, .content h3 {
+            color: #2D2926;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        .content h2 {
+            font-size: 18px;
+        }
+        .content p {
+            margin: 0 0 16px 0;
+            color: #2D2926;
         }
         .badge {
             display: inline-block;
-            padding: 6px 12px;
-            font-size: 12px;
+            padding: 4px 12px;
+            font-size: 11px;
             font-weight: 600;
-            border-radius: 4px;
+            border-radius: 980px;
             text-transform: uppercase;
-            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
         }
-        .badge-info { background-color: #e3f2fd; color: #0d47a1; }
-        .badge-success { background-color: #e8f5e9; color: #1b5e20; }
-        .badge-warning { background-color: #fff8e1; color: #f57f17; }
-        .badge-danger { background-color: #ffebee; color: #b71c1c; }
-
+        .badge-info {
+            background-color: #E6F5F1;
+            color: #007F66;
+            border: 1px solid #B2E3D8;
+        }
+        .badge-success {
+            background-color: #E6F5F1;
+            color: #007F66;
+            border: 1px solid #B2E3D8;
+        }
+        .badge-warning {
+            background-color: #F4F0E2;
+            color: #6B5E2E;
+            border: 1px solid #D6D1C4;
+        }
+        .badge-danger {
+            background-color: #FBECEF;
+            color: #A8123E;
+            border: 1px solid #F3BDC9;
+        }
+        .badge-wine {
+            background-color: #FAEDF0;
+            color: #691C32;
+            border: 1px solid #E5BAC4;
+        }
         .card {
-            background-color: #f8f9fa;
-            border-left: 4px solid #006633;
-            padding: 16px;
+            background-color: #F5F4F1;
+            border: 1px solid #E4E2DD;
+            border-left: 3px solid #007F66;
+            padding: 18px 20px;
             margin: 20px 0;
-            border-radius: 0 6px 6px 0;
+            border-radius: 10px;
+        }
+        .card p {
+            margin: 6px 0;
+            font-size: 13px;
+            color: #2D2926;
         }
         .card-title {
-            font-weight: 700;
-            color: #006633;
-            margin: 0 0 8px 0;
-            font-size: 16px;
+            font-weight: 600;
+            color: #2D2926;
+            margin: 0 0 10px 0;
+            font-size: 14px;
         }
         .btn {
             display: inline-block;
-            background-color: #006633;
+            background-color: #007F66;
             color: #ffffff !important;
             text-decoration: none;
-            padding: 12px 24px;
-            border-radius: 6px;
+            padding: 12px 28px;
+            border-radius: 980px;
             font-weight: 600;
             font-size: 14px;
-            margin-top: 20px;
+            margin: 20px 0 10px 0;
             text-align: center;
+        }
+        .btn:hover {
+            background-color: #00A887;
+        }
+        .btn-secondary {
+            background-color: #FAF9F6;
+            color: #2D2926 !important;
+            border: 1px solid #E4E2DD;
+        }
+        .code-box {
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            background-color: #FAF9F6;
+            border: 1px solid #E4E2DD;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #007F66;
+            font-weight: 600;
         }
         .footer {
-            background-color: #f1f3f5;
-            padding: 20px 30px;
+            background-color: #FAF9F6;
+            padding: 24px 32px;
             text-align: center;
-            font-size: 12px;
-            color: #6c757d;
-            border-top: 1px solid #e9ecef;
+            font-size: 11px;
+            color: #636569;
+            border-top: 1px solid #E4E2DD;
+            line-height: 1.5;
+        }
+        .footer p {
+            margin: 4px 0;
         }
         .footer a {
-            color: #006633;
+            color: #007F66;
             text-decoration: none;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
     <div class="wrapper">
         <div class="container">
-            <div class="header">
-                <h1>Universidad Tecnológica de Huejotzingo</h1>
-                <p>Sistema Institucional de Bolsa de Trabajo y Empleabilidad</p>
+            <!-- Pleca Tricolor Oficial UTH (Verde #007F66, Dorado #C2BA98, Guinda #691C32) -->
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="height: 5px;">
+                <tr>
+                    <td width="45%" style="background-color: #007F66; height: 5px; font-size: 0; line-height: 0;">&nbsp;</td>
+                    <td width="20%" style="background-color: #C2BA98; height: 5px; font-size: 0; line-height: 0;">&nbsp;</td>
+                    <td width="35%" style="background-color: #691C32; height: 5px; font-size: 0; line-height: 0;">&nbsp;</td>
+                </tr>
+            </table>
+
+            <!-- Header Institucional UTH -->
+            <div class="header-content">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 16px;">
+                    <tr>
+                        <td>
+                            <img src="cid:uth_logo" alt="Universidad Tecnológica de Huejotzingo" style="max-height: 42px; width: auto; display: block; border: 0;" />
+                        </td>
+                    </tr>
+                </table>
+                <span class="header-eyebrow">Universidad Tecnológica de Huejotzingo</span>
+                <h1 class="header-title">Dirección de Vinculación y Extensión</h1>
+                <p class="header-sub">Bolsa de Trabajo y Seguimiento de Egresados · exuth.uth.edu.mx</p>
             </div>
+
+            <!-- Contenido Principal Dinámico -->
             <div class="content">
                 {% block content %}
                 {% endblock %}
             </div>
+
+            <!-- Pie de Página Institucional Apple + UTH -->
             <div class="footer">
-                <p>&copy; {% now "Y" %} Universidad Tecnológica de Huejotzingo. Todos los derechos reservados.</p>
-                <p>Camino Real a San Mateo s/n, Sta Ana Xalmimilulco, Huejotzingo, Pue.</p>
-                <p>Este es un mensaje automático del sistema EXUTH, por favor no responda a este correo.</p>
+                <p><strong>Departamento de Prácticas, Estadías y Bolsa de Trabajo</strong></p>
+                <p>Camino Real a San Mateo s/n, Santa Ana Xalmimilulco, Huejotzingo, Puebla. C.P. 74160</p>
+                <p>Este es un correo oficial emitido automáticamente por la plataforma <a href="https://exuth.uth.edu.mx">exuth.uth.edu.mx</a> de la UTH.</p>
+                <p style="margin-top: 10px; color: #A6A6A8;">&copy; {% now "Y" %} Universidad Tecnológica de Huejotzingo. Todos los derechos reservados.</p>
             </div>
         </div>
     </div>

@@ -1,0 +1,27 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}¡Felicidades por tu Contratación! - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-success">Colocación Universitaria</span>
+<h2>¡Enhorabuena por tu Contratación Laboral!</h2>
+
+<p>¡Muchas felicidades, <strong>{{ egresado.user.nombres }} {{ egresado.user.apellido_paterno }}</strong>!</p>
+
+<p>Nos llena de orgullo informarte que la empresa <strong>{{ vacante.empresa.nombre }}</strong> ha confirmado formalmente tu <strong>contratación</strong> para el puesto de <strong>"{{ vacante.titulo }}"</strong>.</p>
+
+<div class="card" style="border-left-color: #007F66; background-color: #F0FDF4;">
+    <div class="card-title" style="color: #007F66;">Registro de Colocación Institucional</div>
+    <p><strong>Puesto Laboral:</strong> {{ vacante.titulo }}</p>
+    <p><strong>Organización:</strong> {{ vacante.empresa.nombre }}</p>
+    <p><strong>Estatus Institucional:</strong> Colocación Universitaria UTH Registrada</p>
+</div>
+
+<p>Tu éxito profesional representa el talento, la disciplina y los valores de nuestra comunidad universitaria. La Universidad Tecnológica de Huejotzingo te desea el mayor de los éxitos en esta nueva etapa en tu trayectoria laboral.</p>
+
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/portal-egresado" class="btn">Ir a Mi Portal de Egresado &rarr;</a>
+</div>
+
+<p style="margin-top: 24px;">Atentamente,<br><strong>Dirección de Vinculación y Extensión UTH</strong></p>
+{% endblock %}

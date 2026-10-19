@@ -1,0 +1,135 @@
+{% load i18n %}
+
+{% block subject %}
+Activación de tu Cuenta Institucional · EXUTH UTH
+{% endblock subject %}
+
+{% block text_body %}
+Hola {{ user.nombres|default:user.get_username }},
+
+Gracias por registrarte en la Bolsa de Trabajo y Seguimiento de Egresados de la Universidad Tecnológica de Huejotzingo (EXUTH).
+
+Para activar tu cuenta y acceder a la plataforma institucional, ingresa al siguiente enlace:
+{{ protocol }}://{{ domain }}/{{ url|safe }}
+
+Este enlace es personal e intransferible. Si no realizaste esta solicitud, puedes ignorar este mensaje.
+
+Atentamente,
+Dirección de Vinculación y Extensión
+Universidad Tecnológica de Huejotzingo
+{% endblock text_body %}
+
+{% block html_body %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activación de Cuenta Institucional · UTH</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F5F4F1; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #2D2926; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F5F4F1; padding: 36px 15px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(45,41,38,0.06); border: 1px solid #E4E2DD;">
+                    
+                    <!-- Pleca Tricolor Oficial UTH (Verde #007F66, Dorado #C2BA98, Guinda #691C32) -->
+                    <tr>
+                        <td style="height: 5px; font-size: 0; line-height: 0;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="height: 5px;">
+                                <tr>
+                                    <td width="45%" style="background-color: #007F66; height: 5px; font-size: 0; line-height: 0;">&nbsp;</td>
+                                    <td width="20%" style="background-color: #C2BA98; height: 5px; font-size: 0; line-height: 0;">&nbsp;</td>
+                                    <td width="35%" style="background-color: #691C32; height: 5px; font-size: 0; line-height: 0;">&nbsp;</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Encabezado Institucional -->
+                    <tr>
+                        <td style="padding: 24px 32px 20px 32px; background-color: #ffffff; border-bottom: 1px solid #EFEDE9; text-align: left;">
+                            <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: #691C32; display: block; margin-bottom: 4px;">
+                                Universidad Tecnológica de Huejotzingo
+                            </span>
+                            <span style="font-size: 18px; font-weight: 700; color: #2D2926; letter-spacing: -0.02em; display: block;">
+                                Dirección de Vinculación y Extensión
+                            </span>
+                            <span style="font-size: 12px; color: #636569; display: block; margin-top: 2px;">
+                                Bolsa de Trabajo y Seguimiento de Egresados · exuth.uth.edu.mx
+                            </span>
+                        </td>
+                    </tr>
+
+                    <!-- Banner de Asunto / Badge -->
+                    <tr>
+                        <td style="padding: 14px 32px; background-color: #FAF9F6; border-bottom: 1px solid #E4E2DD;">
+                            <span style="display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 600; border-radius: 980px; text-transform: uppercase; letter-spacing: 0.5px; background-color: #E6F5F1; color: #007F66; border: 1px solid #B2E3D8;">
+                                Verificación de Cuenta
+                            </span>
+                        </td>
+                    </tr>
+
+                    <!-- Contenido Principal -->
+                    <tr>
+                        <td style="padding: 32px; font-size: 14px; line-height: 1.6; color: #2D2926;">
+                            <h2 style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #2D2926; margin: 0 0 16px 0;">
+                                ¡Bienvenida(o) a la Bolsa de Trabajo UTH!
+                            </h2>
+                            <p style="margin: 0 0 16px 0;">
+                                Estimada(o) <strong>{{ user.nombres|default:user.get_username }}</strong>,
+                            </p>
+                            <p style="margin: 0 0 16px 0;">
+                                Hemos recibido tu solicitud de registro institucional en <strong>EXUTH</strong>. Para confirmar tu dirección de correo electrónico y activar tu cuenta, haz clic en el siguiente botón:
+                            </p>
+
+                            <!-- Botón CTA Verde Acción UTH -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 28px 0 20px 0;">
+                                <tr>
+                                    <td align="center" style="border-radius: 980px; background-color: #007F66;">
+                                        <a href="{{ protocol }}://{{ domain }}/{{ url|safe }}" target="_blank" style="display: inline-block; padding: 13px 32px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 980px;">
+                                            Activar Mi Cuenta Institucional &rarr;
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <div style="background-color: #F5F4F1; border: 1px solid #E4E2DD; border-left: 3px solid #007F66; padding: 16px 20px; border-radius: 10px; margin: 24px 0;">
+                                <p style="margin: 0 0 8px 0; font-size: 12px; color: #636569; font-weight: 600;">
+                                    ¿El botón no responde? Copia y pega este enlace en tu navegador:
+                                </p>
+                                <p style="margin: 0; font-size: 12px; word-break: break-all; color: #007F66;">
+                                    {{ protocol }}://{{ domain }}/{{ url|safe }}
+                                </p>
+                            </div>
+
+                            <p style="margin: 24px 0 0 0; font-size: 13px; color: #636569;">
+                                Si no reconoces este registro o no creaste una cuenta en la plataforma de la Universidad Tecnológica de Huejotzingo, puedes desestimar este mensaje de manera segura.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Pie de Página Institucional -->
+                    <tr>
+                        <td style="padding: 24px 32px; background-color: #FAF9F6; border-top: 1px solid #E4E2DD; text-align: center; font-size: 11px; color: #636569; line-height: 1.5;">
+                            <p style="margin: 0 0 4px 0; font-weight: 600; color: #2D2926;">
+                                Departamento de Prácticas, Estadías y Bolsa de Trabajo
+                            </p>
+                            <p style="margin: 0 0 8px 0;">
+                                Camino Real a San Mateo s/n, Santa Ana Xalmimilulco, Huejotzingo, Puebla. C.P. 74160
+                            </p>
+                            <p style="margin: 0; color: #636569; font-size: 11px;">
+                                Este es un mensaje oficial emitido por el sistema <a href="https://exuth.uth.edu.mx" style="color: #007F66; text-decoration: none; font-weight: 600;">exuth.uth.edu.mx</a> de la UTH.
+                            </p>
+                            <p style="margin-top: 10px; color: #A6A6A8; font-size: 10px;">
+                                &copy; {% now "Y" %} Universidad Tecnológica de Huejotzingo. Todos los derechos reservados.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+{% endblock html_body %}

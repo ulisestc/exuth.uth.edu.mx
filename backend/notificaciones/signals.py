@@ -135,16 +135,80 @@ def capturar_estado_anterior_postulacion(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Postulacion)
-def notificar_estatus_postulacion_egresado(sender, instance, created, **kwargs):
+def notificar_eventos_postulacion(sender, instance, created, **kwargs):
     """
-    Notifica al Egresado cuando el estado de la postulación cambia:
-    - rechazada_uth: Notificación de no cubrir perfil por filtro UTH.
-    - enviada_empresa: Postulación aprobada por UTH y turnada a la Empresa.
-    - Aceptada / Rechazada: Decisión final de la empresa.
+    Gestiona todas las notificaciones del ciclo de vida de una Postulación:
+    - created=True: Acuse de recibo al Egresado (en revisión/filtro UTH).
+    - enviada_empresa: Filtro UTH aprobado. Notifica a la Empresa (candidato turnado)
+      y al Egresado (su CV ha sido enviado a la empresa).
+    - Aceptada: Candidato contratado por la empresa. Notifica al Egresado con felicitación.
+    - rechazada_uth / Rechazada: Filtro no superado o proceso cerrado por empresa.
     """
-    estado_anterior = getattr(instance, '_estado_anterior', None)
+    if created:
+        if instance.egresado.user and instance.egresado.user.email:
+            enviar_correo_institucional(
+                subject=f"[UTH] Confirmación de Postulación: {instance.vacante.titulo} ({instance.vacante.clave_vacante})",
+                template_name='emails/postulacion_recibida_egresado.html',
+                context={
+                    'postulacion': instance,
+                    'vacante': instance.vacante,
+                    'egresado': instance.egresado
+                },
+                recipient_list=[instance.egresado.user.email]
+            )
+        return
 
-    if not created and estado_anterior != instance.estado and instance.estado in ['Aceptada', 'Rechazada', 'rechazada_uth', 'enviada_empresa']:
+    estado_anterior = getattr(instance, '_estado_anterior', None)
+    if estado_anterior == instance.estado:
+        return
+
+    if instance.estado == 'enviada_empresa':
+        # 1. Notificar a la Empresa con la ficha del candidato idóneo
+        destinatarios_empresa = [instance.vacante.empresa.correo_contacto]
+        if instance.vacante.empresa.user and instance.vacante.empresa.user.email:
+            destinatarios_empresa.append(instance.vacante.empresa.user.email)
+        destinatarios_empresa = list(set(filter(None, destinatarios_empresa)))
+
+        if destinatarios_empresa:
+            enviar_correo_institucional(
+                subject=f"[UTH Vinculación] Candidato Idóneo Turnado: {instance.vacante.titulo} - {instance.egresado.user.nombres} {instance.egresado.user.apellido_paterno}",
+                template_name='emails/candidato_turnado_empresa.html',
+                context={
+                    'postulacion': instance,
+                    'vacante': instance.vacante,
+                    'egresado': instance.egresado
+                },
+                recipient_list=destinatarios_empresa
+            )
+
+        # 2. Notificar al Egresado que su postulación superó el filtro UTH
+        if instance.egresado.user and instance.egresado.user.email:
+            enviar_correo_institucional(
+                subject=f"[UTH Vinculación] ¡Tu postulación fue turnada a {instance.vacante.empresa.nombre}!",
+                template_name='emails/postulacion_turnada_egresado.html',
+                context={
+                    'postulacion': instance,
+                    'vacante': instance.vacante,
+                    'egresado': instance.egresado
+                },
+                recipient_list=[instance.egresado.user.email]
+            )
+
+    elif instance.estado == 'Aceptada':
+        # Notificar formalmente la contratación al egresado
+        if instance.egresado.user and instance.egresado.user.email:
+            enviar_correo_institucional(
+                subject=f"[UTH Colocación] ¡Felicidades! Postulación Aceptada en {instance.vacante.empresa.nombre}",
+                template_name='emails/candidato_contratado_egresado.html',
+                context={
+                    'postulacion': instance,
+                    'vacante': instance.vacante,
+                    'egresado': instance.egresado
+                },
+                recipient_list=[instance.egresado.user.email]
+            )
+
+    elif instance.estado in ['rechazada_uth', 'Rechazada']:
         if instance.egresado.user and instance.egresado.user.email:
             enviar_correo_institucional(
                 subject=f"Actualización de Postulación: {instance.vacante.titulo} - {instance.get_estado_display()}",

@@ -1,0 +1,28 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Postulación Turnada a la Empresa - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-success">Filtro UTH Aprobado</span>
+<h2>¡Tu postulación ha sido turnada a la Empresa!</h2>
+
+<p>Estimada(o) <strong>{{ egresado.user.nombres }}</strong>,</p>
+
+<p>¡Buenas noticias! La Dirección de Vinculación de la UTH ha revisado y validado tu postulación, turnando formalmente tu expediente a la empresa <strong>{{ vacante.empresa.nombre }}</strong> para la vacante <strong>"{{ vacante.titulo }}"</strong>.</p>
+
+<div class="card">
+    <div class="card-title">Resumen de la Convocatoria</div>
+    <p><strong>Empresa Empleadora:</strong> {{ vacante.empresa.nombre }}</p>
+    <p><strong>Puesto Ofertado:</strong> {{ vacante.titulo }}</p>
+    <p><strong>Modalidad:</strong> {{ vacante.get_modalidad_display }}</p>
+    <p><strong>Estatus Actual:</strong> En Proceso de Selección con la Organización</p>
+</div>
+
+<p>Los reclutadores de la empresa ya cuentan con tus datos de contacto y tu currículum vitae institucional para coordinar la siguiente etapa del proceso. Te recomendamos estar al pendiente de tu bandeja de correo y teléfono celular.</p>
+
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/portal-egresado" class="btn">Ver Estado en Portal Egresado &rarr;</a>
+</div>
+
+<p style="margin-top: 24px;">Atentamente,<br><strong>Bolsa de Trabajo y Empleabilidad UTH</strong></p>
+{% endblock %}
