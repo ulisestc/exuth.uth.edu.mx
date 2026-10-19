@@ -50,15 +50,7 @@ class Command(BaseCommand):
         # Limpieza opcional
         if options['clean']:
             self.stdout.write(self.style.WARNING('-> Modo --clean activado: Eliminando entidades de demostración previas...'))
-            Colocacion.objects.all().delete()
-            Postulacion.objects.all().delete()
-            RequisitoIdioma.objects.all().delete()
-            Vacante.objects.all().delete()
-            Egresado.objects.all().delete()
-            Empresa.objects.all().delete()
-            PadronEgresado.objects.filter(matricula__startswith='202600').delete()
-            Evento.objects.filter(nombre__contains='UTH 2026').delete()
-            User.objects.filter(email__in=[
+            demo_emails = [
                 'soporte@uth.edu.mx',
                 'admin@uth.edu.mx',
                 'audi@demo.com',
@@ -68,7 +60,16 @@ class Command(BaseCommand):
                 '20260002@uth.edu.mx',
                 '20260003@uth.edu.mx',
                 '20260004@uth.edu.mx',
-            ]).delete()
+            ]
+            Colocacion.objects.filter(egresado__user__email__in=demo_emails).delete()
+            Postulacion.objects.filter(egresado__user__email__in=demo_emails).delete()
+            RequisitoIdioma.objects.filter(vacante__empresa__user__email__in=demo_emails).delete()
+            Vacante.objects.filter(empresa__user__email__in=demo_emails).delete()
+            Egresado.objects.filter(user__email__in=demo_emails).delete()
+            Empresa.objects.filter(user__email__in=demo_emails).delete()
+            PadronEgresado.objects.filter(matricula__startswith='202600').delete()
+            Evento.objects.filter(nombre__contains='UTH 2026').delete()
+            User.objects.filter(email__in=demo_emails).delete()
 
         # 2. Usuarios Institucionales
         self.stdout.write(self.style.WARNING('\n[2/7] Generando Cuentas Institucionales (Soporte TI y Admin UTH)...'))

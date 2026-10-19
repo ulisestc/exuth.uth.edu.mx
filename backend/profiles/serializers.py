@@ -34,8 +34,20 @@ class EgresadoSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         # 1. Obtiene el diccionario original (donde 'carrera' es un número)
         representation = super().to_representation(instance)
-        # 2. Sobrescribe ese número con el nombre real de la carrera
+        # 2. Sobrescribe ese número con el nombre real de la carrera e incluye metadatos del usuario
+        representation['carrera_id'] = instance.carrera_id
         representation['carrera'] = instance.carrera.nombre
+        if instance.user_id and hasattr(instance, 'user'):
+            representation['nombres'] = instance.user.nombres
+            representation['apellido_paterno'] = instance.user.apellido_paterno
+            representation['apellido_materno'] = instance.user.apellido_materno
+            representation['nombre_completo'] = (
+                f"{instance.user.nombres} {instance.user.apellido_paterno} {instance.user.apellido_materno}".strip()
+            )
+            representation['email'] = instance.user.email
+            representation['fecha_registro'] = (
+                instance.user.date_joined.isoformat() if instance.user.date_joined else None
+            )
         return representation
 
 

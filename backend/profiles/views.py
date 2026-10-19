@@ -26,10 +26,11 @@ class EgresadoViewSet(viewsets.ModelViewSet):
     
     filterset_fields = ['carrera', 'es_verificado_padron', 'colocado', 'nivel_estudios']
     
-    # Podemos buscar por matrícula, curp, o cruzar a la tabla User para buscar por nombre
+    # Podemos buscar por matrícula, curp, correo o cruzar a la tabla User para buscar por nombre
     search_fields = [
         'matricula', 
         'curp', 
+        'user__email',
         'user__nombres', 
         'user__apellido_paterno', 
         'user__apellido_materno'
@@ -37,6 +38,12 @@ class EgresadoViewSet(viewsets.ModelViewSet):
     
     ordering_fields = ['id', 'matricula']
     ordering = ['-id']
+
+    def create(self, request, *args, **kwargs):
+        if hasattr(request.user, 'egresado'):
+            serializer = self.get_serializer(request.user.egresado)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -54,7 +61,11 @@ class EgresadoViewSet(viewsets.ModelViewSet):
         serializer.save(user=user, es_verificado_padron=existe_en_padron)
 
     def get_queryset(self):
-        return Egresado.objects.filter(user__deactivated_at__isnull=True)
+        return (
+            Egresado.objects.select_related('user', 'carrera')
+            .prefetch_related('documentos_precargados')
+            .filter(user__deactivated_at__isnull=True)
+        )
 
     def _sync_legacy_documento_to_precargados(self, egresado):
         """Asegura que si el egresado tiene un archivo en `documentos` pero aún no está en `documentos_precargados`, se registre automáticamente."""
@@ -95,6 +106,12 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(egresado, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             egresado = serializer.save()
+
+            # Si el egresado corrigió su matrícula y aún no estaba verificado, revalidar contra el Padrón Oficial
+            if not egresado.es_verificado_padron and egresado.matricula:
+                if PadronEgresado.objects.filter(matricula__iexact=egresado.matricula.strip()).exists():
+                    egresado.es_verificado_padron = True
+                    egresado.save(update_fields=['es_verificado_padron'])
 
             if uploaded_doc and egresado.documentos:
                 if not nombre_doc:
@@ -285,9 +302,30 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Solo administradores de la UTH pueden modificar la verificación de padrón.")
 
         egresado = self.get_object()
-        nuevo_valor = request.data.get('es_verificado_padron', True)
-        egresado.es_verificado_padron = bool(nuevo_valor)
-        egresado.save()
+        nuevo_valor = bool(request.data.get('es_verificado_padron', True))
+        egresado.es_verificado_padron = nuevo_valor
+        egresado.save(update_fields=['es_verificado_padron'])
+
+        # Si se valida manualmente como egresado oficial, sincronizar con PadronEgresado si no existe aún
+        if nuevo_valor and egresado.matricula:
+            nombre_completo = (
+                f"{egresado.user.nombres} {egresado.user.apellido_paterno} {egresado.user.apellido_materno}".strip()
+            )
+            PadronEgresado.objects.get_or_create(
+                matricula=egresado.matricula,
+                defaults={
+                    'nombre': nombre_completo or 'Egresado Validado Manualmente',
+                    'carrera': egresado.carrera.nombre if egresado.carrera_id else 'UTH',
+                    'nivel': egresado.nivel_estudios,
+                    'genero': egresado.genero,
+                    'curp': egresado.curp,
+                    'domicilio': egresado.domicilio,
+                    'correo_personal': egresado.user.email,
+                    'telefono_movil': egresado.telefono_celular,
+                    'estatus_titulacion': 'Validado Manualmente por Vinculación UTH',
+                }
+            )
+
         return Response(EgresadoSerializer(egresado).data, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
@@ -317,6 +355,12 @@ class EmpresaViewSet(viewsets.ModelViewSet):
     # Permitimos ordenar por status para que los admins vean rápido las "pendientes"
     ordering_fields = ['nombre', 'status', 'id']
     ordering = ['-id']
+
+    def create(self, request, *args, **kwargs):
+        if hasattr(request.user, 'empresa'):
+            serializer = self.get_serializer(request.user.empresa)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         if self.request.user.rol not in ['empresa', 'soporte_ti', 'admin_uth'] and not self.request.user.is_superuser:
