@@ -90,7 +90,7 @@ export default async function EmpresasPage({ searchParams }: EmpresasPageProps) 
                 type="search"
                 name="search"
                 defaultValue={search}
-                placeholder="Buscar empresa por nombre o actividad económica…"
+                placeholder="Buscar empresa por nombre, ciudad o estado…"
                 className="w-full h-11 pl-10 pr-4 rounded-field bg-canvas text-caption text-ink ring-1 ring-inset ring-ink/15 outline-none placeholder:text-ink-64/80 focus:ring-2 focus:ring-brand"
               />
             </div>
@@ -131,16 +131,10 @@ export default async function EmpresasPage({ searchParams }: EmpresasPageProps) 
                     </div>
 
                     <div className="space-y-1.5 text-caption text-ink-64 pt-2 border-t border-divider">
-                      {emp.domicilio && (
+                      {(emp.ciudad || emp.estado) && (
                         <p className="flex items-start gap-1.5 line-clamp-2">
                           <MapPin className="size-3.5 text-ink-48 shrink-0 mt-0.5" />
-                          <span>{emp.domicilio}</span>
-                        </p>
-                      )}
-
-                      {emp.nombre_contacto && (
-                        <p className="text-fine text-ink-64">
-                          Contacto: {emp.nombre_contacto}
+                          <span>{[emp.ciudad, emp.estado].filter(Boolean).join(', ')}</span>
                         </p>
                       )}
                     </div>

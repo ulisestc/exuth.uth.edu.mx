@@ -5,9 +5,6 @@ import { fetchEmpresaById, fetchVacantesPorEmpresa } from '@/lib/api';
 import {
   Building2,
   MapPin,
-  Mail,
-  Phone,
-  User,
   Briefcase,
   ArrowLeft,
   CheckCircle2,
@@ -26,6 +23,7 @@ import {
   DataList,
   ButtonLink,
   EmptyState,
+  Alert,
 } from '@/components/ui';
 import { formatMXN, getNivelLabel, getModalidadLabel } from '@/lib/status';
 
@@ -97,77 +95,35 @@ export default async function EmpresaDetailPage({ params }: EmpresaDetailPagePro
                 </h1>
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  {empresa.sector && <Tag>{empresa.sector}</Tag>}
                   {empresa.giro && <Tag>{empresa.giro}</Tag>}
-                  {empresa.campo && <Tag>Campo: {empresa.campo}</Tag>}
                 </div>
               </div>
             </div>
-
-            {empresa.correo_contacto && (
-              <div className="shrink-0 self-start">
-                <ButtonLink
-                  href={`mailto:${empresa.correo_contacto}`}
-                  variant="primary"
-                  size="md"
-                >
-                  <Mail className="size-4" />
-                  Contactar empresa
-                </ButtonLink>
-              </div>
-            )}
           </div>
 
-          {/* Actividad de la empresa */}
-          <div className="rounded-card bg-parchment p-5 sm:p-6 space-y-2">
-            <h2 className="text-caption font-semibold uppercase tracking-wider text-ink-64">
-              Actividad de la organización
-            </h2>
-            <p className="text-body text-ink leading-relaxed">
-              {empresa.actividad_de_la_empresa ||
-                'Organización colaboradora comprometida con el desarrollo profesional y la empleabilidad de la comunidad tecnológica de Huejotzingo.'}
-            </p>
-          </div>
-
-          {/* Datos de contacto y ubicación */}
+          {/* Información pública permitida para egresados */}
           <DataList
-            columns={3}
+            columns={2}
             items={[
-              ...(empresa.domicilio
-                ? [
-                    {
-                      icon: MapPin,
-                      label: 'Ubicación física',
-                      value: empresa.domicilio,
-                    },
-                  ]
-                : []),
               {
-                icon: User,
-                label: 'Enlace de vinculación',
-                value: (
-                  <div>
-                    <p className="font-semibold">{empresa.nombre_contacto || 'Dirección de Recursos Humanos'}</p>
-                    <p className="text-caption text-ink-64">{empresa.cargo_contacto || 'Representante'}</p>
-                  </div>
-                ),
+                icon: MapPin,
+                label: 'Ubicación',
+                value:
+                  [empresa.ciudad, empresa.estado].filter(Boolean).join(', ') ||
+                  'Puebla',
               },
               {
-                icon: Phone,
-                label: 'Líneas de contacto',
-                value: (
-                  <div>
-                    <p className="font-semibold truncate">
-                      {empresa.telefono_oficina || empresa.telefono_celular || empresa.correo_contacto || 'No disponible'}
-                    </p>
-                    {empresa.correo_contacto && (
-                      <p className="text-caption text-ink-64 truncate">{empresa.correo_contacto}</p>
-                    )}
-                  </div>
-                ),
+                icon: Building2,
+                label: 'Giro empresarial',
+                value: empresa.giro || 'Sector productivo vinculado',
               },
             ]}
           />
+
+          <Alert tone="info" title="Postulación y contacto canalizados por la UTH">
+            Para proteger los datos de las organizaciones aliadas, toda postulación y
+            comunicación con la empresa se gestiona a través de la Bolsa de Trabajo UTH.
+          </Alert>
         </Card>
 
         {/* Ofertas laborales vigentes */}

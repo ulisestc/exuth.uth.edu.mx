@@ -14,8 +14,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   FileText,
-  Mail,
-  Phone,
   Globe,
   HeartHandshake,
   ExternalLink,
@@ -291,45 +289,38 @@ export default async function VacanteDetailPage({ params }: VacanteDetailPagePro
           {/* Columna Lateral: Contacto y Validación */}
           <div className="space-y-6">
             {/* Contacto de la Empresa */}
+            {/* Información pública de la Empresa */}
             <Card padded className="space-y-4 bg-canvas">
               <span className="text-fine font-semibold text-wine uppercase tracking-wider block">
-                Contacto de Selección
+                Información de la Empresa
               </span>
 
               <div>
                 <p className="text-body font-semibold text-ink">
-                  {vacante.persona_contacto || vacante.empresa_contacto_nombre || 'Coordinación de Talento Humano'}
+                  {vacante.empresa_nombre || 'Empresa Vinculada UTH'}
                 </p>
-                {vacante.empresa_contacto_cargo && (
-                  <p className="text-caption text-ink-64">{vacante.empresa_contacto_cargo}</p>
+                {vacante.empresa_giro && (
+                  <p className="text-caption text-ink-64 mt-0.5">
+                    Giro: {vacante.empresa_giro}
+                  </p>
                 )}
               </div>
 
-              <div className="space-y-2.5 pt-3 border-t border-divider text-caption">
-                {vacante.empresa_correo && (
-                  <a
-                    href={`mailto:${vacante.empresa_correo}`}
-                    className="flex items-center gap-2 text-primary hover:underline font-medium break-all"
-                  >
-                    <Mail className="size-4 shrink-0" />
-                    <span>{vacante.empresa_correo}</span>
-                  </a>
-                )}
-
-                {vacante.empresa_telefono && (
-                  <p className="flex items-center gap-2 text-ink-64">
-                    <Phone className="size-4 text-ink-48 shrink-0" />
-                    <span>Oficina: <strong className="text-ink font-semibold">{vacante.empresa_telefono}</strong></span>
-                  </p>
-                )}
-
-                {vacante.empresa_domicilio && (
+              {(vacante.empresa_ciudad || vacante.empresa_estado) && (
+                <div className="pt-3 border-t border-divider text-caption">
                   <p className="flex items-start gap-2 text-ink-64">
                     <MapPin className="size-4 text-ink-48 shrink-0 mt-0.5" />
-                    <span>{vacante.empresa_domicilio}</span>
+                    <span>
+                      {[vacante.empresa_ciudad, vacante.empresa_estado].filter(Boolean).join(', ')}
+                    </span>
                   </p>
-                )}
-              </div>
+                </div>
+              )}
+
+              <Alert tone="info" title="Canalización vía Bolsa de Trabajo UTH">
+                Por privacidad empresarial, el contacto y seguimiento de esta vacante se realiza
+                exclusivamente a través de la Bolsa de Trabajo UTH al postularte.
+              </Alert>
 
               {vacante.empresa && (
                 <div className="pt-3 border-t border-divider">
