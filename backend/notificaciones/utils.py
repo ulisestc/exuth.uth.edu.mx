@@ -23,11 +23,13 @@ def _attach_uth_logo(msg):
 
 
 class EmailThread(threading.Thread):
-    def __init__(self, subject, html_content, recipient_list=None, bcc_list=None, is_bulk=False):
+    def __init__(self, subject, html_content, recipient_list=None, cc_list=None, bcc_list=None, attachments=None, is_bulk=False):
         self.subject = subject
         self.html_content = html_content
         self.recipient_list = recipient_list or []
+        self.cc_list = [e for e in (cc_list or []) if e]
         self.bcc_list = bcc_list or []
+        self.attachments = attachments or []
         self.is_bulk = is_bulk
         super().__init__()
 
@@ -59,10 +61,13 @@ class EmailThread(threading.Thread):
                     subject=self.subject,
                     body="Tu cliente de correo no soporta mensajes en formato HTML.",
                     from_email=from_email,
-                    to=self.recipient_list
+                    to=self.recipient_list,
+                    cc=self.cc_list,
                 )
                 msg.attach_alternative(self.html_content, "text/html")
                 _attach_uth_logo(msg)
+                for filename, content, mimetype in self.attachments:
+                    msg.attach(filename, content, mimetype)
                 msg.send(fail_silently=True)
         except Exception as e:
             print(f"[EmailThread Error] Error enviando correo: {e}")
@@ -70,7 +75,16 @@ class EmailThread(threading.Thread):
             connection.close()
 
 
-def enviar_correo_institucional(subject, template_name, context, recipient_list=None, bcc_list=None, is_bulk=False):
+def enviar_correo_institucional(
+    subject,
+    template_name,
+    context,
+    recipient_list=None,
+    cc_list=None,
+    bcc_list=None,
+    attachments=None,
+    is_bulk=False,
+):
     """
     Utileria asíncrona para renderizar plantillas HTML y despachar correos mediante EmailThread.
     Inyecta automáticamente 'frontend_url' para consistencia en botones CTA.
@@ -84,6 +98,8 @@ def enviar_correo_institucional(subject, template_name, context, recipient_list=
         subject=subject,
         html_content=html_content,
         recipient_list=recipient_list,
+        cc_list=cc_list,
         bcc_list=bcc_list,
-        is_bulk=is_bulk
+        attachments=attachments,
+        is_bulk=is_bulk,
     ).start()

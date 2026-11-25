@@ -385,3 +385,104 @@ class NotificacionesTestSuite(TestCase):
         self.assertTrue(u_activo.is_active)
 
         self.assertTrue(len(mail.outbox) >= 2)
+
+    # -------------------------------------------------------------------------
+    # 5. CORREO OFICIAL DE TURNADO DE CV A EMPRESA (TARJETA #11)
+    # -------------------------------------------------------------------------
+
+    def test_happy_turnado_cv_oficial_con_cc_y_pdf_adjunto(self):
+        """TARJETA #11: Aprobar filtro UTH envía asunto/cuerpo oficial, CC institucional y CV PDF adjunto."""
+        import shutil
+        import tempfile
+        from django.test import override_settings
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        temp_media = tempfile.mkdtemp()
+        try:
+            with override_settings(MEDIA_ROOT=temp_media):
+                cv_bytes = b"%PDF-1.4 contenido oficial cv egresado"
+                self.egresado.cv = SimpleUploadedFile("mi_cv.pdf", cv_bytes, content_type="application/pdf")
+                self.egresado.save()
+
+                vacante = Vacante.objects.create(
+                    empresa=self.empresa,
+                    area_estudio=self.area,
+                    titulo="Ingeniero de Procesos",
+                    tipo_contratacion="tiempo_completo",
+                    modalidad="presencial",
+                    sueldo_minimo=18000,
+                    sueldo_maximo=20000,
+                    persona_contacto="Lic. Rebeca Cortes",
+                    entrevistador="Lic. Rebeca Cortes",
+                    status="aprobada",
+                )
+                postulacion = Postulacion.objects.create(vacante=vacante, egresado=self.egresado)
+                self._ejecutar_hilos()
+                mail.outbox = []
+
+                postulacion.estado = 'enviada_empresa'
+                postulacion.save()
+                self._ejecutar_hilos()
+
+                folio = getattr(self.egresado, 'folio_bolsa', None) or self.egresado.id
+                asunto_esperado = f"Envío de curriculum vitae UTH {folio}, interesado en la vacante: INGENIERO DE PROCESOS."
+
+                correos_empresa = [m for m in mail.outbox if m.subject == asunto_esperado]
+                self.assertEqual(len(correos_empresa), 1)
+                correo = correos_empresa[0]
+
+                # Validar destinatario y CC institucional
+                self.assertIn("contacto@techsolutions.com", correo.to)
+                self.assertIn("bolsadetrabajo@uth.edu.mx", correo.cc)
+
+                # Validar cuerpo HTML oficial
+                html_body = correo.alternatives[0][0]
+                self.assertIn("LIC. REBECA CORTES:", html_body)
+                self.assertIn("le hacemos llegar un currículum de un(a) egresado(a) interesado(a) en la vacante de:", html_body)
+                self.assertIn("INGENIERO DE PROCESOS", html_body)
+                self.assertIn("P.D. Favor de confirmar la recepción de este correo.", html_body)
+                self.assertIn("DEPARTAMENTO DE DESEMPEÑO DE EGRESADOS", html_body)
+
+                # Validar PDF del CV adjunto
+                pdf_adjuntos = [
+                    att for att in correo.attachments
+                    if isinstance(att, tuple) and att[0] == f"{folio}.pdf"
+                ]
+                self.assertEqual(len(pdf_adjuntos), 1)
+                self.assertEqual(pdf_adjuntos[0][1], cv_bytes)
+                self.assertEqual(pdf_adjuntos[0][2], "application/pdf")
+        finally:
+            shutil.rmtree(temp_media, ignore_errors=True)
+
+    def test_sad_path_turnado_cv_faltante_en_disco_no_interrumpe(self):
+        """TARJETA #11: Si el archivo físico del CV falta en disco, se registra el warning sin interrumpir el flujo."""
+        Egresado.objects.filter(pk=self.egresado.pk).update(cv="egresados/cvs/archivo_inexistente_999.pdf")
+        self.egresado.refresh_from_db()
+
+        vacante = Vacante.objects.create(
+            empresa=self.empresa,
+            area_estudio=self.area,
+            titulo="Ingeniero Industrial",
+            tipo_contratacion="tiempo_completo",
+            modalidad="presencial",
+            sueldo_minimo=15000,
+            sueldo_maximo=18000,
+            persona_contacto="Lic. Laura Flores",
+            status="aprobada",
+        )
+        postulacion = Postulacion.objects.create(vacante=vacante, egresado=self.egresado)
+        self._ejecutar_hilos()
+        mail.outbox = []
+
+        with self.assertLogs('notificaciones.signals', level='WARNING') as cm:
+            postulacion.estado = 'enviada_empresa'
+            postulacion.save()
+
+        self._ejecutar_hilos()
+
+        self.assertTrue(any("No se pudo leer el archivo físico del CV" in msg for msg in cm.output))
+        folio = getattr(self.egresado, 'folio_bolsa', None) or self.egresado.id
+        correos_empresa = [m for m in mail.outbox if f"Envío de curriculum vitae UTH {folio}" in m.subject]
+        self.assertEqual(len(correos_empresa), 1)
+        pdf_adjuntos = [att for att in correos_empresa[0].attachments if isinstance(att, tuple)]
+        self.assertEqual(len(pdf_adjuntos), 0)

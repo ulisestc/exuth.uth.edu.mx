@@ -1,24 +1,16 @@
 {% extends 'emails/base_email.html' %}
 
-{% block title %}Candidato Idóneo Turnado por UTH{% endblock %}
+{% block title %}Envío de curriculum vitae UTH {{ folio_bolsa }}{% endblock %}
 
 {% block content %}
-<span class="badge badge-success">Candidato Turnado por UTH</span>
-<h2>Candidato Validado para su Vacante</h2>
+<span class="badge badge-success">Bolsa de Trabajo UTH · Folio {{ folio_bolsa }}</span>
+<h2>Envío de Currículum Vitae — {{ puesto_mayus }}</h2>
 
-<p>Estimados representantes de <strong>{{ vacante.empresa.nombre }}</strong>,</p>
+<p>
+    <strong>{{ contacto_destinatario }}:</strong> Por medio de la presente y en respuesta a su solicitud enviada a nuestra Bolsa de Trabajo UTH, le hacemos llegar un currículum de un(a) egresado(a) interesado(a) en la vacante de: <strong>{{ puesto_mayus }}</strong>. Así mismo, le pediríamos mantenernos informados sobre el proceso de este egresado(a) con la finalidad de tener actualizado su expediente en nuestra Bolsa de Trabajo. Por otro lado, si requiere de nuestro apoyo para poder localizar o citar a entrevista al egresado(a), no dude en comentarnos.
+</p>
 
-<p>La Dirección de Vinculación de la Universidad Tecnológica de Huejotzingo ha auditado y turnado formalmente al siguiente candidato egresado que cumple satisfactoriamente con el perfil requerido para su vacante <strong>"{{ vacante.titulo }}"</strong>:</p>
-
-<div class="card">
-    <div class="card-title">Ficha del Candidato Egresado</div>
-    <p><strong>Nombre:</strong> {{ egresado.user.nombres }} {{ egresado.user.apellido_paterno }} {{ egresado.user.apellido_materno }}</p>
-    <p><strong>Programa Académico:</strong> {{ egresado.carrera.nombre }}</p>
-    <p><strong>Nivel de Estudios:</strong> {{ egresado.get_nivel_estudios_display }}</p>
-    <p><strong>Matrícula UTH:</strong> <span class="code-box">{{ egresado.matricula }}</span></p>
-    <p><strong>Teléfono de Contacto:</strong> {{ egresado.telefono_celular|default:'Consultar en portal' }}</p>
-    <p><strong>Correo Electrónico:</strong> {{ egresado.user.email }}</p>
-</div>
+<p>Sin otro particular quedamos a sus órdenes. P.D. Favor de confirmar la recepción de este correo.</p>
 
 {% if postulacion.notas_uth %}
 <div class="card" style="border-left-color: #C2BA98; background-color: #FAF9F6;">
@@ -27,11 +19,16 @@
 </div>
 {% endif %}
 
-<p>Ya puede acceder a su portal corporativo para consultar el expediente completo del egresado, descargar su currículum vitae oficial y agendar su entrevista laboral.</p>
-
 <div style="text-align: center; margin-top: 24px;">
-    <a href="{{ frontend_url }}/portal-empresa" class="btn">Revisar Expediente en Portal Empresa &rarr;</a>
+    <a href="{{ frontend_url }}/portal-empresa" class="btn">Consultar Expediente en Portal Empresa &rarr;</a>
 </div>
 
-<p style="margin-top: 24px;">Atentamente,<br><strong>Departamento de Bolsa de Trabajo UTH</strong></p>
+<div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 13px; line-height: 1.6; color: #374151;">
+    <p style="margin: 0;"><strong>ATENTAMENTE</strong></p>
+    <p style="margin: 4px 0 0 0;"><strong>{{ firma_responsable }}</strong></p>
+    <p style="margin: 0;">BOLSA DE TRABAJO</p>
+    <p style="margin: 0;">DEPARTAMENTO DE DESEMPEÑO DE EGRESADOS</p>
+    <p style="margin: 0;">UNIVERSIDAD TECNOLÓGICA DE HUEJOTZINGO</p>
+    <p style="margin: 4px 0 0 0;"><a href="{{ frontend_url }}" style="color: #006847;">{{ frontend_url }}</a></p>
+</div>
 {% endblock %}

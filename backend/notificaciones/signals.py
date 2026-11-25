@@ -1,3 +1,5 @@
+import logging
+from django.conf import settings
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
@@ -6,6 +8,7 @@ from vacantes.models import Vacante, Postulacion
 from notificaciones.utils import enviar_correo_institucional
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # =========================================================================
@@ -163,22 +166,56 @@ def notificar_eventos_postulacion(sender, instance, created, **kwargs):
         return
 
     if instance.estado == 'enviada_empresa':
-        # 1. Notificar a la Empresa con la ficha del candidato idóneo
+        # 1. Notificar a la Empresa con formato oficial UTH, CC y CV en PDF adjunto
         destinatarios_empresa = [instance.vacante.empresa.correo_contacto]
         if instance.vacante.empresa.user and instance.vacante.empresa.user.email:
             destinatarios_empresa.append(instance.vacante.empresa.user.email)
         destinatarios_empresa = list(set(filter(None, destinatarios_empresa)))
 
         if destinatarios_empresa:
+            folio_bolsa = getattr(instance.egresado, 'folio_bolsa', None) or instance.egresado.id
+            puesto_mayus = (instance.vacante.titulo or '').strip().upper()
+            contacto_destinatario = (
+                instance.vacante.entrevistador
+                or instance.vacante.persona_contacto
+                or instance.vacante.empresa.nombre_contacto
+                or 'ESTIMADO(A) RECLUTADOR(A)'
+            ).strip().upper()
+            firma_responsable = getattr(settings, 'UTH_FIRMA_RESPONSABLE', 'MA. FÉLIX MOTA ÁNGELES')
+            cc_email = getattr(settings, 'UTH_BOLSA_CC_EMAIL', 'bolsadetrabajo@uth.edu.mx')
+            cc_list = [cc_email] if cc_email else []
+
+            # Leer bytes del CV antes de iniciar el hilo (si falta en disco, registrar sin interrumpir HTTP)
+            attachments = []
+            if instance.egresado.cv:
+                try:
+                    with instance.egresado.cv.open('rb') as cv_file:
+                        cv_bytes = cv_file.read()
+                    if cv_bytes:
+                        attachments.append((f"{folio_bolsa}.pdf", cv_bytes, 'application/pdf'))
+                except Exception as e:
+                    logger.warning(
+                        "No se pudo leer el archivo físico del CV para egresado %s (postulación %s): %s",
+                        instance.egresado.id,
+                        instance.id,
+                        e,
+                    )
+
             enviar_correo_institucional(
-                subject=f"[UTH Vinculación] Candidato Idóneo Turnado: {instance.vacante.titulo} - {instance.egresado.user.nombres} {instance.egresado.user.apellido_paterno}",
+                subject=f"Envío de curriculum vitae UTH {folio_bolsa}, interesado en la vacante: {puesto_mayus}.",
                 template_name='emails/candidato_turnado_empresa.html',
                 context={
                     'postulacion': instance,
                     'vacante': instance.vacante,
-                    'egresado': instance.egresado
+                    'egresado': instance.egresado,
+                    'folio_bolsa': folio_bolsa,
+                    'puesto_mayus': puesto_mayus,
+                    'contacto_destinatario': contacto_destinatario,
+                    'firma_responsable': firma_responsable,
                 },
-                recipient_list=destinatarios_empresa
+                recipient_list=destinatarios_empresa,
+                cc_list=cc_list,
+                attachments=attachments,
             )
 
         # 2. Notificar al Egresado que su postulación superó el filtro UTH
