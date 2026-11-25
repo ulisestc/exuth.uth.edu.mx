@@ -89,6 +89,8 @@ function RegistroForm() {
     nombre: '',
     rfc: '',
     domicilio: '',
+    ciudad: '',
+    estado: 'Puebla',
     correo_contacto: '',
     actividad_de_la_empresa: '',
     giro: '',
@@ -235,6 +237,8 @@ function RegistroForm() {
       const result = await registerEmpresa({
         nombre: empresaForm.nombre,
         domicilio: empresaForm.domicilio,
+        ciudad: empresaForm.ciudad,
+        estado: empresaForm.estado,
         correo_contacto: empresaForm.correo_contacto || empresaForm.email,
         actividad_de_la_empresa: empresaForm.actividad_de_la_empresa,
         giro: Number(empresaForm.giro),
@@ -703,6 +707,24 @@ function RegistroForm() {
                         />
                       </Field>
                     </div>
+
+                    <Field label="Ciudad o Población" required>
+                      <Input
+                        required
+                        value={empresaForm.ciudad}
+                        onChange={(e) => setEmpresaForm({ ...empresaForm, ciudad: e.target.value })}
+                        placeholder="ej. Huejotzingo / San Mateo Cuanalá"
+                      />
+                    </Field>
+
+                    <Field label="Estado" required>
+                      <Input
+                        required
+                        value={empresaForm.estado}
+                        onChange={(e) => setEmpresaForm({ ...empresaForm, estado: e.target.value })}
+                        placeholder="ej. Puebla"
+                      />
+                    </Field>
 
                     <div className="sm:col-span-2">
                       <Field label="Actividad Principal o Ramo" required>

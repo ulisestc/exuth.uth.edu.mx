@@ -39,6 +39,8 @@ export default function EditarPerfilEmpresaModal({
   const [telefonoOficina, setTelefonoOficina] = useState('');
   const [telefonoCelular, setTelefonoCelular] = useState('');
   const [domicilio, setDomicilio] = useState('');
+  const [ciudad, setCiudad] = useState('');
+  const [estado, setEstado] = useState('Puebla');
   const [actividad, setActividad] = useState('');
 
   // Estados de Logotipo
@@ -59,6 +61,8 @@ export default function EditarPerfilEmpresaModal({
       setTelefonoOficina(empresa.telefono_oficina || '');
       setTelefonoCelular(empresa.telefono_celular || '');
       setDomicilio(empresa.domicilio || '');
+      setCiudad(empresa.ciudad || '');
+      setEstado(empresa.estado || 'Puebla');
       setActividad(empresa.actividad_de_la_empresa || '');
       setLogoPreview(empresa.logo || null);
       setLogoFile(null);
@@ -107,6 +111,11 @@ export default function EditarPerfilEmpresaModal({
       return;
     }
 
+    if (!ciudad.trim() || !estado.trim()) {
+      setErrorMessage('La ciudad o población y el estado son obligatorios.');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('nombre_contacto', nombreContacto.trim());
     formData.append('cargo_contacto', cargoContacto.trim());
@@ -114,6 +123,8 @@ export default function EditarPerfilEmpresaModal({
     if (telefonoOficina.trim()) formData.append('telefono_oficina', telefonoOficina.trim());
     if (telefonoCelular.trim()) formData.append('telefono_celular', telefonoCelular.trim());
     formData.append('domicilio', domicilio.trim());
+    formData.append('ciudad', ciudad.trim());
+    formData.append('estado', estado.trim());
     formData.append('actividad_de_la_empresa', actividad.trim());
 
     if (logoFile) {
@@ -325,6 +336,29 @@ export default function EditarPerfilEmpresaModal({
             />
           </Field>
 
+          {/* Ciudad y Estado (visibles para egresados) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Ciudad o Población" required>
+              <Input
+                type="text"
+                required
+                value={ciudad}
+                onChange={(e) => setCiudad(e.target.value)}
+                placeholder="Ej. Huejotzingo / San Mateo Cuanalá"
+              />
+            </Field>
+
+            <Field label="Estado" required>
+              <Input
+                type="text"
+                required
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                placeholder="Ej. Puebla"
+              />
+            </Field>
+          </div>
+                
           {/* Actividad Empresarial */}
           <Field label="Actividad Principal de la Organización">
             <Textarea

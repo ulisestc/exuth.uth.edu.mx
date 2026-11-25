@@ -565,9 +565,14 @@ export default function PortalEmpresaPage() {
                       <MapPin className="size-3.5 text-primary" />
                       <span>Ubicación y Sector</span>
                     </span>
-                    <p className="text-body text-ink leading-relaxed">
+                                        <p className="text-body text-ink leading-relaxed">
                       {empresa?.domicilio || 'No especificado'}
                     </p>
+                    {(empresa?.ciudad || empresa?.estado) && (
+                      <p className="text-ink-64 text-fine">
+                        {[empresa?.ciudad, empresa?.estado].filter(Boolean).join(', ')}
+                      </p>
+                    )}
                     <p className="text-ink-64 text-fine">Giro: {empresa?.giro || 'Industria'}</p>
                   </div>
                 </div>

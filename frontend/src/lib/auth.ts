@@ -291,6 +291,8 @@ export async function registerEmpresa(data: RegistroEmpresaData): Promise<{ succ
         acepta_aviso_privacidad: data.acepta_aviso_privacidad,
         nombre: data.nombre.trim(),
         domicilio: data.domicilio.trim(),
+        ciudad: data.ciudad.trim(),
+        estado: data.estado.trim(),
         correo_contacto: data.correo_contacto.trim(),
         actividad_de_la_empresa: data.actividad_de_la_empresa.trim(),
         giro: data.giro,
@@ -333,6 +335,8 @@ export async function registerEmpresa(data: RegistroEmpresaData): Promise<{ succ
         body: JSON.stringify({
           nombre: data.nombre.trim(),
           domicilio: data.domicilio.trim(),
+          ciudad: data.ciudad.trim(),
+          estado: data.estado.trim(),
           correo_contacto: data.correo_contacto.trim(),
           actividad_de_la_empresa: data.actividad_de_la_empresa.trim(),
           giro: data.giro,

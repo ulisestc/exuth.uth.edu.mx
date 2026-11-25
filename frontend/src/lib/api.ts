@@ -31,6 +31,8 @@ export interface Vacante {
   empresa_telefono?: string | null;
   empresa_celular?: string | null;
   empresa_domicilio?: string;
+  empresa_ciudad?: string;
+  empresa_estado?: string;
   empresa_giro?: string;
   empresa_sector?: string;
   empresa_actividad?: string;
@@ -62,7 +64,7 @@ export interface Vacante {
   incluye_transporte: boolean;
   incluye_comedor: boolean;
   documentos_requeridos: string;
-  persona_contacto: string;
+  persona_contacto?: string;
   entrevistador?: string | null;
   observaciones?: string | null;
   idiomas?: RequisitoIdiomaItem[];
@@ -295,6 +297,8 @@ export interface RegistroEgresadoData {
 export interface RegistroEmpresaData {
   nombre: string;
   domicilio: string;
+  ciudad: string;
+  estado: string;
   correo_contacto: string;
   actividad_de_la_empresa: string;
   giro: number;
@@ -760,8 +764,10 @@ export interface EmpresaProfile {
   id: number;
   user: number;
   nombre: string;
-  domicilio: string;
-  correo_contacto: string;
+  domicilio?: string;
+  ciudad?: string;
+  estado?: string;
+  correo_contacto?: string;
   actividad_de_la_empresa: string;
   campo: string | null;
   giro: string;
@@ -769,8 +775,8 @@ export interface EmpresaProfile {
   status: 'pendiente' | 'aprobada' | 'rechazada';
   telefono_oficina?: string;
   telefono_celular?: string;
-  nombre_contacto: string;
-  cargo_contacto: string;
+  nombre_contacto?: string;
+  cargo_contacto?: string;
   logo?: string | null;
 }
 
@@ -1094,8 +1100,10 @@ export interface EmpresaListItem {
   id: number;
   user: number;
   nombre: string;
-  domicilio: string;
-  correo_contacto: string;
+  domicilio?: string;
+  ciudad?: string;
+  estado?: string;
+  correo_contacto?: string;
   actividad_de_la_empresa: string;
   campo?: string | null;
   giro: string;
@@ -1103,8 +1111,8 @@ export interface EmpresaListItem {
   status: 'pendiente' | 'aprobada' | 'rechazada';
   telefono_oficina?: string | null;
   telefono_celular?: string | null;
-  nombre_contacto: string;
-  cargo_contacto: string;
+  nombre_contacto?: string;
+  cargo_contacto?: string;
 }
 
 export async function fetchAdminVacantes(
