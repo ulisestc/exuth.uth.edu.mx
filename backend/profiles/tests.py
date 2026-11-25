@@ -252,3 +252,53 @@ class ProfilesE2ETests(APITestCase):
         self.assertEqual(res_cv.status_code, status.HTTP_200_OK)
         self.assertEqual(res_cv['Content-Type'], 'application/pdf')
         self.assertIn('inline', res_cv['Content-Disposition'])
+
+    def test_privacidad_datos_empresariales_por_rol(self):
+        """PRIVACIDAD #10: Anónimo y egresado solo ven nombre, ciudad, estado y giro; admin y empresa dueña ven todo."""
+        empresa = Empresa.objects.create(
+            user=self.user_empresa,
+            nombre="Metforja S.A.P.I. de C.V.",
+            domicilio="Carr. Federal México Puebla KM 96.5",
+            ciudad="San Mateo Cuanalá",
+            estado="Puebla",
+            telefono_oficina="2222210642",
+            telefono_celular="2229998877",
+            correo_contacto="recursos.humanos@metforja.com.mx",
+            actividad_de_la_empresa="Fabricación de productos metálicos",
+            giro=self.giro,
+            sector=self.sector,
+            status="aprobada",
+            nombre_contacto="Lic. Rebeca Cortés",
+            cargo_contacto="Jefa de RH",
+        )
+
+        user_admin = User.objects.create_user(
+            email="admin_priv@uth.edu.mx", password="password123", rol="admin_uth", is_active=True
+        )
+        client_admin = APIClient()
+        client_admin.credentials(HTTP_AUTHORIZATION=f'JWT {RefreshToken.for_user(user_admin).access_token}')
+
+        campos_privados = [
+            'domicilio', 'correo_contacto', 'telefono_oficina',
+            'telefono_celular', 'nombre_contacto', 'cargo_contacto',
+        ]
+
+        # Anónimo y egresado NO deben recibir campos privados
+        for cliente in (self.client_anon, self.client_e1):
+            res = cliente.get(f'/api/v1/profiles/empresas/{empresa.id}/')
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data['nombre'], empresa.nombre)
+            self.assertEqual(res.data['ciudad'], 'San Mateo Cuanalá')
+            self.assertEqual(res.data['estado'], 'Puebla')
+            self.assertEqual(res.data['giro'], self.giro.nombre)
+            for campo in campos_privados:
+                self.assertNotIn(campo, res.data)
+
+        # Admin UTH y la propia empresa SÍ deben recibir todos los datos completos
+        for cliente in (client_admin, self.client_emp):
+            res = cliente.get(f'/api/v1/profiles/empresas/{empresa.id}/')
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data['ciudad'], 'San Mateo Cuanalá')
+            self.assertEqual(res.data['estado'], 'Puebla')
+            for campo in campos_privados:
+                self.assertIn(campo, res.data)

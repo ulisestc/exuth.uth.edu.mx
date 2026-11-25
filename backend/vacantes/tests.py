@@ -277,3 +277,50 @@ class VacantesUnitTestSuite(APITestCase):
         res_emp = self.client_empresa.get('/api/v1/vacantes/postulaciones/')
         ids_visibles = [p['id'] for p in res_emp.data.get('results', res_emp.data)]
         self.assertNotIn(post.id, ids_visibles)
+
+    def test_privacidad_datos_empresa_en_vacante_por_rol(self):
+        """PRIVACIDAD #10: GET /api/v1/vacantes/{id}/ oculta contacto y domicilio exacto a anónimos y egresados."""
+        self.empresa.ciudad = "Huejotzingo"
+        self.empresa.estado = "Puebla"
+        self.empresa.telefono_oficina = "2222210642"
+        self.empresa.telefono_celular = "2221113344"
+        self.empresa.save()
+
+        vacante = Vacante.objects.create(
+            empresa=self.empresa,
+            area_estudio=self.area,
+            titulo="Ingeniero de Procesos",
+            status="aprobada",
+            tipo_contratacion="tiempo_completo",
+            modalidad="presencial",
+            sueldo_minimo=18000,
+            sueldo_maximo=20000,
+            persona_contacto="Lic. Rebeca Cortés",
+            entrevistador="Lic. Rebeca Cortés",
+        )
+
+        client_anon = APIClient()
+        campos_privados = [
+            'empresa_domicilio', 'empresa_correo', 'empresa_telefono', 'empresa_celular',
+            'empresa_contacto_nombre', 'empresa_contacto_cargo', 'persona_contacto', 'entrevistador',
+        ]
+
+        # Anónimo y egresado solo reciben ciudad, estado, nombre y giro
+        for cliente in (client_anon, self.client_egresado):
+            res = cliente.get(f'/api/v1/vacantes/{vacante.id}/')
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data['empresa_nombre'], self.empresa.nombre)
+            self.assertEqual(res.data['empresa_ciudad'], 'Huejotzingo')
+            self.assertEqual(res.data['empresa_estado'], 'Puebla')
+            self.assertEqual(res.data['empresa_giro'], self.giro.nombre)
+            for campo in campos_privados:
+                self.assertNotIn(campo, res.data)
+
+        # Admin UTH y la empresa propietaria mantienen acceso total
+        for cliente in (self.client_admin, self.client_empresa):
+            res = cliente.get(f'/api/v1/vacantes/{vacante.id}/')
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data['empresa_ciudad'], 'Huejotzingo')
+            self.assertEqual(res.data['empresa_estado'], 'Puebla')
+            for campo in campos_privados:
+                self.assertIn(campo, res.data)
