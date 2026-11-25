@@ -33,6 +33,8 @@ class UserCreateSerializer(BaseUserCreateSerializer):
     nombre_contacto = serializers.CharField(required=False, write_only=True, allow_blank=True)
     cargo_contacto = serializers.CharField(required=False, write_only=True, allow_blank=True)
     telefono_oficina = serializers.CharField(required=False, write_only=True, allow_blank=True)
+    ciudad = serializers.CharField(required=False, write_only=True, allow_blank=True)
+    estado = serializers.CharField(required=False, write_only=True, allow_blank=True)
 
     def validate_rol(self, value):
         """
@@ -108,6 +110,8 @@ class UserCreateSerializer(BaseUserCreateSerializer):
             'cargo_contacto': validated_data.pop('cargo_contacto', None),
             'telefono_oficina': validated_data.pop('telefono_oficina', None),
             'telefono_celular': egresado_fields['telefono_celular'],
+            'ciudad': validated_data.pop('ciudad', ''),
+            'estado': validated_data.pop('estado', 'Puebla'),
         }
 
         if validated_data.get('acepta_aviso_privacidad'):
@@ -170,6 +174,8 @@ class UserCreateSerializer(BaseUserCreateSerializer):
                     cargo_contacto=empresa_fields.get('cargo_contacto') or 'Contacto Institucional',
                     telefono_oficina=clean_tel_of,
                     telefono_celular=clean_tel_cel,
+                    ciudad=(empresa_fields.get('ciudad') or '').strip(),
+                    estado=(empresa_fields.get('estado') or 'Puebla').strip() or 'Puebla',
                 )
 
             return user
@@ -181,7 +187,7 @@ class UserCreateSerializer(BaseUserCreateSerializer):
             'is_active',
             'matricula', 'curp', 'carrera', 'nivel_estudios', 'genero', 'telefono_celular', 'domicilio', 'habilidades',
             'nombre', 'nombre_empresa', 'correo_contacto', 'actividad_de_la_empresa', 'giro', 'sector',
-            'nombre_contacto', 'cargo_contacto', 'telefono_oficina'
+            'nombre_contacto', 'cargo_contacto', 'telefono_oficina', 'ciudad', 'estado',
         )
         read_only_fields = ('is_active',)
 

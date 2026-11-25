@@ -21,6 +21,8 @@ class VacanteSerializer(serializers.ModelSerializer):
     empresa_telefono = serializers.ReadOnlyField(source='empresa.telefono_oficina')
     empresa_celular = serializers.ReadOnlyField(source='empresa.telefono_celular')
     empresa_domicilio = serializers.ReadOnlyField(source='empresa.domicilio')
+    empresa_ciudad = serializers.ReadOnlyField(source='empresa.ciudad')
+    empresa_estado = serializers.ReadOnlyField(source='empresa.estado')
     empresa_giro = serializers.ReadOnlyField(source='empresa.giro.nombre')
     empresa_sector = serializers.ReadOnlyField(source='empresa.sector.nombre')
     empresa_actividad = serializers.ReadOnlyField(source='empresa.actividad_de_la_empresa')
@@ -40,6 +42,36 @@ class VacanteSerializer(serializers.ModelSerializer):
         model = Vacante
         fields = '__all__'
         read_only_fields = ['empresa', 'clave_vacante', 'status'] # <--- Esto le dice a DRF: "Yo lo lleno en el servidor, ignóralo si viene del frontend"
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+
+        es_admin = bool(
+            user and user.is_authenticated and (
+                getattr(user, 'rol', None) in ['admin_uth', 'soporte_ti'] or user.is_superuser
+            )
+        )
+        es_propietaria = bool(
+            user and user.is_authenticated and instance.empresa.user_id == user.id
+        )
+
+        if not (es_admin or es_propietaria):
+            campos_privados = [
+                'empresa_domicilio',
+                'empresa_correo',
+                'empresa_telefono',
+                'empresa_celular',
+                'empresa_contacto_nombre',
+                'empresa_contacto_cargo',
+                'persona_contacto',
+                'entrevistador',
+            ]
+            for campo in campos_privados:
+                representation.pop(campo, None)
+
+        return representation
 
     def validate(self, attrs):
         sueldo_min = attrs.get('sueldo_minimo')

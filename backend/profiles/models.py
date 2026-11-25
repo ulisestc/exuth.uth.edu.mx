@@ -59,6 +59,8 @@ class Empresa(models.Model):
     
     nombre = models.CharField(max_length=255)
     domicilio = models.CharField(max_length=255)
+    ciudad = models.CharField(max_length=150, blank=True, default='', verbose_name="Ciudad o Población")
+    estado = models.CharField(max_length=100, default='Puebla', verbose_name="Estado")
     telefono_oficina = models.CharField(max_length=15, blank=True, null=True, validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="El número de teléfono debe tener entre 9 y 15 dígitos y puede incluir un prefijo internacional.")])
     telefono_celular = models.CharField(max_length=15, blank=True, null=True, validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="El número de teléfono debe tener entre 9 y 15 dígitos y puede incluir un prefijo internacional.")])
     correo_contacto = models.EmailField()

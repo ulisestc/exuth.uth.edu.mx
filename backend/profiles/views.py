@@ -325,7 +325,8 @@ class EmpresaViewSet(viewsets.ModelViewSet):
     search_fields = [
         'nombre', 
         'actividad_de_la_empresa', 
-        'correo_contacto'
+        'ciudad', 
+        'estado',
     ]
     
     # Permitimos ordenar por status para que los admins vean rápido las "pendientes"

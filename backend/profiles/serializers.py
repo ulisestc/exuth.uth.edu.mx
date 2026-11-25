@@ -55,7 +55,7 @@ class EmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empresa
         fields = [
-            'id', 'user', 'nombre', 'domicilio', 'correo_contacto',
+            'id', 'user', 'nombre', 'domicilio', 'ciudad', 'estado', 'correo_contacto',
             'actividad_de_la_empresa', 'campo', 'giro', 'sector', 'status',
             'telefono_oficina', 'telefono_celular', 'nombre_contacto', 'cargo_contacto',
             'logo'
@@ -67,6 +67,31 @@ class EmpresaSerializer(serializers.ModelSerializer):
         # Traducimos las llaves foráneas de catálogos
         representation['giro'] = instance.giro.nombre
         representation['sector'] = instance.sector.nombre
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+
+        es_admin = bool(
+            user and user.is_authenticated and (
+                getattr(user, 'rol', None) in ['admin_uth', 'soporte_ti'] or user.is_superuser
+            )
+        )
+        es_propietaria = bool(
+            user and user.is_authenticated and instance.user_id == user.id
+        )
+
+        if not (es_admin or es_propietaria):
+            campos_privados = [
+                'domicilio',
+                'correo_contacto',
+                'telefono_oficina',
+                'telefono_celular',
+                'nombre_contacto',
+                'cargo_contacto',
+            ]
+            for campo in campos_privados:
+                representation.pop(campo, None)
+
         return representation
     
 class EmpresaStatusSerializer(serializers.ModelSerializer):
