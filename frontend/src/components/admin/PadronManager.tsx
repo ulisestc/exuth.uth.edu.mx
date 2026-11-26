@@ -28,6 +28,7 @@ import {
   fetchAdminEgresados,
   verificarEgresadoPadron,
   denegarAccesoEgresado,
+  cambiarEstadoCuentaEgresado,
 } from '@/lib/api';
 import CvViewerModal from '@/components/shared/CvViewerModal';
 import {
@@ -54,15 +55,35 @@ interface PadronManagerProps {
 const PAGE_SIZE = 10;
 
 type PadronViewMode = 'cuentas' | 'excel';
-type CuentasFilter = 'pendientes' | 'verificados' | 'todos';
+type CuentasFilter = 'pendientes' | 'verificados' | 'inactivas' | 'todos';
+
+const esCuentaActiva = (eg: EgresadoProfile): boolean => {
+  if (eg.cuenta_activa !== undefined) return eg.cuenta_activa;
+  return eg.activo_bolsa !== false && eg.user_is_active !== false && !eg.deactivated_at;
+};
+
+const getMotivoInactividadLabel = (eg: EgresadoProfile): string => {
+  switch (eg.motivo_inactividad) {
+    case 'colocado':
+      return 'Contratado en vacante';
+    case 'vencimiento':
+      return 'Vigencia 6m concluida';
+    case 'acceso_denegado':
+      return 'Acceso denegado';
+    case 'manual':
+      return 'Inactivada por UTH';
+    default:
+      return eg.deactivated_at ? 'Acceso denegado' : 'Inactiva';
+  }
+};
 
 export default function PadronManager({ token, onStatsChange }: PadronManagerProps) {
   const [viewMode, setViewMode] = useState<PadronViewMode>('cuentas');
 
-  // --- Estado: Cuentas de Egresados en Plataforma (Validación Manual) ---
+  // --- Estado: Cuentas de Egresados en Plataforma (Validación Manual y Control Activo/Inactivo) ---
   const [egresadosList, setEgresadosList] = useState<EgresadoProfile[]>([]);
   const [loadingEgresados, setLoadingEgresados] = useState<boolean>(true);
-  const [cuentasFilter, setCuentasFilter] = useState<CuentasFilter>('pendientes');
+  const [cuentasFilter, setCuentasFilter] = useState<CuentasFilter>('todos');
   const [cuentasSearch, setCuentasSearch] = useState<string>('');
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [feedbackBanner, setFeedbackBanner] = useState<{
@@ -70,6 +91,10 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
     text: string;
   } | null>(null);
   const [confirmDenyTarget, setConfirmDenyTarget] = useState<EgresadoProfile | null>(null);
+  const [confirmEstadoTarget, setConfirmEstadoTarget] = useState<{
+    egresado: EgresadoProfile;
+    nuevoActivo: boolean;
+  } | null>(null);
   const [cvModalTarget, setCvModalTarget] = useState<EgresadoProfile | null>(null);
 
   // --- Estado: Padrón Oficial Excel ---
@@ -164,6 +189,32 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
     }
   };
 
+  const handleConfirmCambiarEstado = async () => {
+    if (!confirmEstadoTarget) return;
+    const { egresado: target, nuevoActivo } = confirmEstadoTarget;
+    setFeedbackBanner(null);
+    setActionLoadingId(target.id);
+    const res = await cambiarEstadoCuentaEgresado(token, target.id, nuevoActivo);
+    setActionLoadingId(null);
+    setConfirmEstadoTarget(null);
+
+    if (res.success) {
+      setFeedbackBanner({
+        tone: nuevoActivo ? 'success' : 'info',
+        text: nuevoActivo
+          ? `Cuenta reactivada: ${target.nombre_completo || target.matricula} recupera el acceso al portal con nueva vigencia de 6 meses.`
+          : `Cuenta inactivada: se bloqueó el inicio de sesión de ${target.nombre_completo || target.matricula}.`,
+      });
+      await loadEgresadosPlataforma();
+      if (onStatsChange) onStatsChange();
+    } else {
+      setFeedbackBanner({
+        tone: 'danger',
+        text: res.error || 'No se pudo actualizar el estado de la cuenta.',
+      });
+    }
+  };
+
   const handleConfirmDenegarAcceso = async () => {
     if (!confirmDenyTarget) return;
     const target = confirmDenyTarget;
@@ -176,7 +227,7 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
     if (res.success) {
       setFeedbackBanner({
         tone: 'info',
-        text: `Acceso denegado: La cuenta de ${target.nombre_completo || target.email || target.matricula} fue desactivada y ya no podrá iniciar sesión en el sistema.`,
+        text: `Acceso denegado: La cuenta de ${target.nombre_completo || target.email || target.matricula} fue bloqueada y movida a la pestaña de Inactivas.`,
       });
       await loadEgresadosPlataforma();
       if (onStatsChange) onStatsChange();
@@ -252,32 +303,44 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
   const startIndex = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const endIndex = Math.min(currentPage * PAGE_SIZE, totalCount);
 
-  const countPendientes = egresadosList.filter((e) => !e.es_verificado_padron).length;
-  const countVerificados = egresadosList.filter((e) => e.es_verificado_padron).length;
+  const countPendientes = egresadosList.filter(
+    (e) => !e.es_verificado_padron && e.motivo_inactividad !== 'acceso_denegado'
+  ).length;
+  const countActivas = egresadosList.filter((e) => esCuentaActiva(e)).length;
+  const countInactivas = egresadosList.filter((e) => !esCuentaActiva(e)).length;
 
   const filteredEgresados = egresadosList.filter((e) => {
-    if (cuentasFilter === 'pendientes' && e.es_verificado_padron) return false;
-    if (cuentasFilter === 'verificados' && !e.es_verificado_padron) return false;
+    const activa = esCuentaActiva(e);
+    if (cuentasFilter === 'pendientes' && (e.es_verificado_padron || e.motivo_inactividad === 'acceso_denegado')) {
+      return false;
+    }
+    if (cuentasFilter === 'verificados' && (!e.es_verificado_padron || !activa)) {
+      return false;
+    }
+    if (cuentasFilter === 'inactivas' && activa) {
+      return false;
+    }
     if (cuentasSearch.trim()) {
       const q = cuentasSearch.toLowerCase();
       const matchNombre = (e.nombre_completo || '').toLowerCase().includes(q);
       const matchEmail = (e.email || '').toLowerCase().includes(q);
       const matchMatricula = (e.matricula || '').toLowerCase().includes(q);
+      const matchFolio = String(e.folio_bolsa || '').toLowerCase().includes(q);
       const matchCurp = (e.curp || '').toLowerCase().includes(q);
       const matchCarrera = (e.carrera || '').toLowerCase().includes(q);
-      return matchNombre || matchEmail || matchMatricula || matchCurp || matchCarrera;
+      return matchNombre || matchEmail || matchMatricula || matchFolio || matchCurp || matchCarrera;
     }
     return true;
   });
 
   return (
     <div className="space-y-8">
-      {/* Selector superior de modo: Validación Manual de Cuentas vs Sábana Oficial Excel */}
+      {/* Selector superior de modo: Cuentas en Plataforma vs Sábana Oficial Excel */}
       <Card padded className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-canvas">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-tagline text-ink font-semibold">
-              Padrón Escolar y Validación de Egresados
+              Padrón Escolar, Vigencia y Control de Cuentas de Egresados
             </h2>
             {countPendientes > 0 && (
               <StatusPill tone="warning">
@@ -286,7 +349,7 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
             )}
           </div>
           <p className="text-caption text-ink-64">
-            Valida manualmente a egresados registrados fuera del corte o importa la sábana oficial de Servicios Escolares (.xlsx).
+            Gestiona estatus Activo/Inactivo, reactiva vigencias de 6 meses, valida matrículas o importa la sábana oficial de Servicios Escolares (.xlsx).
           </p>
         </div>
 
@@ -297,8 +360,8 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
           items={[
             {
               id: 'cuentas',
-              label: 'Cuentas en Plataforma (Validación Manual)',
-              count: countPendientes,
+              label: 'Cuentas en Plataforma (Control y Vigencia)',
+              count: egresadosList.length,
             },
             {
               id: 'excel',
@@ -310,29 +373,35 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
       </Card>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          MODO 1: CUENTAS DE EGRESADOS EN PLATAFORMA (VALIDACIÓN MANUAL)
+          MODO 1: CUENTAS DE EGRESADOS EN PLATAFORMA (VALIDACIÓN Y ACTIVO/INACTIVO)
          ══════════════════════════════════════════════════════════════════════ */}
       {viewMode === 'cuentas' && (
         <div className="space-y-6 animate-fade-in">
           {/* Métricas de Cuentas Registradas */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatTile
               tone="canvas"
-              label="Pendientes de Validación Manual"
+              label="Cuentas Activas en Bolsa"
+              value={loadingEgresados ? '…' : countActivas}
+              hint="Habilitadas para postularse"
+            />
+            <StatTile
+              tone="canvas"
+              label="Cuentas Inactivas / Colocadas"
+              value={loadingEgresados ? '…' : countInactivas}
+              hint="Contratados, vencidos 6m o pausados"
+            />
+            <StatTile
+              tone="canvas"
+              label="Pendientes de Padrón"
               value={loadingEgresados ? '…' : countPendientes}
-              hint="Egresados no hallados en el último Excel"
+              hint="En espera de validación manual"
             />
             <StatTile
               tone="canvas"
-              label="Cuentas Verificadas en Padrón"
-              value={loadingEgresados ? '…' : countVerificados}
-              hint="Aprobadas por Excel o por Vinculación UTH"
-            />
-            <StatTile
-              tone="canvas"
-              label="Total Cuentas de Egresados Activas"
+              label="Total Egresados Registrados"
               value={loadingEgresados ? '…' : egresadosList.length}
-              hint="Egresados con acceso al portal"
+              hint="Expedientes totales en plataforma"
             />
           </div>
 
@@ -352,16 +421,17 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
                 value={cuentasFilter}
                 onChange={setCuentasFilter}
                 items={[
-                  { id: 'pendientes', label: 'Pendientes de Validar', count: countPendientes },
-                  { id: 'verificados', label: 'Verificados en Padrón', count: countVerificados },
-                  { id: 'todos', label: 'Todas las Cuentas', count: egresadosList.length },
+                  { id: 'todos', label: 'Todas', count: egresadosList.length },
+                  { id: 'verificados', label: 'Activas Verificadas', count: egresadosList.filter((e) => e.es_verificado_padron && esCuentaActiva(e)).length },
+                  { id: 'inactivas', label: 'Inactivas', count: countInactivas },
+                  { id: 'pendientes', label: 'Pendientes Padrón', count: countPendientes },
                 ]}
               />
 
               <div className="flex items-center gap-2.5 w-full xl:w-auto">
                 <div className="flex-1 sm:w-80">
                   <SearchInput
-                    placeholder="Buscar por nombre, matrícula, correo o CURP…"
+                    placeholder="Buscar folio, nombre, matrícula, correo o CURP…"
                     value={cuentasSearch}
                     onChange={(e) => setCuentasSearch(e.target.value)}
                   />
@@ -388,13 +458,17 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
               <EmptyState
                 icon={GraduationCap}
                 title={
-                  cuentasFilter === 'pendientes'
+                  cuentasFilter === 'inactivas'
+                    ? 'No hay cuentas de egresados inactivas'
+                    : cuentasFilter === 'pendientes'
                     ? 'No hay egresados pendientes de validación manual'
                     : 'No se encontraron cuentas de egresados'
                 }
                 description={
-                  cuentasFilter === 'pendientes'
-                    ? 'Todas las cuentas de egresados registradas en la plataforma ya han sido verificadas en el Padrón Institucional.'
+                  cuentasFilter === 'inactivas'
+                    ? 'Actualmente todas las cuentas registradas se encuentran activas y dentro de su periodo de vigencia.'
+                    : cuentasFilter === 'pendientes'
+                    ? 'Todas las cuentas activas registradas en la plataforma ya han sido verificadas en el Padrón Institucional.'
                     : 'Ajusta el filtro o término de búsqueda para consultar otros registros.'
                 }
               />
@@ -403,22 +477,28 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
                 <table className="w-full text-left text-caption">
                   <thead>
                     <tr className="bg-parchment border-b border-hairline text-ink-64 font-semibold uppercase tracking-wider text-fine">
-                      <th className="py-3.5 px-4">Matrícula / CURP</th>
+                      <th className="py-3.5 px-4">Folio / Matrícula</th>
                       <th className="py-3.5 px-4">Egresado y Cuenta</th>
                       <th className="py-3.5 px-4">Programa / Nivel</th>
                       <th className="py-3.5 px-4">Contacto y CV</th>
-                      <th className="py-3.5 px-4">Estatus Padrón</th>
-                      <th className="py-3.5 px-4 text-right">Dictamen Manual UTH</th>
+                      <th className="py-3.5 px-4">Padrón y Vigencia</th>
+                      <th className="py-3.5 px-4 text-right">Control de Cuenta UTH</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-hairline bg-canvas">
                     {filteredEgresados.map((eg) => {
                       const isProcessing = actionLoadingId === eg.id;
+                      const activa = esCuentaActiva(eg);
                       return (
                         <tr key={eg.id} className="hover:bg-pearl transition-colors">
-                          <td className="py-4 px-4 align-top">
-                            <Code>{eg.matricula}</Code>
-                            <span className="block font-mono text-fine text-ink-64 mt-1">
+                          <td className="py-4 px-4 align-top space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {eg.folio_bolsa && (
+                                <Tag>Folio #{eg.folio_bolsa}</Tag>
+                              )}
+                              <Code>{eg.matricula}</Code>
+                            </div>
+                            <span className="block font-mono text-fine text-ink-64">
                               {eg.curp}
                             </span>
                           </td>
@@ -435,7 +515,7 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
                             )}
                             {eg.fecha_registro && (
                               <span className="block text-fine text-ink-48 mt-0.5">
-                                Registrado: {formatDate(eg.fecha_registro)}
+                                Alta: {formatDate(eg.fecha_registro)}
                               </span>
                             )}
                           </td>
@@ -469,63 +549,98 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
                             )}
                           </td>
 
-                          <td className="py-4 px-4 align-top">
-                            {eg.es_verificado_padron ? (
-                              <StatusPill tone="success">Verificado en Padrón</StatusPill>
-                            ) : (
-                              <StatusPill tone="warning">En Validación Manual</StatusPill>
-                            )}
+                          <td className="py-4 px-4 align-top space-y-1.5">
+                            <div className="flex flex-wrap gap-1.5">
+                              {activa ? (
+                                <StatusPill tone="success">Activa en Bolsa</StatusPill>
+                              ) : (
+                                <StatusPill
+                                  tone={eg.motivo_inactividad === 'acceso_denegado' ? 'danger' : 'warning'}
+                                >
+                                  Inactiva · {getMotivoInactividadLabel(eg)}
+                                </StatusPill>
+                              )}
+                            </div>
+                            <div>
+                              {eg.es_verificado_padron ? (
+                                <span className="text-fine text-primary font-medium block">
+                                  Verificado en Padrón
+                                </span>
+                              ) : (
+                                <span className="text-fine text-warning font-medium block">
+                                  Pendiente en Padrón
+                                </span>
+                              )}
+                              {activa && eg.vigencia_hasta && (
+                                <span className="text-fine text-ink-64 block mt-0.5">
+                                  Vigencia: {formatDate(eg.vigencia_hasta)}
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           <td className="py-4 px-4 align-top text-right">
                             <div className="inline-flex flex-wrap items-center justify-end gap-2">
+                              {!activa ? (
+                                <Button
+                                  type="button"
+                                  variant="primary"
+                                  size="sm"
+                                  loading={isProcessing}
+                                  icon={<RotateCcw className="size-3.5" />}
+                                  onClick={() => setConfirmEstadoTarget({ egresado: eg, nuevoActivo: true })}
+                                >
+                                  Reactivar (6 meses)
+                                </Button>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  disabled={isProcessing}
+                                  icon={<UserX className="size-3.5" />}
+                                  onClick={() => setConfirmEstadoTarget({ egresado: eg, nuevoActivo: false })}
+                                >
+                                  Inactivar
+                                </Button>
+                              )}
+
                               {!eg.es_verificado_padron ? (
                                 <>
                                   <Button
                                     type="button"
-                                    variant="primary"
+                                    variant={activa ? 'primary' : 'pearl'}
                                     size="sm"
                                     loading={isProcessing}
                                     icon={<UserCheck className="size-3.5" />}
                                     onClick={() => handleVerificarManual(eg, true)}
                                   >
-                                    Validar en Padrón
+                                    Validar Padrón
                                   </Button>
-                                  <Button
-                                    type="button"
-                                    variant="danger"
-                                    size="sm"
-                                    disabled={isProcessing}
-                                    icon={<UserX className="size-3.5" />}
-                                    onClick={() => setConfirmDenyTarget(eg)}
-                                  >
-                                    Denegar Acceso
-                                  </Button>
+                                  {activa && (
+                                    <Button
+                                      type="button"
+                                      variant="danger"
+                                      size="sm"
+                                      disabled={isProcessing}
+                                      icon={<ShieldAlert className="size-3.5" />}
+                                      onClick={() => setConfirmDenyTarget(eg)}
+                                    >
+                                      Denegar Acceso
+                                    </Button>
+                                  )}
                                 </>
                               ) : (
-                                <>
-                                  <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    loading={isProcessing}
-                                    icon={<RotateCcw className="size-3.5" />}
-                                    onClick={() => handleVerificarManual(eg, false)}
-                                  >
-                                    Revocar Validación
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={isProcessing}
-                                    icon={<UserX className="size-3.5" />}
-                                    className="text-danger hover:bg-danger-tint"
-                                    onClick={() => setConfirmDenyTarget(eg)}
-                                  >
-                                    Desactivar
-                                  </Button>
-                                </>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  loading={isProcessing}
+                                  icon={<RotateCcw className="size-3.5" />}
+                                  onClick={() => handleVerificarManual(eg, false)}
+                                >
+                                  Revocar Padrón
+                                </Button>
                               )}
                             </div>
                           </td>
@@ -869,6 +984,74 @@ export default function PadronManager({ token, onStatsChange }: PadronManagerPro
           </Card>
         </div>
       )}
+
+      {/* Modal de Confirmación para Activar (6 meses) / Inactivar en Bolsa */}
+      <Modal
+        open={Boolean(confirmEstadoTarget)}
+        onClose={() => setConfirmEstadoTarget(null)}
+        size="md"
+        eyebrow="Control de Vigencia y Estatus UTH"
+        title={
+          confirmEstadoTarget?.nuevoActivo
+            ? '¿Reactivar cuenta de egresado por 6 meses?'
+            : '¿Inactivar y bloquear acceso de la cuenta?'
+        }
+        description={
+          confirmEstadoTarget?.nuevoActivo
+            ? 'Se restablecerá el inicio de sesión del egresado y se renovará automáticamente su vigencia institucional por 180 días (6 meses).'
+            : 'Se desactivará la cuenta del egresado y no podrá iniciar sesión en la plataforma hasta ser reactivado por Administración UTH.'
+        }
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setConfirmEstadoTarget(null)}
+              disabled={actionLoadingId !== null}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant={confirmEstadoTarget?.nuevoActivo ? 'primary' : 'danger'}
+              size="sm"
+              loading={actionLoadingId === confirmEstadoTarget?.egresado.id}
+              icon={confirmEstadoTarget?.nuevoActivo ? <RotateCcw className="size-3.5" /> : <UserX className="size-3.5" />}
+              onClick={handleConfirmCambiarEstado}
+            >
+              {confirmEstadoTarget?.nuevoActivo ? 'Confirmar Reactivación (6 meses)' : 'Confirmar Inactivación'}
+            </Button>
+          </>
+        }
+      >
+        {confirmEstadoTarget && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-card bg-parchment space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-body-strong text-ink">
+                  {confirmEstadoTarget.egresado.nombre_completo || `Usuario #${confirmEstadoTarget.egresado.user}`}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {confirmEstadoTarget.egresado.folio_bolsa && (
+                    <Tag>Folio #{confirmEstadoTarget.egresado.folio_bolsa}</Tag>
+                  )}
+                  <Code>{confirmEstadoTarget.egresado.matricula}</Code>
+                </div>
+              </div>
+              {confirmEstadoTarget.egresado.email && (
+                <p className="text-caption text-ink-64">{confirmEstadoTarget.egresado.email}</p>
+              )}
+              <p className="text-caption text-ink-64">{confirmEstadoTarget.egresado.carrera}</p>
+            </div>
+            <Alert tone={confirmEstadoTarget.nuevoActivo ? 'info' : 'warning'}>
+              {confirmEstadoTarget.nuevoActivo
+                ? 'El egresado recibirá confirmación por correo electrónico informándole que su servicio de Bolsa de Trabajo UTH ha sido reactivado.'
+                : 'Al intentar iniciar sesión, el egresado verá un aviso indicando que su cuenta está inactiva y que debe comunicarse con el administrador UTH.'}
+            </Alert>
+          </div>
+        )}
+      </Modal>
 
       {/* Modal de Confirmación para Denegar Acceso / Desactivar Cuenta */}
       <Modal

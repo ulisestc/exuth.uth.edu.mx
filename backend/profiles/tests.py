@@ -302,3 +302,68 @@ class ProfilesE2ETests(APITestCase):
             self.assertEqual(res.data['estado'], 'Puebla')
             for campo in campos_privados:
                 self.assertIn(campo, res.data)
+
+    def test_control_activo_inactivo_y_reactivacion_admin_uth(self):
+        """TARJETA #16: Admin UTH ve cuentas activas/inactivas, alterna estado y al reactivar renueva vigencia de 6 meses."""
+        from datetime import timedelta
+        from django.utils import timezone
+
+        eg = Egresado.objects.create(
+            user=self.user_egresado_1,
+            matricula="2026777",
+            curp="TEST77777777777777",
+            telefono_celular="2227777777",
+            domicilio="Huejotzingo",
+            genero="M",
+            carrera=self.carrera,
+            habilidades="Python",
+        )
+        self.assertIsNotNone(eg.folio_bolsa)
+        self.assertTrue(eg.activo_bolsa)
+
+        user_admin = User.objects.create_user(
+            email="admin_toggle@uth.edu.mx", password="password123", rol="admin_uth", is_active=True
+        )
+        client_admin = APIClient()
+        client_admin.credentials(HTTP_AUTHORIZATION=f'JWT {RefreshToken.for_user(user_admin).access_token}')
+
+        # RBAC: El propio egresado y una empresa NO pueden cambiar el estado de cuenta (403 Forbidden)
+        for cliente_no_admin in (self.client_e1, self.client_emp):
+            res_forb = cliente_no_admin.patch(
+                f'/api/v1/profiles/egresados/{eg.id}/cambiar-estado-cuenta/', {'activo': False}, format='json'
+            )
+            self.assertEqual(res_forb.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Admin UTH inactiva manualmente
+        res_inact = client_admin.patch(
+            f'/api/v1/profiles/egresados/{eg.id}/cambiar-estado-cuenta/', {'activo': False}, format='json'
+        )
+        self.assertEqual(res_inact.status_code, status.HTTP_200_OK)
+        self.assertFalse(res_inact.data['activo_bolsa'])
+        self.assertEqual(res_inact.data['motivo_inactividad'], 'manual')
+
+        # Incluso si se aplica Denegar Acceso (DELETE), Admin UTH sigue viéndolo en el listado para poder reactivarlo
+        res_del = client_admin.delete(f'/api/v1/profiles/egresados/{eg.id}/')
+        self.assertEqual(res_del.status_code, status.HTTP_204_NO_CONTENT)
+
+        res_list = client_admin.get('/api/v1/profiles/egresados/')
+        ids_visibles = [item['id'] for item in res_list.data.get('results', res_list.data)]
+        self.assertIn(eg.id, ids_visibles)
+
+        # Simular vigencia vencida hace 20 días y reactivar desde Admin UTH -> nueva vigencia a +180 días
+        Egresado.objects.filter(pk=eg.pk).update(
+            vigencia_hasta=timezone.now() - timedelta(days=20),
+            aviso_vencimiento_enviado=True,
+        )
+        res_react = client_admin.patch(
+            f'/api/v1/profiles/egresados/{eg.id}/cambiar-estado-cuenta/', {'activo': True}, format='json'
+        )
+        self.assertEqual(res_react.status_code, status.HTTP_200_OK)
+        eg.refresh_from_db()
+        eg.user.refresh_from_db()
+        self.assertTrue(eg.activo_bolsa)
+        self.assertIsNone(eg.motivo_inactividad)
+        self.assertFalse(eg.aviso_vencimiento_enviado)
+        self.assertTrue(eg.user.is_active)
+        self.assertIsNone(eg.user.deactivated_at)
+        self.assertGreater(eg.vigencia_hasta, timezone.now() + timedelta(days=179))

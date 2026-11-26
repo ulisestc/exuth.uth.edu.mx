@@ -351,9 +351,12 @@ export interface DocumentoPrecargadoItem {
   fecha_subida: string;
 }
 
+export type MotivoInactividadEgresado = 'colocado' | 'vencimiento' | 'manual' | 'acceso_denegado';
+
 export interface EgresadoProfile {
   id: number;
   user: number;
+  folio_bolsa?: number | null;
   matricula: string;
   curp: string;
   cv: string | null;
@@ -375,6 +378,12 @@ export interface EgresadoProfile {
   documentos_precargados?: DocumentoPrecargadoItem[];
   colocado: boolean;
   es_verificado_padron: boolean;
+  activo_bolsa?: boolean;
+  motivo_inactividad?: MotivoInactividadEgresado | null;
+  vigencia_hasta?: string | null;
+  user_is_active?: boolean;
+  deactivated_at?: string | null;
+  cuenta_activa?: boolean;
 }
 
 export async function fetchMiPerfilEgresado(token: string): Promise<EgresadoProfile | null> {
@@ -748,6 +757,39 @@ export async function denegarAccesoEgresado(
     return { success: true };
   } catch (error: any) {
     console.error('Error denegando acceso a egresado:', error);
+    return {
+      success: false,
+      error: error.message || 'Error de conexión con el servidor.',
+    };
+  }
+}
+
+export async function cambiarEstadoCuentaEgresado(
+  accessToken: string,
+  egresadoId: number,
+  activo: boolean
+): Promise<{ success: boolean; profile?: EgresadoProfile; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/profiles/egresados/${egresadoId}/cambiar-estado-cuenta/`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ activo }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.detail || data.activo?.[0] || 'No se pudo actualizar el estado de la cuenta.',
+      };
+    }
+
+    return { success: true, profile: data };
+  } catch (error: any) {
+    console.error('Error cambiando estado de cuenta de egresado:', error);
     return {
       success: false,
       error: error.message || 'Error de conexión con el servidor.',

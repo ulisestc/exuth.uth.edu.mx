@@ -24,19 +24,20 @@ class EgresadoViewSet(viewsets.ModelViewSet):
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     
-    filterset_fields = ['carrera', 'es_verificado_padron', 'colocado', 'nivel_estudios']
+    filterset_fields = ['carrera', 'es_verificado_padron', 'colocado', 'nivel_estudios', 'activo_bolsa', 'motivo_inactividad']
     
     # Podemos buscar por matrícula, curp, correo o cruzar a la tabla User para buscar por nombre
     search_fields = [
         'matricula', 
         'curp', 
+        'folio_bolsa',
         'user__email',
         'user__nombres', 
         'user__apellido_paterno', 
         'user__apellido_materno'
     ]
     
-    ordering_fields = ['id', 'matricula']
+    ordering_fields = ['id', 'matricula', 'folio_bolsa']
     ordering = ['-id']
 
     def create(self, request, *args, **kwargs):
@@ -61,11 +62,14 @@ class EgresadoViewSet(viewsets.ModelViewSet):
         serializer.save(user=user, es_verificado_padron=existe_en_padron)
 
     def get_queryset(self):
-        return (
+        qs = (
             Egresado.objects.select_related('user', 'carrera')
             .prefetch_related('documentos_precargados')
-            .filter(user__deactivated_at__isnull=True)
         )
+        user = self.request.user
+        if user.is_authenticated and (getattr(user, 'rol', None) in ['admin_uth', 'soporte_ti'] or user.is_superuser):
+            return qs.all()
+        return qs.filter(user__deactivated_at__isnull=True)
 
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
     def me(self, request):
@@ -74,6 +78,7 @@ class EgresadoViewSet(viewsets.ModelViewSet):
             raise NotFound("No cuentas con un perfil de egresado registrado.")
         
         egresado = request.user.egresado
+        egresado.verificar_vigencia()
 
         if request.method == 'GET':
             serializer = self.get_serializer(egresado)
@@ -304,13 +309,71 @@ class EgresadoViewSet(viewsets.ModelViewSet):
 
         return Response(EgresadoSerializer(egresado).data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['patch'], url_path='cambiar-estado-cuenta')
+    def cambiar_estado_cuenta(self, request, pk=None):
+        """
+        Permite al Administrador UTH activar (reactivando vigencia de 6 meses)
+        o inactivar en Bolsa la cuenta de un egresado sin pasar por Django Admin.
+        """
+        if request.user.rol not in ['admin_uth', 'soporte_ti'] and not request.user.is_superuser:
+            raise PermissionDenied("Solo administradores de la UTH pueden activar o inactivar cuentas de egresados.")
+
+        raw_activo = request.data.get('activo', None)
+        if raw_activo is None:
+            raise ValidationError({"activo": "Debes indicar el estado deseado ('activo': true o false)."})
+
+        activar = raw_activo is True or (isinstance(raw_activo, str) and raw_activo.strip().lower() in ['true', '1'])
+        egresado = self.get_object()
+
+        if activar:
+            from datetime import timedelta
+            from notificaciones.utils import enviar_correo_institucional
+
+            egresado.user.is_active = True
+            egresado.user.deactivated_at = None
+            egresado.user.save(update_fields=['is_active', 'deactivated_at'])
+
+            egresado.activo_bolsa = True
+            egresado.motivo_inactividad = None
+            egresado.vigencia_hasta = timezone.now() + timedelta(days=180)
+            egresado.aviso_vencimiento_enviado = False
+            egresado.save(update_fields=[
+                'activo_bolsa',
+                'motivo_inactividad',
+                'vigencia_hasta',
+                'aviso_vencimiento_enviado',
+            ])
+
+            if egresado.user and egresado.user.email:
+                enviar_correo_institucional(
+                    subject="[UTH Bolsa de Trabajo] Tu cuenta ha sido reactivada por 6 meses",
+                    template_name='emails/reactivacion_cuenta_egresado.html',
+                    context={'egresado': egresado},
+                    recipient_list=[egresado.user.email],
+                )
+        else:
+            ahora = timezone.now()
+            egresado.user.is_active = False
+            egresado.user.deactivated_at = ahora
+            egresado.user.save(update_fields=['is_active', 'deactivated_at'])
+
+            egresado.activo_bolsa = False
+            egresado.motivo_inactividad = 'manual'
+            egresado.save(update_fields=['activo_bolsa', 'motivo_inactividad'])
+
+        return Response(EgresadoSerializer(egresado, context={'request': request}).data, status=status.HTTP_200_OK)
+
     def destroy(self, request, *args, **kwargs):
-        #SOFT DELETE USANDO DEACTIVATED_AT DE USER
+        # Denegación total de acceso (bloquea inicio de sesión y marca cuenta como acceso_denegado)
         instance = self.get_object()
 
-        # lógica de borrado suave
+        instance.user.is_active = False
         instance.user.deactivated_at = timezone.now()
-        instance.user.save()
+        instance.user.save(update_fields=['is_active', 'deactivated_at'])
+
+        instance.activo_bolsa = False
+        instance.motivo_inactividad = 'acceso_denegado'
+        instance.save(update_fields=['activo_bolsa', 'motivo_inactividad'])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

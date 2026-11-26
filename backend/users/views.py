@@ -42,60 +42,22 @@ class ReactivateAccountRequestView(APIView):
 
     @extend_schema(request=ReactivateRequestSerializer)
     def post(self, request):
-        email = request.data.get('email')
-        
-        if not email:
-            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            user = User.objects.get(email=email)
-            #solo si usuario es desactivado sigue
-            if user.deactivated_at is not None:
-                # 1 encriptar id para url
-                uid = urlsafe_base64_encode(force_bytes(user.pk))
-                # 2 generar token
-                token = default_token_generator.make_token(user)
+        return Response(
+            {
+                'detail': 'La reactivación de cuentas es gestionada exclusivamente por la Dirección de Vinculación y Bolsa de Trabajo UTH. Comunícate a bolsadetrabajo@uth.edu.mx.'
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
-                #3 construir enlace
-                reactivation_link = f"{settings.FRONTEND_URL}/reactivate-account/{uid}/{token}/"
 
-                #4. enviar correo
-                send_mail(
-                    subject="Reactivación de Cuenta - EXUTH",
-                    message=f"Hola {user.nombres}, haz clic en el siguiente enlace para reactivar tu cuenta: {reactivation_link}",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False,
-                )
-        except User.DoesNotExist:
-            # No revelar si el usuario existe o no
-            pass
-        
-        return Response({'message': 'Si el correo electrónico existe y la cuenta está desactivada, se ha enviado un enlace de reactivación.'}, status=status.HTTP_200_OK)
-    
 class ReactivateAccountConfirmView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(request=ReactivateConfirmSerializer)
-    def post(self,request):
-        uidb64 = request.data.get('uid')
-        token = request.data.get('token')
-
-        if not uidb64 or not token:
-            return Response({'error': 'Faltan credenciales de reactivación'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            #1. decodificar uid
-            uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            user = None
-
-        #validar usuario existente y que token sea correcto / no expirado
-        if user is not None and default_token_generator.check_token(user, token):
-            # Reactivar la cuenta
-            user.deactivated_at = None
-            user.save()
-            return Response({'message': 'Cuenta reactivada exitosamente.'}, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'Enlace de reactivación inválido o expirado.'}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request):
+        return Response(
+            {
+                'detail': 'La reactivación de cuentas es gestionada exclusivamente por la Dirección de Vinculación y Bolsa de Trabajo UTH.'
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )

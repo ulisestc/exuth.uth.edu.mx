@@ -1,0 +1,30 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Cuenta Reactivada en Bolsa de Trabajo - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-success">Cuenta Reactivada</span>
+<h2>Tu cuenta en la Bolsa de Trabajo UTH ha sido reactivada</h2>
+
+<p>Estimada(o) <strong>{{ egresado.user.nombres }} {{ egresado.user.apellido_paterno }}</strong>,</p>
+
+<p>Te informamos que la Dirección de Vinculación y el Departamento de Desempeño de Egresados de la UTH han <strong>reactivado</strong> tu cuenta en el servicio de Bolsa de Trabajo en Línea.</p>
+
+<div class="card">
+    <div class="card-title">Detalles de tu Reactivación</div>
+    <p><strong>Folio Bolsa de Trabajo:</strong> <span class="code-box">{{ egresado.folio_bolsa|default:egresado.id }}</span></p>
+    <p><strong>Matrícula:</strong> {{ egresado.matricula }}</p>
+    <p><strong>Estatus Operativo:</strong> Activo para postulaciones</p>
+    {% if egresado.vigencia_hasta %}
+    <p><strong>Nueva vigencia de 6 meses hasta:</strong> {{ egresado.vigencia_hasta|date:"d/m/Y" }}</p>
+    {% endif %}
+</div>
+
+<p>Ya puedes postularte nuevamente a las ofertas laborales disponibles en la plataforma institucional. Te recomendamos revisar que tu Currículum Vitae en PDF se encuentre actualizado.</p>
+
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/vacantes" class="btn">Explorar Vacantes Activas &rarr;</a>
+</div>
+
+<p style="margin-top: 24px;">Atentamente,<br><strong>Departamento de Desempeño de Egresados UTH</strong></p>
+{% endblock %}

@@ -23,13 +23,17 @@ class EgresadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Egresado
         fields = [
-            'id', 'user', 'matricula', 'curp', 'cv', 'carrera',
+            'id', 'user', 'folio_bolsa', 'matricula', 'curp', 'cv', 'carrera',
             'telefono_celular', 'telefono_casa', 'domicilio',
             'nivel_estudios', 'genero', 'capacidades_especiales',
             'habilidades', 'documentos_precargados',
-            'colocado', 'es_verificado_padron'
+            'colocado', 'es_verificado_padron',
+            'activo_bolsa', 'motivo_inactividad', 'vigencia_hasta',
         ]
-        read_only_fields = ['id', 'user', 'colocado', 'es_verificado_padron', 'documentos_precargados']
+        read_only_fields = [
+            'id', 'user', 'folio_bolsa', 'colocado', 'es_verificado_padron',
+            'documentos_precargados', 'activo_bolsa', 'motivo_inactividad', 'vigencia_hasta',
+        ]
 
     def to_representation(self, instance):
         # 1. Obtiene el diccionario original (donde 'carrera' es un número)
@@ -47,6 +51,13 @@ class EgresadoSerializer(serializers.ModelSerializer):
             representation['email'] = instance.user.email
             representation['fecha_registro'] = (
                 instance.user.date_joined.isoformat() if instance.user.date_joined else None
+            )
+            representation['user_is_active'] = instance.user.is_active
+            representation['deactivated_at'] = (
+                instance.user.deactivated_at.isoformat() if instance.user.deactivated_at else None
+            )
+            representation['cuenta_activa'] = bool(
+                instance.activo_bolsa and instance.user.is_active and instance.user.deactivated_at is None
             )
         return representation
 
