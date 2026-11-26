@@ -76,8 +76,8 @@ class NotificacionesTestSuite(TestCase):
     # 1. HAPPY PATHS: SIGNALS E INMEDIATOS (EMPRESA, VACANTE, POSTULACION)
     # -------------------------------------------------------------------------
 
-    def test_happy_signal_nueva_empresa_notifica_admin(self):
-        """HAPPY PATH: Al crear una Empresa se notifica al administrador UTH."""
+    def test_happy_signal_nueva_empresa_confirma_empresa_y_notifica_admin(self):
+        """TARJETA #13: Al crear una Empresa se confirma a la Empresa (sin cláusula de egresado) y se alerta al Admin UTH."""
         mail.outbox = []
         user_emp2 = User.objects.create_user(
             email="emp2@test.com", password="Pass123!", nombres="Empresa 2", rol="empresa", is_active=True
@@ -86,7 +86,7 @@ class NotificacionesTestSuite(TestCase):
             user=user_emp2,
             nombre="Empresa Dos",
             domicilio="Calle 2",
-            correo_contacto="emp2@test.com",
+            correo_contacto="contacto_emp2@test.com",
             actividad_de_la_empresa="Servicios",
             giro=self.giro,
             sector=self.sector,
@@ -95,10 +95,57 @@ class NotificacionesTestSuite(TestCase):
         )
 
         self._ejecutar_hilos()
-        self.assertTrue(len(mail.outbox) >= 1)
-        ultimo_correo = mail.outbox[-1]
-        self.assertIn("Nueva Empresa Registrada", ultimo_correo.subject)
-        self.assertIn("admin@test.com", ultimo_correo.to)
+        correos_admin = [m for m in mail.outbox if "Nueva Empresa Registrada" in m.subject]
+        correos_empresa = [m for m in mail.outbox if "Confirmación de Registro Empresarial" in m.subject]
+
+        self.assertEqual(len(correos_admin), 1)
+        self.assertIn("admin@test.com", correos_admin[0].to)
+
+        self.assertEqual(len(correos_empresa), 1)
+        self.assertIn("contacto_emp2@test.com", correos_empresa[0].to)
+        self.assertIn("emp2@test.com", correos_empresa[0].to)
+        html_emp = correos_empresa[0].alternatives[0][0]
+        self.assertNotIn("UTH-VN-DDE-F-DSBT/01", html_emp)
+        self.assertNotIn("Tu vigencia es de 6 meses a partir de esta fecha", html_emp)
+
+    def test_happy_signal_nuevo_egresado_envia_folio_clausula_y_notifica_admin(self):
+        """TARJETA #13: Registro de egresado asigna folio consecutivo único, envía cláusula oficial y notifica a Admin UTH."""
+        mail.outbox = []
+        u_eg2 = User.objects.create_user(
+            email="egresado2@test.com",
+            password="SecretPassword99!",
+            nombres="María",
+            apellido_paterno="Hernández",
+            apellido_materno="Soto",
+            rol="egresado",
+            is_active=True,
+        )
+        eg2 = Egresado.objects.create(
+            user=u_eg2,
+            matricula="2026999",
+            curp="HESM010101MPLRRA09",
+            carrera=self.carrera,
+            telefono_celular="2221234567",
+            domicilio="Huejotzingo",
+            genero="F",
+            habilidades="Django, Next.js",
+        )
+
+        self._ejecutar_hilos()
+        self.assertIsNotNone(eg2.folio_bolsa)
+        self.assertGreater(eg2.folio_bolsa, self.egresado.folio_bolsa)
+
+        correos_eg = [m for m in mail.outbox if f"Folio #{eg2.folio_bolsa}" in m.subject and "egresado2@test.com" in m.to]
+        correos_admin = [m for m in mail.outbox if "Nuevo Egresado Registrado" in m.subject and "admin@test.com" in m.to]
+
+        self.assertEqual(len(correos_eg), 1)
+        self.assertEqual(len(correos_admin), 1)
+
+        html_eg = correos_eg[0].alternatives[0][0]
+        self.assertIn("Este usuario y contraseña son de uso personal y quedan bajo tu responsabilidad", html_eg)
+        self.assertIn("Tu vigencia es de 6 meses a partir de esta fecha", html_eg)
+        self.assertIn("UTH-VN-DDE-F-DSBT/01", html_eg)
+        self.assertNotIn("SecretPassword99!", html_eg)
 
     def test_happy_signal_aprobacion_empresa_notifica_empresa(self):
         """HAPPY PATH: Al cambiar estatus de Empresa a 'aprobada', notifica a la Empresa."""
@@ -353,38 +400,94 @@ class NotificacionesTestSuite(TestCase):
         self.assertTrue(len(mail.outbox) >= 1)
 
     def test_happy_cronjob_limpieza_inactivos_aviso_y_desactivacion(self):
-        """HAPPY PATH & SAD PATH: limpieza_inactivos alerta a los 165 días y desactiva a los 180 días exactos."""
-        hoy = timezone.now().date()
-        fecha_165 = hoy - timedelta(days=165)
-        fecha_180 = hoy - timedelta(days=180)
-        fecha_reciente = hoy - timedelta(days=10)
+        """TARJETA #14: limpieza_inactivos envía aviso único <= 15 días antes e inactiva con vigencia_hasta <= ahora (incluso con atraso)."""
+        ahora = timezone.now()
 
         u_aviso = User.objects.create_user(
             email="aviso@test.com", password="Pass123!", nombres="User Aviso", rol="egresado", is_active=True
         )
-        u_desact = User.objects.create_user(
+        eg_aviso = Egresado.objects.create(
+            user=u_aviso,
+            matricula="2026165",
+            curp="AVIS010101HPLRRA01",
+            carrera=self.carrera,
+            telefono_celular="2221111111",
+            domicilio="Huejotzingo",
+            genero="M",
+            habilidades="Python",
+            vigencia_hasta=ahora + timedelta(days=10),
+        )
+
+        u_vencido = User.objects.create_user(
             email="desact@test.com", password="Pass123!", nombres="User Desact", rol="egresado", is_active=True
         )
+        eg_vencido = Egresado.objects.create(
+            user=u_vencido,
+            matricula="2026185",
+            curp="VENC010101HPLRRA02",
+            carrera=self.carrera,
+            telefono_celular="2222222222",
+            domicilio="Huejotzingo",
+            genero="M",
+            habilidades="Python",
+            vigencia_hasta=ahora - timedelta(days=5),
+        )
+
         u_activo = User.objects.create_user(
             email="activo@test.com", password="Pass123!", nombres="User Activo", rol="egresado", is_active=True
         )
+        eg_activo = Egresado.objects.create(
+            user=u_activo,
+            matricula="2026010",
+            curp="ACTI010101HPLRRA03",
+            carrera=self.carrera,
+            telefono_celular="2223333333",
+            domicilio="Huejotzingo",
+            genero="M",
+            habilidades="Python",
+            vigencia_hasta=ahora + timedelta(days=170),
+        )
 
-        User.objects.filter(id=u_aviso.id).update(last_login=timezone.make_aware(timezone.datetime.combine(fecha_165, timezone.datetime.min.time())))
-        User.objects.filter(id=u_desact.id).update(last_login=timezone.make_aware(timezone.datetime.combine(fecha_180, timezone.datetime.min.time())))
-        User.objects.filter(id=u_activo.id).update(last_login=timezone.make_aware(timezone.datetime.combine(fecha_reciente, timezone.datetime.min.time())))
-
+        self._ejecutar_hilos()
         mail.outbox = []
+
         out = io.StringIO()
         call_command("limpieza_inactivos", stdout=out)
         self._ejecutar_hilos()
 
-        u_desact.refresh_from_db()
-        self.assertFalse(u_desact.is_active)
+        eg_aviso.refresh_from_db()
+        self.assertTrue(eg_aviso.activo_bolsa)
+        self.assertTrue(eg_aviso.aviso_vencimiento_enviado)
 
+        eg_vencido.refresh_from_db()
+        u_vencido.refresh_from_db()
+        self.assertFalse(eg_vencido.activo_bolsa)
+        self.assertEqual(eg_vencido.motivo_inactividad, 'vencimiento')
+        self.assertFalse(u_vencido.is_active)
+        self.assertIsNotNone(u_vencido.deactivated_at)
+
+        eg_activo.refresh_from_db()
+        self.assertTrue(eg_activo.activo_bolsa)
+
+        self.assertEqual(len(mail.outbox), 2)
+
+        # Ejecutar por segunda vez el mismo día NO debe volver a enviar correos duplicados
+        mail.outbox = []
+        call_command("limpieza_inactivos", stdout=io.StringIO())
+        self._ejecutar_hilos()
+        self.assertEqual(len(mail.outbox), 0)
+
+        # Blindaje en tiempo real en login: si una cuenta vence antes de correr el cron, bloquea al instante con motivo 'vencimiento'
+        from rest_framework.test import APIClient
+        Egresado.objects.filter(pk=eg_activo.pk).update(vigencia_hasta=ahora - timedelta(minutes=5))
+        res_login_vencido = APIClient().post('/api/v1/auth/jwt/create/', {
+            'email': 'activo@test.com',
+            'password': 'Pass123!',
+        })
+        self.assertEqual(res_login_vencido.status_code, 403)
+        self.assertEqual(res_login_vencido.data['motivo_inactividad'], 'vencimiento')
         u_activo.refresh_from_db()
-        self.assertTrue(u_activo.is_active)
-
-        self.assertTrue(len(mail.outbox) >= 2)
+        self.assertFalse(u_activo.is_active)
 
     # -------------------------------------------------------------------------
     # 5. CORREO OFICIAL DE TURNADO DE CV A EMPRESA (TARJETA #11)

@@ -198,13 +198,84 @@ class CustomUserSerializer(BaseUserSerializer):
         fields = ('id', 'email', 'nombres', 'apellido_paterno', 'apellido_materno', 'rol', 'is_active', 'deactivated_at', 'date_joined', 'last_login', 'acepta_aviso_privacidad', 'fecha_aviso_privacidad')
         read_only_fields = ('id', 'email', 'rol', 'is_active', 'deactivated_at', 'date_joined', 'last_login', 'acepta_aviso_privacidad', 'fecha_aviso_privacidad')
 
-# Serializador custom para evitar que usuario con deactivated_at != None pueda iniciar sesión
+from rest_framework.exceptions import APIException
+
+
+class CuentaInactivaLoginError(APIException):
+    status_code = 403
+    default_code = 'cuenta_inactiva'
+
+
+# Serializador custom para bloquear login de cuentas inactivas mostrando motivo específico (colocación o inactividad)
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        data = super().validate(attrs)
-        if self.user.deactivated_at is not None:
-            raise serializers.ValidationError("Este usuario ha sido desactivado y no puede iniciar sesión.")
-        return data
+        from datetime import timedelta
+        from django.conf import settings
+
+        email = (attrs.get(self.username_field) or '').strip()
+        password = attrs.get('password') or ''
+        contacto_uth = getattr(settings, 'UTH_BOLSA_CC_EMAIL', 'bolsadetrabajo@uth.edu.mx')
+
+        user = User.objects.select_related('egresado').filter(email__iexact=email).first() if email else None
+
+        # Verificar contraseña primero para nunca revelar el estatus de una cuenta a terceros sin credenciales válidas
+        if user and password and user.check_password(password):
+            ahora = timezone.now()
+            egresado = getattr(user, 'egresado', None) if user.rol == 'egresado' else None
+
+            # Blindaje en tiempo real: si ya venció su periodo de 6 meses y aún no había corrido el cron
+            if egresado and egresado.vigencia_hasta and egresado.vigencia_hasta <= ahora:
+                if user.is_active or egresado.activo_bolsa:
+                    user.is_active = False
+                    user.deactivated_at = ahora
+                    user.save(update_fields=['is_active', 'deactivated_at'])
+                    egresado.activo_bolsa = False
+                    egresado.motivo_inactividad = 'vencimiento'
+                    egresado.save(update_fields=['activo_bolsa', 'motivo_inactividad'])
+
+            es_inactiva = (
+                user.deactivated_at is not None
+                or (egresado is not None and (not egresado.activo_bolsa or bool(egresado.motivo_inactividad)))
+            )
+
+            if es_inactiva:
+                motivo = (
+                    (egresado.motivo_inactividad if egresado else None)
+                    or ('colocado' if (egresado and egresado.colocado) else 'manual')
+                )
+
+                if motivo == 'colocado':
+                    raise CuentaInactivaLoginError({
+                        'motivo_inactividad': 'colocado',
+                        'titulo': '¡Felicitaciones por tu contratación laboral!',
+                        'detail': (
+                            f'Derivado de tu aceptación en una vacante vinculada por la UTH, tu cuenta se encuentra '
+                            f'actualmente inactiva. En caso de requerir reactivar tu acceso al sistema, comunícate '
+                            f'con el administrador de Bolsa de Trabajo UTH ({contacto_uth}).'
+                        ),
+                    })
+
+                if motivo == 'vencimiento':
+                    raise CuentaInactivaLoginError({
+                        'motivo_inactividad': 'vencimiento',
+                        'titulo': 'Cuenta inactiva por conclusión de vigencia (6 meses)',
+                        'detail': (
+                            f'Tu periodo institucional de 6 meses de vigencia en la Bolsa de Trabajo UTH ha concluido '
+                            f'y tu cuenta se encuentra inactiva. Para solicitar su reactivación, comunícate con el '
+                            f'administrador de Bolsa de Trabajo UTH ({contacto_uth}).'
+                        ),
+                    })
+
+                raise CuentaInactivaLoginError({
+                    'motivo_inactividad': motivo,
+                    'titulo': 'Cuenta inactiva',
+                    'detail': (
+                        f'Tu cuenta en la Bolsa de Trabajo UTH se encuentra actualmente desactivada. En caso de '
+                        f'requerir su reactivación, comunícate con el administrador de Bolsa de Trabajo UTH ({contacto_uth}).'
+                    ),
+                })
+
+        return super().validate(attrs)
     
 class ReactivateRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(help_text="Correo electrónico de la cuenta desactivada")

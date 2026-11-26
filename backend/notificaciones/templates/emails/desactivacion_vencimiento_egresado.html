@@ -1,19 +1,19 @@
 {% extends 'emails/base_email.html' %}
 
-{% block title %}Cuenta Desactivada por Inactividad - UTH{% endblock %}
+{% block title %}Vigencia de 6 Meses Concluida - UTH{% endblock %}
 
 {% block content %}
-<span class="badge badge-danger">Cuenta Desactivada</span>
-<h2>Tu registro en Bolsa de Trabajo UTH ha sido desactivado temporalmente</h2>
+<span class="badge badge-danger">Cuenta Inactiva</span>
+<h2>Tu periodo de vigencia de 6 meses en Bolsa de Trabajo UTH ha concluido</h2>
 
 <p>Hola <strong>{{ user.nombres }} {{ user.apellido_paterno }}</strong>,</p>
 
-<p>Te notificamos que al haber transcurrido <strong>6 meses (180 días)</strong> sin inicio de sesión en la plataforma EXUTH, tu cuenta ha sido desactivada temporalmente conforme a los lineamientos institucionales.</p>
+<p>Te notificamos que al haberse cumplido tu periodo de <strong>6 meses (180 días)</strong> de vigencia en la plataforma EXUTH, tu cuenta ha sido desactivada conforme a los lineamientos institucionales.</p>
 
 <div class="card">
-    <div class="card-title">¿Cómo reactivar tu cuenta?</div>
-    <p>Si deseas reactivar tu perfil para postularte a nuevas vacantes y recibir convocatorias laborales, por favor ponte en contacto con el Departamento de Empleabilidad y Bolsa de Trabajo UTH o solicita tu reactivación a través del portal.</p>
+    <div class="card-title">¿Cómo solicitar la reactivación de tu cuenta?</div>
+    <p>En caso de requerir reactivar tu acceso por un nuevo periodo de 6 meses para continuar postulándote a vacantes, por favor comunícate con la Dirección de Vinculación / Departamento de Desempeño de Egresados UTH (<a href="mailto:{{ contacto_uth|default:'bolsadetrabajo@uth.edu.mx' }}" style="color: #007F66; font-weight: 600;">{{ contacto_uth|default:'bolsadetrabajo@uth.edu.mx' }}</a>).</p>
 </div>
 
-<p>Atentamente,<br><strong>Departamento de Empleabilidad y Bolsa de Trabajo UTH</strong></p>
+<p style="margin-top: 24px;">Atentamente,<br><strong>Departamento de Desempeño de Egresados UTH</strong></p>
 {% endblock %}

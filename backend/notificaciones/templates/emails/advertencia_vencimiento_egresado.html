@@ -1,21 +1,24 @@
 {% extends 'emails/base_email.html' %}
 
-{% block title %}Aviso de Próximo Vencimiento - UTH{% endblock %}
+{% block title %}Aviso de Próximo Vencimiento de Vigencia - UTH{% endblock %}
 
 {% block content %}
-<span class="badge badge-warning">Aviso Importante</span>
-<h2>Tu cuenta en la Bolsa de Trabajo UTH vencerá pronto</h2>
+<span class="badge badge-warning">Aviso Preventivo</span>
+<h2>Tu vigencia de 6 meses en Bolsa de Trabajo UTH vencerá pronto</h2>
 
 <p>Hola <strong>{{ user.nombres }} {{ user.apellido_paterno }}</strong>,</p>
 
-<p>Te informamos que han transcurrido <strong>5 meses y medio (165 días)</strong> desde tu último inicio de sesión en el Sistema de Bolsa de Trabajo y Empleabilidad UTH.</p>
+<p>Te informamos que tu periodo institucional de <strong>6 meses (180 días)</strong> de vigencia en el Servicio de Bolsa de Trabajo en Línea de la UTH está próximo a concluir{% if egresado.vigencia_hasta %} el día <strong>{{ egresado.vigencia_hasta|date:"d/m/Y" }}</strong>{% endif %}.</p>
 
 <div class="card">
-    <div class="card-title">¿Qué ocurrirá si no inicias sesión?</div>
-    <p>En <strong>15 días</strong> (al cumplir 6 meses de inactividad), tu cuenta será desactivada temporalmente para proteger tu privacidad y mantener actualizado nuestro padrón de egresados.</p>
+    <div class="card-title">¿Qué ocurrirá al concluir tu vigencia?</div>
+    <p>Al cumplirse los 6 meses desde tu alta o última reactivación, tu cuenta pasará automáticamente a estatus <strong>Inactivo</strong> y el acceso quedará suspendido conforme a los lineamientos institucionales.</p>
+    <p>Si continúas en búsqueda laboral activa y deseas renovar tu vigencia por 6 meses adicionales, comunícate con el Departamento de Desempeño de Egresados UTH (<a href="mailto:{{ contacto_uth|default:'bolsadetrabajo@uth.edu.mx' }}" style="color: #007F66; font-weight: 600;">{{ contacto_uth|default:'bolsadetrabajo@uth.edu.mx' }}</a>).</p>
 </div>
 
-<p>Para mantener tu cuenta activa y continuar recibiendo oportunidades laborales afines a tu perfil, simplemente **inicia sesión** en la plataforma EXUTH hoy mismo.</p>
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/portal-egresado" class="btn">Ir a Mi Portal de Egresado &rarr;</a>
+</div>
 
-<p>Atentamente,<br><strong>Departamento de Empleabilidad y Vinculación UTH</strong></p>
+<p style="margin-top: 24px;">Atentamente,<br><strong>Departamento de Desempeño de Egresados UTH</strong></p>
 {% endblock %}

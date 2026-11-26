@@ -1,65 +1,85 @@
+from datetime import timedelta
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from datetime import timedelta
-from django.contrib.auth import get_user_model
+from profiles.models import Egresado
 from notificaciones.utils import enviar_correo_institucional
-
-User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Comando cronjob diario para gestionar advertencia (165 días / 5.5 meses) y desactivación (180 días / 6 meses) por inactividad de egresados."
+    help = (
+        "Comando cronjob diario para gestionar aviso preventivo (15 días antes) y paso a estado "
+        "inactivo al concluir la vigencia de 6 meses (180 días) de cuentas de egresados."
+    )
 
     def handle(self, *args, **options):
-        hoy = timezone.now().date()
-        fecha_aviso = hoy - timedelta(days=165)
-        fecha_desactivacion = hoy - timedelta(days=180)
+        ahora = timezone.now()
+        limite_aviso = ahora + timedelta(days=15)
+        contacto_uth = getattr(settings, 'UTH_BOLSA_CC_EMAIL', 'bolsadetrabajo@uth.edu.mx')
 
-        # 1. Fase de Aviso: Usuarios egresados activos cuyo last_login sea de hace exactamente 165 días
-        usuarios_aviso = User.objects.filter(
-            rol='egresado',
-            is_active=True,
-            last_login__date=fecha_aviso
+        # 1. Fase de Aviso Preventivo: vigencia_hasta dentro de los próximos 15 días (una sola vez)
+        egresados_aviso = Egresado.objects.select_related('user').filter(
+            activo_bolsa=True,
+            user__is_active=True,
+            user__deactivated_at__isnull=True,
+            aviso_vencimiento_enviado=False,
+            vigencia_hasta__gt=ahora,
+            vigencia_hasta__lte=limite_aviso,
         )
 
         total_avisos = 0
-        for user in usuarios_aviso:
-            if user.email:
+        for eg in egresados_aviso:
+            eg.aviso_vencimiento_enviado = True
+            eg.save(update_fields=['aviso_vencimiento_enviado'])
+            if eg.user and eg.user.email:
                 enviar_correo_institucional(
-                    subject="Aviso: Tu cuenta en la Bolsa de Trabajo UTH vencerá en 15 días",
+                    subject="Aviso: Tu vigencia de 6 meses en la Bolsa de Trabajo UTH está próxima a concluir",
                     template_name='emails/advertencia_vencimiento_egresado.html',
-                    context={'user': user},
-                    recipient_list=[user.email]
+                    context={
+                        'user': eg.user,
+                        'egresado': eg,
+                        'contacto_uth': contacto_uth,
+                    },
+                    recipient_list=[eg.user.email],
                 )
                 total_avisos += 1
 
         self.stdout.write(
-            self.style.SUCCESS(f"[Fase de Aviso] Se despacharon {total_avisos} alertas de vencimiento (165 días de inactividad).")
+            self.style.SUCCESS(f"[Fase de Aviso] Se despacharon {total_avisos} alertas preventivas de vigencia (<= 15 días).")
         )
 
-        # 2. Fase de Desactivación: Usuarios egresados activos cuyo last_login sea de hace exactamente 180 días
-        usuarios_desactivar = User.objects.filter(
-            rol='egresado',
-            is_active=True,
-            last_login__date=fecha_desactivacion
+        # 2. Fase de Vencimiento: vigencia_hasta <= ahora (captura atrasos si el cron no corrió un día)
+        egresados_vencidos = Egresado.objects.select_related('user').filter(
+            activo_bolsa=True,
+            user__is_active=True,
+            user__deactivated_at__isnull=True,
+            vigencia_hasta__lte=ahora,
         )
 
         total_desactivados = 0
-        ahora = timezone.now()
-        for user in usuarios_desactivar:
-            user.is_active = False
-            user.deactivated_at = ahora
-            user.save(update_fields=['is_active', 'deactivated_at'])
+        for eg in egresados_vencidos:
+            eg.activo_bolsa = False
+            eg.motivo_inactividad = 'vencimiento'
+            eg.save(update_fields=['activo_bolsa', 'motivo_inactividad'])
 
-            if user.email:
+            if eg.user:
+                eg.user.is_active = False
+                eg.user.deactivated_at = ahora
+                eg.user.save(update_fields=['is_active', 'deactivated_at'])
+
+            if eg.user and eg.user.email:
                 enviar_correo_institucional(
-                    subject="Notificación: Tu cuenta en la Bolsa de Trabajo UTH ha sido desactivada",
+                    subject="Notificación: Tu periodo de vigencia de 6 meses en Bolsa de Trabajo UTH ha concluido",
                     template_name='emails/desactivacion_vencimiento_egresado.html',
-                    context={'user': user},
-                    recipient_list=[user.email]
+                    context={
+                        'user': eg.user,
+                        'egresado': eg,
+                        'contacto_uth': contacto_uth,
+                    },
+                    recipient_list=[eg.user.email],
                 )
-                total_desactivados += 1
+            total_desactivados += 1
 
         self.stdout.write(
-            self.style.SUCCESS(f"[Fase de Desactivación] Se desactivaron {total_desactivados} usuarios (180 días de inactividad).")
+            self.style.SUCCESS(f"[Fase de Vencimiento] Se inactivaron {total_desactivados} cuentas por vigencia de 6 meses concluida.")
         )

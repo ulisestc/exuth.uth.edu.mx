@@ -30,6 +30,7 @@ class Command(BaseCommand):
             emails_egresados = list(
                 Egresado.objects.filter(
                     carrera__area=area,
+                    activo_bolsa=True,
                     user__is_active=True,
                     user__deactivated_at__isnull=True
                 ).values_list('user__email', flat=True)
