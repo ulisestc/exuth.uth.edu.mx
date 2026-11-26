@@ -1,0 +1,46 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Confirmación de Registro en Bolsa de Trabajo - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-success">Comprobante de Registro · Egresado UTH</span>
+<h2>Bienvenido(a) al Servicio de Bolsa de Trabajo UTH</h2>
+
+<p style="font-size: 12px; color: #636569;">
+    Santa Ana Xalmimilulco, Huejotzingo, Pue. · Fecha de alta: <strong>{{ fecha_registro|date:"d/m/Y" }}</strong>
+</p>
+
+<p>Estimada(o) <strong>{{ egresado.user.nombres }} {{ egresado.user.apellido_paterno }} {{ egresado.user.apellido_materno }}</strong>,</p>
+
+<p>Tu registro en el Departamento de Desempeño de Egresados y Bolsa de Trabajo de la Universidad Tecnológica de Huejotzingo ha quedado formalmente dado de alta con los siguientes datos institucionales:</p>
+
+<div class="card">
+    <div class="card-title">Datos de Usuario y Expediente</div>
+    <p><strong>Folio Bolsa de Trabajo:</strong> <span class="code-box">{{ folio_bolsa }}</span></p>
+    <p><strong>Nombre:</strong> {{ egresado.user.nombres }} {{ egresado.user.apellido_paterno }} {{ egresado.user.apellido_materno }}</p>
+    <p><strong>Matrícula:</strong> {{ egresado.matricula }}</p>
+    <p><strong>Carrera:</strong> {{ egresado.carrera.nombre }}</p>
+    <p><strong>Usuario de acceso:</strong> {{ egresado.user.email }}</p>
+    {% if egresado.vigencia_hasta %}
+    <p><strong>Vigencia de cuenta hasta:</strong> {{ egresado.vigencia_hasta|date:"d/m/Y" }}</p>
+    {% endif %}
+</div>
+
+<div class="card" style="border-left-color: #691C32; background-color: #FAF9F6;">
+    <div class="card-title" style="color: #691C32;">Términos de Uso y Vigencia Institucional</div>
+    <p style="line-height: 1.65;">
+        Este usuario y contraseña son de uso personal y quedan bajo tu responsabilidad. En caso de pérdida, extravío u olvido, deberás dar aviso de inmediato al servicio de Bolsa de Trabajo de la UTH, para que estos sean dados de baja del sistema y se te asignen otros. Recuerda que el mal uso de los mismos puede ser causa de baja definitiva del Servicio de Bolsa de Trabajo de la UTH. Para poder accesar al servicio de Bolsa de Trabajo en Línea, deberás ingresar a través de la página <a href="{{ frontend_url }}" style="color: #007F66; font-weight: 600; text-decoration: none;">{{ frontend_url }}</a> y aceptar los términos de uso.
+    </p>
+    <p style="line-height: 1.65; margin-top: 10px;">
+        <strong>Tu vigencia es de 6 meses a partir de esta fecha; en caso de ser contratado derivado de alguna postulación, el sistema en automático te suspenderá de nuevas postulaciones momentáneamente.</strong>
+    </p>
+</div>
+
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/portal-egresado" class="btn">Ingresar a Mi Portal de Egresado &rarr;</a>
+</div>
+
+<p style="margin-top: 24px; font-size: 11px; color: #636569; border-top: 1px solid #E4E2DD; padding-top: 12px;">
+    <strong>CÓDIGO: UTH-VN-DDE-F-DSBT/01 · REVISIÓN: 1</strong> · Departamento de Desempeño de Egresados UTH
+</p>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Nuevo Egresado Registrado - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-info">Nuevo Registro de Egresado</span>
+<h2>Nuevo Egresado Registrado en la Plataforma</h2>
+
+<p>Estimado equipo del Departamento de Desempeño de Egresados y Bolsa de Trabajo UTH,</p>
+
+<p>Se ha registrado una nueva cuenta de egresado en el sistema institucional EXUTH:</p>
+
+<div class="card">
+    <div class="card-title">Ficha del Egresado</div>
+    <p><strong>Folio Bolsa de Trabajo:</strong> <span class="code-box">{{ folio_bolsa }}</span></p>
+    <p><strong>Nombre Completo:</strong> {{ egresado.user.nombres }} {{ egresado.user.apellido_paterno }} {{ egresado.user.apellido_materno }}</p>
+    <p><strong>Matrícula:</strong> {{ egresado.matricula }}</p>
+    <p><strong>Programa Educativo:</strong> {{ egresado.carrera.nombre }} ({{ egresado.get_nivel_estudios_display }})</p>
+    <p><strong>Correo Electrónico:</strong> {{ egresado.user.email }}</p>
+    <p><strong>Teléfono Celular:</strong> {{ egresado.telefono_celular|default:"No especificado" }}</p>
+    <p><strong>Estatus en Padrón Escolar:</strong> {% if egresado.es_verificado_padron %}Verificado automáticamente contra Padrón Oficial{% else %}Pendiente de validación manual en Padrón{% endif %}</p>
+</div>
+
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/admin-uth?tab=padron" class="btn">Consultar Padrón en Panel UTH &rarr;</a>
+</div>
+
+<p style="margin-top: 24px;">Atentamente,<br><strong>Plataforma Institucional EXUTH</strong></p>
+{% endblock %}

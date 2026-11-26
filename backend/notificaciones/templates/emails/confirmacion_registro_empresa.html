@@ -1,0 +1,29 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Confirmación de Registro Empresarial - UTH{% endblock %}
+
+{% block content %}
+<span class="badge badge-success">Registro Corporativo Confirmado</span>
+<h2>Bienvenida a la Red de Vinculación Empresarial UTH</h2>
+
+<p>Estimado(a) <strong>{{ empresa.nombre_contacto }}</strong>,</p>
+
+<p>Confirmamos el registro exitoso de <strong>{{ empresa.nombre }}</strong> en la Plataforma Institucional de Bolsa de Trabajo y Vinculación de la Universidad Tecnológica de Huejotzingo.</p>
+
+<div class="card">
+    <div class="card-title">Resumen de Cuenta Empresarial</div>
+    <p><strong>Organización:</strong> {{ empresa.nombre }}</p>
+    <p><strong>Giro / Sector:</strong> {{ empresa.giro.nombre }} / {{ empresa.sector.nombre }}</p>
+    <p><strong>Ubicación:</strong> {{ empresa.ciudad|default:"No especificada" }}, {{ empresa.estado }}</p>
+    <p><strong>Contacto Registrado:</strong> {{ empresa.nombre_contacto }} ({{ empresa.cargo_contacto }})</p>
+    <p><strong>Usuario de Acceso:</strong> {{ empresa.user.email }}</p>
+</div>
+
+<p>Su cuenta corporativa se encuentra activa para registrar vacantes laborales. Una vez que el Departamento de Desempeño de Egresados UTH revise y apruebe cada oferta, los perfiles de egresados compatibles serán filtrados y turnados a su organización.</p>
+
+<div style="text-align: center; margin-top: 24px;">
+    <a href="{{ frontend_url }}/portal-empresa" class="btn">Acceder al Panel de Empresa &rarr;</a>
+</div>
+
+<p style="margin-top: 24px;">Atentamente,<br><strong>Dirección de Vinculación y Extensión UTH</strong></p>
+{% endblock %}

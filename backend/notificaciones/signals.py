@@ -1,9 +1,10 @@
 import logging
 from django.conf import settings
+from django.utils import timezone
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
-from profiles.models import Empresa
+from profiles.models import Empresa, Egresado
 from vacantes.models import Vacante, Postulacion
 from notificaciones.utils import enviar_correo_institucional
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 # =========================================================================
-# 1. NOTIFICACIONES DE EMPRESA (PRE_SAVE + POST_SAVE)
+# 1. NOTIFICACIONES DE REGISTRO Y ESTATUS DE PERFILES (EMPRESA Y EGRESADO)
 # =========================================================================
 
 @receiver(pre_save, sender=Empresa)
@@ -31,11 +32,25 @@ def capturar_estado_anterior_empresa(sender, instance, **kwargs):
 @receiver(post_save, sender=Empresa)
 def notificar_eventos_empresa(sender, instance, created, **kwargs):
     """
-    - Si es nueva (created=True): Notifica inmediatamente al Admin UTH.
+    - Si es nueva (created=True): Confirma registro a la Empresa y notifica al Admin UTH.
     - Si cambió estatus a 'aprobada' o 'rechazada': Notifica a la propia Empresa.
     """
     if created:
-        # Notificar a administradores UTH sobre el nuevo registro
+        # 1. Confirmación de registro corporativo a la propia Empresa (sin cláusula de egresados)
+        destinatarios_empresa = [instance.correo_contacto]
+        if instance.user_id and instance.user and instance.user.email:
+            destinatarios_empresa.append(instance.user.email)
+        destinatarios_empresa = list(set(filter(None, destinatarios_empresa)))
+
+        if destinatarios_empresa:
+            enviar_correo_institucional(
+                subject=f"[UTH Vinculación] Confirmación de Registro Empresarial: {instance.nombre}",
+                template_name='emails/confirmacion_registro_empresa.html',
+                context={'empresa': instance},
+                recipient_list=destinatarios_empresa,
+            )
+
+        # 2. Notificar a administradores UTH sobre el nuevo registro empresarial
         admin_emails = list(
             User.objects.filter(rol='admin_uth', is_active=True).values_list('email', flat=True)
         )
@@ -44,7 +59,7 @@ def notificar_eventos_empresa(sender, instance, created, **kwargs):
                 subject=f"[UTH Admin] Nueva Empresa Registrada: {instance.nombre}",
                 template_name='emails/nueva_empresa_admin.html',
                 context={'empresa': instance},
-                recipient_list=admin_emails
+                recipient_list=admin_emails,
             )
     else:
         estado_anterior = getattr(instance, '_estado_anterior', None)
@@ -61,6 +76,55 @@ def notificar_eventos_empresa(sender, instance, created, **kwargs):
                     context={'empresa': instance},
                     recipient_list=destinatarios
                 )
+
+
+@receiver(post_save, sender=Egresado)
+def notificar_registro_egresado(sender, instance, created, **kwargs):
+    """
+    Al registrarse un nuevo Egresado:
+    1. Envía comprobante oficial (UTH-VN-DDE-F-DSBT/01 Rev. 1) al egresado con su folio consecutivo y cláusula obligatoria.
+    2. Notifica inmediatamente a los administradores UTH (admin_uth).
+    """
+    if not created:
+        return
+
+    folio_bolsa = instance.folio_bolsa or instance.id
+    fecha_registro = (
+        instance.user.date_joined
+        if (instance.user_id and instance.user and instance.user.date_joined)
+        else timezone.now()
+    )
+
+    if instance.user_id and instance.user and instance.user.email:
+        enviar_correo_institucional(
+            subject=f"[UTH Bolsa de Trabajo] Confirmación de Registro · Folio #{folio_bolsa}",
+            template_name='emails/confirmacion_registro_egresado.html',
+            context={
+                'egresado': instance,
+                'folio_bolsa': folio_bolsa,
+                'fecha_registro': fecha_registro,
+            },
+            recipient_list=[instance.user.email],
+        )
+
+    admin_emails = list(
+        User.objects.filter(rol='admin_uth', is_active=True).values_list('email', flat=True)
+    )
+    if admin_emails:
+        nombre_egresado = (
+            f"{instance.user.nombres} {instance.user.apellido_paterno}".strip()
+            if instance.user_id and instance.user
+            else instance.matricula
+        )
+        enviar_correo_institucional(
+            subject=f"[UTH Admin] Nuevo Egresado Registrado: {nombre_egresado} (Folio #{folio_bolsa})",
+            template_name='emails/nuevo_egresado_admin.html',
+            context={
+                'egresado': instance,
+                'folio_bolsa': folio_bolsa,
+            },
+            recipient_list=admin_emails,
+        )
 
 
 # =========================================================================

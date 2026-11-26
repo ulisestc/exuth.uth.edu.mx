@@ -1,5 +1,8 @@
-from django.db import models
+from datetime import timedelta
+from django.db import models, transaction, IntegrityError
+from django.db.models import Max
 from django.conf import settings
+from django.utils import timezone
 from core.models import Giro, Sector, Carrera
 from django.core.validators import RegexValidator, MinLengthValidator
 # Create your models here.
@@ -17,7 +20,15 @@ class Egresado(models.Model):
         ('O', 'Otro'),
     ]
 
+    MOTIVO_INACTIVIDAD_CHOICES = [
+        ('colocado', 'Contratado en Vacante'),
+        ('vencimiento', 'Vigencia de 6 Meses Concluida'),
+        ('manual', 'Inactivado por Administración UTH'),
+        ('acceso_denegado', 'Acceso Denegado'),
+    ]
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='egresado')
+    folio_bolsa = models.PositiveIntegerField(unique=True, null=True, blank=True, editable=False, verbose_name="Folio Bolsa de Trabajo")
     matricula = models.CharField(max_length=50, unique=True)
     curp = models.CharField(max_length=18, unique=True, validators=[MinLengthValidator(18)])
     cv = models.FileField(upload_to='egresados/cvs/', blank=True, null=True)
@@ -31,6 +42,43 @@ class Egresado(models.Model):
     habilidades = models.TextField(verbose_name="Habilidades Técnicas y Blandas")
     colocado = models.BooleanField(default=False, verbose_name="¿Egresado Colocado?")
     es_verificado_padron = models.BooleanField(default=False, verbose_name="Verificado contra padrón UTH")
+    activo_bolsa = models.BooleanField(default=True, db_index=True, verbose_name="Activo en Bolsa de Trabajo")
+    motivo_inactividad = models.CharField(max_length=20, choices=MOTIVO_INACTIVIDAD_CHOICES, blank=True, null=True, verbose_name="Motivo de Inactividad")
+    vigencia_hasta = models.DateTimeField(blank=True, null=True, verbose_name="Vigencia de Cuenta Hasta")
+    aviso_vencimiento_enviado = models.BooleanField(default=False, verbose_name="Aviso Preventivo 15 Días Enviado")
+
+    def save(self, *args, **kwargs):
+        es_nuevo = self._state.adding and self.pk is None
+        if es_nuevo and not self.vigencia_hasta:
+            self.vigencia_hasta = timezone.now() + timedelta(days=180)
+
+        if es_nuevo and self.folio_bolsa is None:
+            for intento in range(3):
+                try:
+                    with transaction.atomic():
+                        ultimo = Egresado.objects.select_for_update().aggregate(max_folio=Max('folio_bolsa'))['max_folio'] or 0
+                        self.folio_bolsa = ultimo + 1
+                        return super().save(*args, **kwargs)
+                except IntegrityError as exc:
+                    if 'folio_bolsa' in str(exc) and intento < 2:
+                        self.folio_bolsa = None
+                        continue
+                    raise
+
+        return super().save(*args, **kwargs)
+
+    def verificar_vigencia(self):
+        """Evalúa en tiempo real si concluyó la vigencia de 6 meses; de ser así, bloquea el acceso de la cuenta."""
+        ahora = timezone.now()
+        if self.activo_bolsa and self.vigencia_hasta and self.vigencia_hasta <= ahora:
+            self.activo_bolsa = False
+            self.motivo_inactividad = 'vencimiento'
+            self.save(update_fields=['activo_bolsa', 'motivo_inactividad'])
+            if self.user_id and self.user:
+                self.user.is_active = False
+                self.user.deactivated_at = ahora
+                self.user.save(update_fields=['is_active', 'deactivated_at'])
+        return self.activo_bolsa
 
     def __str__(self):
         return f"{self.user.nombres} {self.user.apellido_paterno} {self.user.apellido_materno} - {self.matricula}"
