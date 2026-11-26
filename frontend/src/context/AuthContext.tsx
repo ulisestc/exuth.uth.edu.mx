@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   AuthUser,
   LoginCredentials,
+  LoginError,
   TokenResponse,
   loginRequest,
   fetchCurrentUser,
@@ -16,12 +17,20 @@ import {
   refreshAccessToken,
 } from '@/lib/auth';
 
+export interface LoginResult {
+  success: boolean;
+  user?: AuthUser;
+  error?: string;
+  titulo?: string;
+  motivoInactividad?: string;
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   accessToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<{ success: boolean; user?: AuthUser; error?: string }>;
+  login: (credentials: LoginCredentials) => Promise<LoginResult>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -85,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; user?: AuthUser; error?: string }> => {
+  const login = async (credentials: LoginCredentials): Promise<LoginResult> => {
     try {
       // 1. Obtener tokens JWT de Djoser
       const tokens: TokenResponse = await loginRequest(credentials);
@@ -101,10 +110,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { success: true, user: profile };
     } catch (error: any) {
-      console.error('Login error:', error);
+      if (!(error instanceof LoginError)) {
+        console.error('Unexpected login error:', error);
+      }
       return { 
         success: false, 
-        error: error.message || 'Error al iniciar sesión. Revisa tus credenciales.' 
+        error: error.message || 'Error al iniciar sesión. Revisa tus credenciales.',
+        titulo: error.titulo,
+        motivoInactividad: error.motivoInactividad,
       };
     }
   };

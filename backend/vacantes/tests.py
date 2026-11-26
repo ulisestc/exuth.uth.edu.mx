@@ -324,3 +324,74 @@ class VacantesUnitTestSuite(APITestCase):
             self.assertEqual(res.data['empresa_estado'], 'Puebla')
             for campo in campos_privados:
                 self.assertIn(campo, res.data)
+
+    def test_inactivacion_y_bloqueo_login_con_felicitacion_al_ser_aceptado(self):
+        """TARJETA #15: Al aceptar postulación se bloquea el login (is_active=False) y al intentar entrar devuelve 403 con felicitación y contacto Admin."""
+        vac1 = Vacante.objects.create(
+            empresa=self.empresa,
+            area_estudio=self.area,
+            titulo="Ingeniero de Datos",
+            status="aprobada",
+            tipo_contratacion="tiempo_completo",
+            modalidad="presencial",
+            sueldo_minimo=18000,
+            sueldo_maximo=22000,
+            persona_contacto="Ing. Carlos",
+        )
+        vac2 = Vacante.objects.create(
+            empresa=self.empresa,
+            area_estudio=self.area,
+            titulo="Ingeniero DevOps",
+            status="aprobada",
+            tipo_contratacion="tiempo_completo",
+            modalidad="presencial",
+            sueldo_minimo=20000,
+            sueldo_maximo=25000,
+            persona_contacto="Ing. Carlos",
+        )
+
+        res_post = self.client_egresado.post('/api/v1/vacantes/postulaciones/', {'vacante': vac1.id}, format='json')
+        self.assertEqual(res_post.status_code, status.HTTP_201_CREATED)
+        post_id = res_post.data['id']
+
+        res_turnar = self.client_admin.post(f'/api/v1/vacantes/postulaciones/{post_id}/aprobar-uth/', {}, format='json')
+        self.assertEqual(res_turnar.status_code, status.HTTP_200_OK)
+
+        res_aceptar = self.client_empresa.patch(
+            f'/api/v1/vacantes/postulaciones/{post_id}/', {'estado': 'Aceptada'}, format='json'
+        )
+        self.assertEqual(res_aceptar.status_code, status.HTTP_200_OK)
+
+        self.egresado.refresh_from_db()
+        self.u_egresado.refresh_from_db()
+        self.assertTrue(self.egresado.colocado)
+        self.assertFalse(self.egresado.activo_bolsa)
+        self.assertEqual(self.egresado.motivo_inactividad, 'colocado')
+        self.assertFalse(self.u_egresado.is_active)
+        self.assertIsNotNone(self.u_egresado.deactivated_at)
+
+        # Contraseña incorrecta NO revela motivo de inactividad (401 estándar)
+        res_bad_pw = APIClient().post('/api/v1/auth/jwt/create/', {
+            'email': 'egresado@test.com',
+            'password': 'WrongPassword99!',
+        })
+        self.assertEqual(res_bad_pw.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn('motivo_inactividad', res_bad_pw.data)
+
+        # Contraseña correcta bloquea login (403) pero entrega felicitación y aviso de contactar a Admin UTH
+        res_login = APIClient().post('/api/v1/auth/jwt/create/', {
+            'email': 'egresado@test.com',
+            'password': 'Pass123!',
+        })
+        self.assertEqual(res_login.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res_login.data['motivo_inactividad'], 'colocado')
+        self.assertIn('Felicitaciones', res_login.data['titulo'])
+        self.assertIn('bolsadetrabajo@uth.edu.mx', res_login.data['detail'])
+
+        # Un token previo tampoco puede ya consultar perfil ni postularse (401 por is_active=False)
+        res_me = self.client_egresado.get('/api/v1/profiles/egresados/me/')
+        self.assertEqual(res_me.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        res_bloqueado = self.client_egresado.post('/api/v1/vacantes/postulaciones/', {'vacante': vac2.id}, format='json')
+        self.assertEqual(res_bloqueado.status_code, status.HTTP_401_UNAUTHORIZED)
+

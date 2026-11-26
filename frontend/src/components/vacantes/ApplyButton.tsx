@@ -318,6 +318,34 @@ export const ApplyButton: React.FC<ApplyButtonProps> = ({
     );
   }
 
+  // 3.5. Caso: Cuenta de Egresado Inactiva en Bolsa (Contratado / Vigencia 6m / Suspendida)
+  if (profile && profile.activo_bolsa === false) {
+    const esColocado = profile.motivo_inactividad === 'colocado';
+    return (
+      <div className="space-y-2.5 max-w-md">
+        <Alert
+          tone={esColocado ? 'success' : 'warning'}
+          title={
+            esColocado
+              ? '¡Felicitaciones por tu contratación! · Cuenta Inactiva'
+              : profile.motivo_inactividad === 'vencimiento'
+              ? 'Vigencia de 6 meses concluida · Cuenta Inactiva'
+              : 'Cuenta Inactiva para Postulaciones'
+          }
+        >
+          <span>
+            {esColocado
+              ? 'Derivado de tu contratación registrada en la Bolsa de Trabajo UTH, tu cuenta se encuentra temporalmente inactiva para nuevas postulaciones.'
+              : profile.motivo_inactividad === 'vencimiento'
+              ? 'Tu periodo de vigencia de 6 meses ha concluido y no es posible registrar nuevas postulaciones.'
+              : 'Tu cuenta se encuentra actualmente inactiva para registrar nuevas postulaciones.'}{' '}
+            En caso de requerir reactivarla, contacta a la Dirección de Vinculación UTH (<a href="mailto:bolsadetrabajo@uth.edu.mx" className="font-semibold underline">bolsadetrabajo@uth.edu.mx</a>).
+          </span>
+        </Alert>
+      </div>
+    );
+  }
+
   const hasCv = Boolean(profile?.cv);
   const docsPrecargados = profile?.documentos_precargados || [];
 

@@ -129,6 +129,21 @@ class PostulacionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if hasattr(self.request.user, 'egresado'):
             egresado = self.request.user.egresado
+            egresado.verificar_vigencia()
+
+            if not egresado.activo_bolsa or not self.request.user.is_active or self.request.user.deactivated_at is not None:
+                if egresado.motivo_inactividad == 'colocado':
+                    raise exceptions.PermissionDenied(
+                        "¡Felicitaciones por tu contratación! Tu cuenta en la Bolsa de Trabajo UTH se encuentra temporalmente inactiva para nuevas postulaciones. En caso de requerir reactivarla, contacta a la Dirección de Vinculación UTH."
+                    )
+                if egresado.motivo_inactividad == 'vencimiento':
+                    raise exceptions.PermissionDenied(
+                        "Tu periodo de vigencia de 6 meses en la Bolsa de Trabajo UTH ha concluido. Para solicitar la reactivación de tu cuenta, contacta a la Dirección de Vinculación UTH."
+                    )
+                raise exceptions.PermissionDenied(
+                    "Tu cuenta en la Bolsa de Trabajo UTH se encuentra actualmente inactiva para nuevas postulaciones. En caso de requerirlo, contacta a la Dirección de Vinculación UTH."
+                )
+
             if not egresado.cv:
                 raise exceptions.ValidationError("Debes subir tu Currículum Vitae en formato PDF en tu expediente antes de postularte a una vacante.")
             vacante = serializer.validated_data.get('vacante')

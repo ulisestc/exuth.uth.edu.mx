@@ -158,12 +158,20 @@ class Colocacion(models.Model):
         verbose_name_plural = "Colocaciones de Egresados"
         unique_together = ['egresado', 'vacante']
 
-    # actualizar bandera 'colocado' en perfil de egresado al agregar registro de colocación
+    # actualizar bandera 'colocado' y desactivar acceso de cuenta al agregar registro de colocación
     def save(self, *args, **kwargs):
+        es_nueva = self._state.adding
         super().save(*args, **kwargs)
-        if not self.egresado.colocado:
+        if es_nueva or not self.egresado.colocado:
+            ahora = timezone.now()
             self.egresado.colocado = True
-            self.egresado.save(update_fields=['colocado'])
+            self.egresado.activo_bolsa = False
+            self.egresado.motivo_inactividad = 'colocado'
+            self.egresado.save(update_fields=['colocado', 'activo_bolsa', 'motivo_inactividad'])
+            if self.egresado.user_id and self.egresado.user:
+                self.egresado.user.is_active = False
+                self.egresado.user.deactivated_at = ahora
+                self.egresado.user.save(update_fields=['is_active', 'deactivated_at'])
 
     def __str__(self):
         puesto = self.vacante.titulo if self.vacante else "Puesto Externo"

@@ -95,6 +95,18 @@ export function clearAuthSession() {
   deleteCookie('uth_user_role');
 }
 
+export class LoginError extends Error {
+  motivoInactividad?: string;
+  titulo?: string;
+
+  constructor(message: string, opts?: { motivoInactividad?: string; titulo?: string }) {
+    super(message);
+    this.name = 'LoginError';
+    this.motivoInactividad = opts?.motivoInactividad;
+    this.titulo = opts?.titulo;
+  }
+}
+
 // --- API Requests ---
 export async function loginRequest(credentials: LoginCredentials): Promise<TokenResponse> {
   const res = await fetch(`${API_BASE_URL}/auth/jwt/create/`, {
@@ -105,13 +117,22 @@ export async function loginRequest(credentials: LoginCredentials): Promise<Token
     body: JSON.stringify(credentials),
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const errorMsg = data.detail || 
+    const rawDetail = Array.isArray(data.detail) ? data.detail[0] : data.detail;
+    const rawMotivo = Array.isArray(data.motivo_inactividad) ? data.motivo_inactividad[0] : data.motivo_inactividad;
+    const rawTitulo = Array.isArray(data.titulo) ? data.titulo[0] : data.titulo;
+
+    const errorMsg =
+      rawDetail ||
       (data.non_field_errors && data.non_field_errors[0]) ||
-      'Credenciales incorrectas o cuenta inactiva. Verifica tu correo y contraseña.';
-    throw new Error(errorMsg);
+      'Credenciales incorrectas. Verifica tu correo y contraseña.';
+
+    throw new LoginError(errorMsg, {
+      motivoInactividad: typeof rawMotivo === 'string' ? rawMotivo : undefined,
+      titulo: typeof rawTitulo === 'string' ? rawTitulo : undefined,
+    });
   }
 
   return data as TokenResponse;

@@ -177,6 +177,14 @@ export default function PortalEgresadoPage() {
                   {profile?.matricula && (
                     <Code>Matrícula: {profile.matricula}</Code>
                   )}
+
+                  {profile?.folio_bolsa && (
+                    <Code>Folio Bolsa: #{profile.folio_bolsa}</Code>
+                  )}
+
+                  {profile?.vigencia_hasta && (
+                    <Tag>Vigencia hasta: {formatDate(profile.vigencia_hasta)}</Tag>
+                  )}
                 </div>
 
                 <h1 className="text-display-md text-ink font-semibold">

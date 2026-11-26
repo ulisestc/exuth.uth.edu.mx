@@ -53,7 +53,10 @@ class ReportsUnitTestSuite(APITestCase):
             egresado=self.egresado, vacante=self.vacante, registrado_por=self.admin
         )
 
-        # Clientes HTTP
+        # Clientes HTTP (para RBAC de egresado usamos un usuario activo, ya que u_egr quedó inactivo al ser colocado)
+        self.u_egr_activo = User.objects.create_user(
+            email="egr_activo_rep@test.com", password="password123", rol="egresado", is_active=True
+        )
         self.client_admin = APIClient()
         self.client_admin.credentials(HTTP_AUTHORIZATION=f'JWT {RefreshToken.for_user(self.admin).access_token}')
 
@@ -61,7 +64,7 @@ class ReportsUnitTestSuite(APITestCase):
         self.client_empresa.credentials(HTTP_AUTHORIZATION=f'JWT {RefreshToken.for_user(self.u_emp).access_token}')
 
         self.client_egresado = APIClient()
-        self.client_egresado.credentials(HTTP_AUTHORIZATION=f'JWT {RefreshToken.for_user(self.u_egr).access_token}')
+        self.client_egresado.credentials(HTTP_AUTHORIZATION=f'JWT {RefreshToken.for_user(self.u_egr_activo).access_token}')
 
     def test_dashboard_stats_ok(self):
         """HAPPY PATH: Dashboard devuelve estadísticas consolidadas a Admin UTH."""

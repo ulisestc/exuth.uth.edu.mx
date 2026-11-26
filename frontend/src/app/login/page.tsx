@@ -40,7 +40,11 @@ function LoginFormContent() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loginNotice, setLoginNotice] = useState<{
+    message: string;
+    titulo?: string;
+    motivoInactividad?: string;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal de recuperación de contraseña
@@ -59,10 +63,10 @@ function LoginFormContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
+    setLoginNotice(null);
 
     if (!email || !password) {
-      setErrorMsg('Por favor ingresa tu correo y contraseña.');
+      setLoginNotice({ message: 'Por favor ingresa tu correo y contraseña.' });
       return;
     }
 
@@ -75,10 +79,14 @@ function LoginFormContent() {
         const dest = getRoleRedirectPath(result.user.rol, returnUrl);
         router.push(dest);
       } else {
-        setErrorMsg(result.error || 'Credenciales incorrectas o cuenta inactiva.');
+        setLoginNotice({
+          message: result.error || 'Credenciales incorrectas o cuenta inactiva.',
+          titulo: result.titulo,
+          motivoInactividad: result.motivoInactividad,
+        });
       }
     } catch {
-      setErrorMsg('Error de conexión con el servidor de autenticación.');
+      setLoginNotice({ message: 'Error de conexión con el servidor de autenticación.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -119,10 +127,48 @@ function LoginFormContent() {
 
           {/* Tarjeta del Formulario */}
           <Card padded className="space-y-6 bg-canvas">
-            {errorMsg && (
-              <Alert tone="danger" title="Error de autenticación">
-                {errorMsg}
-              </Alert>
+            {loginNotice && (
+              loginNotice.motivoInactividad === 'colocado' ? (
+                <Alert
+                  tone="success"
+                  title={loginNotice.titulo || '¡Felicitaciones por tu contratación laboral!'}
+                >
+                  <div className="space-y-2">
+                    <p>{loginNotice.message}</p>
+                    <p className="text-fine">
+                      Contacto directo:{' '}
+                      <a
+                        href="mailto:bolsadetrabajo@uth.edu.mx"
+                        className="font-semibold underline"
+                      >
+                        bolsadetrabajo@uth.edu.mx
+                      </a>
+                    </p>
+                  </div>
+                </Alert>
+              ) : loginNotice.motivoInactividad ? (
+                <Alert
+                  tone="warning"
+                  title={loginNotice.titulo || 'Cuenta inactiva'}
+                >
+                  <div className="space-y-2">
+                    <p>{loginNotice.message}</p>
+                    <p className="text-fine">
+                      Contacto directo:{' '}
+                      <a
+                        href="mailto:bolsadetrabajo@uth.edu.mx"
+                        className="font-semibold underline"
+                      >
+                        bolsadetrabajo@uth.edu.mx
+                      </a>
+                    </p>
+                  </div>
+                </Alert>
+              ) : (
+                <Alert tone="danger" title="Error de autenticación">
+                  {loginNotice.message}
+                </Alert>
+              )
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">

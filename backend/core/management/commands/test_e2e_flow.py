@@ -170,12 +170,26 @@ class Command(BaseCommand):
         assert resp_contratar.data['estado'] == 'Aceptada', "El estado no es 'Aceptada'."
         self.stdout.write(self.style.SUCCESS(f'  [OK] Empresa SoftTech aceptó y contrató al candidato #{postulacion_id}.'))
 
-        # 6.2 Comprobación automática de Colocación en Base de Datos
+        # 6.2 Comprobación automática de Colocación y Bloqueo de Acceso de Cuenta
         colocacion_obj = Colocacion.objects.filter(vacante_id=vacante_id, egresado=egresado_profile).first()
         assert colocacion_obj is not None, "Error de Integridad: No se generó automáticamente el registro en Colocacion."
         egresado_profile.refresh_from_db()
+        egresado_user.refresh_from_db()
         assert egresado_profile.colocado is True, "Error de Integridad: La bandera egresado.colocado no cambió a True."
-        self.stdout.write(self.style.SUCCESS('  [OK] Trigger de Colocación verificado: egresado.colocado = True y registro de Colocacion creado.'))
+        assert egresado_profile.activo_bolsa is False and egresado_profile.motivo_inactividad == 'colocado', (
+            "Error de Regla de Negocio (#15): El egresado contratado debía pasar automáticamente a inactivo."
+        )
+        assert egresado_user.is_active is False and egresado_user.deactivated_at is not None, (
+            "Error de Regla de Negocio (#15): El inicio de sesión del egresado contratado debía bloquearse."
+        )
+        resp_login_colocado = APIClient(SERVER_NAME='localhost').post(
+            '/api/v1/auth/jwt/create/',
+            {'email': '20260003@uth.edu.mx', 'password': 'Password123!'},
+        )
+        assert resp_login_colocado.status_code == status.HTTP_403_FORBIDDEN and resp_login_colocado.data.get('motivo_inactividad') == 'colocado', (
+            f"El login del egresado colocado debía devolver 403 con motivo 'colocado', devolvió: {resp_login_colocado.status_code}"
+        )
+        self.stdout.write(self.style.SUCCESS('  [OK] Trigger de Colocación verificado: cuenta bloqueada y login responde 403 con felicitación.'))
 
         # ---------------------------------------------------------------------
         # FASE 7: DASHBOARD DE INTELIGENCIA DE NEGOCIOS Y REPORTES
@@ -206,7 +220,12 @@ class Command(BaseCommand):
         Postulacion.objects.filter(id=postulacion_id).delete()
         Vacante.objects.filter(id=vacante_id).delete()
         egresado_profile.colocado = False
-        egresado_profile.save(update_fields=['colocado'])
+        egresado_profile.activo_bolsa = True
+        egresado_profile.motivo_inactividad = None
+        egresado_profile.save(update_fields=['colocado', 'activo_bolsa', 'motivo_inactividad'])
+        egresado_user.is_active = True
+        egresado_user.deactivated_at = None
+        egresado_user.save(update_fields=['is_active', 'deactivated_at'])
         self.stdout.write(self.style.SUCCESS('  [OK] Base de datos restaurada al estado limpio previo a la prueba.'))
 
         # RESUMEN FINAL
